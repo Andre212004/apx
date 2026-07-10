@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import apx_cli
+import apx_environment
 
 
 class Account:
@@ -168,6 +169,33 @@ class CommandTests(unittest.TestCase):
         )
         return code, stdout.getvalue(), stderr.getvalue()
 
+    def run_inspect_with_registration(
+        self, account: str, registration_name: str | None, content: str | None
+    ) -> tuple[int, str, str]:
+        uid = 1001
+        self.accounts = [Account(account, uid, f"/home/{account}")]
+        self.stat_mock = Mock(return_value=stat_result(uid=uid))
+        self.command_runner = Mock(
+            side_effect=[successful_mount_result(), successful_btrfs_result()]
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            if registration_name is not None and content is not None:
+                (Path(directory) / f"{registration_name}.json").write_text(
+                    content, encoding="utf-8"
+                )
+            stdout = StringIO()
+            stderr = StringIO()
+            code = apx_cli.run(
+                ["environment", "inspect", account],
+                accounts_provider=lambda: self.accounts,
+                stat_func=self.stat_mock,
+                command_runner=self.command_runner,
+                registration_directory=directory,
+                stdout=stdout,
+                stderr=stderr,
+            )
+            return code, stdout.getvalue(), stderr.getvalue()
+
     def test_status_stable_output(self) -> None:
         code, output, error = self.run_command(["status"])
         self.assertEqual(code, 0)
@@ -196,7 +224,86 @@ class CommandTests(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         self.assertIn("Environment candidate: apx-hub\n", output)
+        self.assertIn("Registration:\n", output)
         self.assertEqual(error, "")
+
+    def test_inspect_maps_accounts_to_canonical_registration_files(self) -> None:
+        for account, logical_name in (
+            ("apx-hub", "hub"),
+            ("apx-development", "development"),
+            ("apx-work", "work"),
+        ):
+            identity = apx_environment.derive_identity(logical_name)
+            value = apx_environment.serialize_registration(
+                apx_environment.EnvironmentRegistration(
+                    1, logical_name, identity.role, identity.account, identity.home,
+                    "active",
+                    apx_environment.StorageIdentity(
+                        "btrfs", 256,
+                        "11111111-1111-4111-8111-111111111111", None,
+                    ),
+                )
+            )
+            code, output, error = self.run_inspect_with_registration(
+                account, logical_name, value
+            )
+            with self.subTest(account=account):
+                self.assertEqual(code, 0)
+                self.assertEqual(error, "")
+                self.assertIn(f"Expected path: ", output)
+                self.assertIn(f"/{logical_name}.json\n", output)
+                self.assertIn("  Observation: valid\n", output)
+                self.assertIn(f"  Logical name: {logical_name}\n", output)
+                self.assertIn("Formal classification: unconfirmed\n", output)
+
+    def test_absent_and_malformed_registration_render_safely(self) -> None:
+        absent_code, absent, _ = self.run_inspect_with_registration(
+            "apx-work", None, None
+        )
+        malformed_code, malformed, _ = self.run_inspect_with_registration(
+            "apx-work", "work", "{secret contents"
+        )
+        self.assertEqual(absent_code, 0)
+        self.assertIn("  Observation: absent\n", absent)
+        self.assertIn("Formal classification: candidate\n", absent)
+        self.assertEqual(malformed_code, 0)
+        self.assertIn("  Observation: malformed\n", malformed)
+        self.assertIn(
+            "  Reason: registration JSON does not match schema version 1\n",
+            malformed,
+        )
+        self.assertNotIn("secret contents", malformed)
+
+    def test_valid_registration_with_confirmed_home_mismatch_is_incomplete(self) -> None:
+        identity = apx_environment.derive_identity("work")
+        value = apx_environment.serialize_registration(
+            apx_environment.EnvironmentRegistration(
+                1, "work", identity.role, identity.account, identity.home, "active",
+                apx_environment.StorageIdentity(
+                    "btrfs", 256,
+                    "11111111-1111-4111-8111-111111111111", None,
+                ),
+            )
+        )
+        self.stat_mock = Mock(return_value=stat_result(uid=9999))
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "work.json").write_text(value, encoding="utf-8")
+            stdout = StringIO()
+            code = apx_cli.run(
+                ["environment", "inspect", "apx-work"],
+                accounts_provider=lambda: [
+                    Account("apx-work", 1001, "/home/apx-work")
+                ],
+                stat_func=self.stat_mock,
+                command_runner=Mock(
+                    side_effect=[successful_mount_result(), successful_btrfs_result()]
+                ),
+                registration_directory=directory,
+                stdout=stdout,
+                stderr=StringIO(),
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("Formal classification: incomplete\n", stdout.getvalue())
 
     def test_unknown_candidate_returns_two(self) -> None:
         code, output, error = self.run_command(

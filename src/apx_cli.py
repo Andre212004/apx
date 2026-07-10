@@ -16,11 +16,19 @@ from typing import Callable, Iterable, Sequence, TextIO
 
 from apx_environment import (
     CreationPreconditions,
+    EnvironmentClassification,
     EnvironmentIdentity,
+    classify_observed_environment,
     create_plan,
     derive_identity,
     render_creation_plan,
     validate_logical_name,
+)
+from apx_registration import (
+    DEFAULT_REGISTRATION_DIRECTORY,
+    RegistrationObservation,
+    RegistrationObservationState,
+    observe_registration,
 )
 
 
@@ -743,6 +751,8 @@ def render_inspect(
     candidate: Candidate,
     mount: MountObservation,
     btrfs: BtrfsObservation,
+    registration: RegistrationObservation,
+    classification: EnvironmentClassification,
 ) -> str:
     lines = [
         f"Environment candidate: {candidate.name}",
@@ -755,12 +765,30 @@ def render_inspect(
         f"Home is directory: {observation(candidate.home_is_directory)}",
         f"Home ownership UID: {observation(candidate.home_owner_uid)}",
         f"Ownership matches account UID: {observation(candidate.ownership_matches)}",
+        f"Formal classification: {render_environment_classification(classification)}",
     ]
     if candidate.warnings:
         lines.append("Warnings:")
         lines.extend(f"- {warning}" for warning in candidate.warnings)
     else:
         lines.append("Warnings: none")
+    lines.extend(
+        (
+            "Registration:",
+            f"  Expected path: {registration.expected_path}",
+            f"  Observation: {registration.state}",
+        )
+    )
+    if registration.registration is not None:
+        lines.extend(
+            (
+                f"  Schema version: {registration.registration.schema_version}",
+                f"  Logical name: {registration.registration.logical_name}",
+                f"  Lifecycle state: {registration.registration.lifecycle_state}",
+            )
+        )
+    elif registration.reason:
+        lines.append(f"  Reason: {registration.reason}")
     lines.extend(
         (
             "Filesystem:",
@@ -780,12 +808,21 @@ def render_inspect(
     return "\n".join(lines)
 
 
+def render_environment_classification(
+    classification: EnvironmentClassification,
+) -> str:
+    if classification is EnvironmentClassification.UNCONFIRMED:
+        return "unconfirmed"
+    return classification.value
+
+
 def run(
     argv: Sequence[str] | None = None,
     *,
     accounts_provider: Callable[[], Iterable[object]] = pwd.getpwall,
     stat_func: Callable[[str], os.stat_result] = os.stat,
     command_runner: CommandRunner = run_command,
+    registration_directory: str | os.PathLike[str] = DEFAULT_REGISTRATION_DIRECTORY,
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
 ) -> int:
@@ -844,13 +881,45 @@ def run(
     if candidate is None:
         print(f"Unknown Environment candidate: {args.name}", file=stderr)
         return 2
+    logical_name = candidate.name.removeprefix("apx-")
+    try:
+        identity = derive_identity(logical_name)
+        if identity.account != candidate.name:
+            raise ValueError("candidate account is not canonical")
+        registration = observe_registration(logical_name, registration_directory)
+    except ValueError:
+        registration = RegistrationObservation(
+            str(registration_directory),
+            RegistrationObservationState.CONFLICTING,
+            reason="candidate account does not map to a canonical APX identity",
+        )
     try:
         mount = observe_mount(candidate.home, command_runner)
         btrfs = observe_btrfs(candidate.home, mount, command_runner)
     except Exception as error:
         print(f"APX observation error: {error}", file=stderr)
         return 1
-    print(render_inspect(candidate, mount, btrfs), file=stdout)
+    confirmed_mismatch = candidate.state == "inconsistent"
+    if confirmed_mismatch:
+        host_observations = "confirmed"
+    elif candidate.state == "unavailable" or btrfs.subvolume in {
+        "unavailable", "ambiguous", "not applicable"
+    }:
+        host_observations = "unavailable"
+    else:
+        # Storage UUID/ID and registration file ownership are not observed yet.
+        host_observations = "unavailable"
+    classification = classify_observed_environment(
+        registration_state=registration.state,
+        candidate_present=True,
+        incomplete_operation=False,
+        host_observations=host_observations,
+        confirmed_mismatch=confirmed_mismatch,
+    )
+    print(
+        render_inspect(candidate, mount, btrfs, registration, classification),
+        file=stdout,
+    )
     return 0
 
 

@@ -25,6 +25,14 @@ class ContractError(ValueError):
     """A machine-readable APX contract value is invalid."""
 
 
+class UnsupportedRegistrationError(ContractError):
+    """The registration uses a schema version this APX does not support."""
+
+
+class RegistrationConflictError(ContractError):
+    """Registration data conflicts with its canonical derived identity."""
+
+
 class LifecycleState(str, Enum):
     ACTIVE = "active"
     ARCHIVED = "archived"
@@ -112,14 +120,20 @@ class EnvironmentRegistration:
 
     def __post_init__(self) -> None:
         if self.schema_version != REGISTRATION_SCHEMA_VERSION:
-            raise ContractError("unsupported registration schema_version")
+            raise UnsupportedRegistrationError("unsupported registration schema_version")
         identity = derive_identity(self.logical_name)
         if self.role != identity.role:
-            raise ContractError("registration role does not match logical name")
+            raise RegistrationConflictError(
+                "registration role does not match logical name"
+            )
         if self.account_name != identity.account:
-            raise ContractError("registration account_name does not match logical name")
+            raise RegistrationConflictError(
+                "registration account_name does not match logical name"
+            )
         if self.home_path != identity.home:
-            raise ContractError("registration home_path does not match logical name")
+            raise RegistrationConflictError(
+                "registration home_path does not match logical name"
+            )
         if self.lifecycle_state != LifecycleState.ACTIVE.value:
             raise ContractError("registration schema v1 supports only active lifecycle")
 
@@ -230,6 +244,47 @@ def classify_environment(
     if observations == ObservationClassification.CONFIRMED.value:
         return EnvironmentClassification.CONSISTENT
     raise ContractError("invalid environment observation classification")
+
+
+def classify_observed_environment(
+    *,
+    registration_state: str,
+    candidate_present: bool,
+    incomplete_operation: bool,
+    host_observations: str,
+    confirmed_mismatch: bool,
+) -> EnvironmentClassification:
+    """Classify combined registration and host evidence without overclaiming."""
+    if incomplete_operation:
+        return EnvironmentClassification.INCOMPLETE
+    if registration_state == "unavailable":
+        return EnvironmentClassification.UNCONFIRMED
+    if registration_state in {"malformed", "unsupported", "conflicting"}:
+        return (
+            EnvironmentClassification.CANDIDATE
+            if candidate_present
+            else EnvironmentClassification.INCOMPLETE
+        )
+    if registration_state == "absent":
+        return (
+            EnvironmentClassification.CANDIDATE
+            if candidate_present
+            else EnvironmentClassification.ABSENT
+        )
+    if registration_state != "valid":
+        raise ContractError("invalid registration observation state")
+    if confirmed_mismatch:
+        return EnvironmentClassification.INCOMPLETE
+    if host_observations in {
+        ObservationClassification.UNAVAILABLE.value,
+        ObservationClassification.AMBIGUOUS.value,
+    }:
+        return EnvironmentClassification.UNCONFIRMED
+    if host_observations == "partial":
+        return EnvironmentClassification.REGISTERED
+    if host_observations == ObservationClassification.CONFIRMED.value:
+        return EnvironmentClassification.CONSISTENT
+    raise ContractError("invalid host observation classification")
 
 
 def classify_rollback(

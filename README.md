@@ -101,7 +101,8 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   └── session-management.md
 ├── src/
 │   ├── apx_cli.py
-│   └── apx_environment.py
+│   ├── apx_environment.py
+│   └── apx_registration.py
 ├── tests/
 ├── .gitignore
 ├── apx

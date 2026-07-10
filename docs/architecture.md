@@ -128,6 +128,8 @@ The current read-only prototype's candidate state named `consistent` covers only
 
 The current `apx environment inspect` command inspects a discovered candidate by its exact Linux account name, for example `apx environment inspect apx-hub`. Creation instead accepts the logical Environment name, for example `apx environment create hub --dry-run`. The inspection command does not resolve logical-name aliases.
 
+Candidate inspection also performs a bounded read-only lookup of the corresponding registration. It reports the registration observation separately from the prototype's legacy candidate state and renders a formal combined classification. The current observer cannot yet confirm registration file ownership or the registered Btrfs subvolume ID, UUID, and parent UUID, so a valid registration normally remains `unconfirmed` in live CLI output unless a confirmed host mismatch makes it `incomplete`. It does not infer formal consistency from the narrower legacy candidate checks.
+
 ### Linux User
 
 The Linux user is the primary identity boundary.
@@ -213,7 +215,15 @@ For `parent_uuid`, null means Btrfs reported no snapshot parent UUID when the st
 
 Naming resemblance does not establish APX ownership. A candidate is an account or home-like resource matching APX naming conventions without sufficient valid registration. A registered Environment has a schema-valid canonical record, but registration alone does not prove current host consistency. A consistent Environment has fresh agreement across registration, account, home, Btrfs identity, ownership, permissions, and policy. An incomplete Environment has a valid registration or operation marker plus a confirmed missing or conflicting postcondition. Unavailable or ambiguous observation remains unconfirmed, not inconsistent. Archived remains future intended architecture and is rejected by registration schema v1.
 
-The registration directory is future root-owned host state. This milestone implements only pure serialization and parsing; it does not read or write the real path.
+The registration directory is future root-owned host state. Registration serialization and parsing remain pure. The current observer may read the real path when the execution context permits, but it never writes there.
+
+The read-only prototype may inspect that future path but never creates it or writes registration data. A caller-injected directory is supported only as an internal/test boundary; CLI users cannot supply arbitrary registration paths. A validated logical name maps to exactly `<logical-name>.json`, with no recursive search.
+
+Registration observation states are `absent`, `valid`, `malformed`, `unsupported`, `conflicting`, and `unavailable`. A missing configured directory or canonical file means only that no registration exists in the canonical configured location; it does not classify the full host Environment as absent. Invalid UTF-8, invalid or duplicate-key JSON, schema-shape errors, and files larger than 64 KiB are malformed. Exactly 64 KiB is accepted for strict parsing. A non-v1 schema is unsupported. A schema-valid record that does not bind the logical identity implied by its canonical filename is conflicting. Permission failures, non-regular paths, unsupported safe-open primitives, and restricted-context failures are unavailable. Diagnostics are fixed summaries and never include file content or raw exceptions.
+
+The configured registration directory itself and the canonical registration file must not be symbolic links. Both are opened read-only with no-follow semantics, and the file is opened relative to the already opened directory. The Arch Linux implementation requires `O_NOFOLLOW`, `O_DIRECTORY`, and `O_CLOEXEC`; if those primitives are unavailable, observation is explicitly unavailable rather than falling back to unsafe opening. A symbolic link is reported unavailable even if it would resolve within the same filesystem or directory. Parent components of the configured directory are part of the trusted configuration boundary; no CLI input can change them.
+
+`registered` means the registration is valid and every host observation made so far is available and matching, but at least one required postcondition has not yet been observed. `unconfirmed` means at least one required observation was attempted or required but is unavailable or ambiguous. `consistent` requires every required postcondition to be freshly confirmed. The current CLI does not observe registration ownership/mode, incomplete-operation state, full subvolume identity, or UUID uniqueness, so it cannot report `consistent` and normally reports a valid registration as `unconfirmed`.
 
 ### Linux Account and Permission Policy
 

@@ -189,6 +189,57 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(absent, contract.EnvironmentClassification.ABSENT)
         self.assertNotEqual(absent, contract.EnvironmentClassification.INCOMPLETE)
 
+    def test_combined_registration_and_host_classification(self) -> None:
+        cases = (
+            ("absent", True, "confirmed", False, "candidate"),
+            ("absent", False, "confirmed", False, "absent"),
+            ("valid", True, "partial", False, "registered"),
+            ("valid", True, "unavailable", False, "unavailable-or-unconfirmed"),
+            ("valid", True, "confirmed", False, "consistent"),
+            ("valid", True, "confirmed", True, "incomplete"),
+            ("malformed", True, "confirmed", False, "candidate"),
+            ("conflicting", True, "confirmed", False, "candidate"),
+            ("unavailable", False, "confirmed", False, "unavailable-or-unconfirmed"),
+        )
+        for state, candidate, host, mismatch, expected in cases:
+            with self.subTest(state=state, host=host, mismatch=mismatch):
+                result = contract.classify_observed_environment(
+                    registration_state=state,
+                    candidate_present=candidate,
+                    incomplete_operation=False,
+                    host_observations=host,
+                    confirmed_mismatch=mismatch,
+                )
+                self.assertEqual(result.value, expected)
+
+    def test_hub_and_development_use_identical_classification_rules(self) -> None:
+        for name in ("hub", "development"):
+            with self.subTest(name=name):
+                self.assertEqual(
+                    contract.classify_observed_environment(
+                        registration_state="valid",
+                        candidate_present=True,
+                        incomplete_operation=False,
+                        host_observations="unavailable",
+                        confirmed_mismatch=False,
+                    ),
+                    contract.EnvironmentClassification.UNCONFIRMED,
+                )
+
+    def test_confirmed_account_and_home_mismatches_are_incomplete(self) -> None:
+        for mismatch in ("account", "home"):
+            with self.subTest(mismatch=mismatch):
+                self.assertEqual(
+                    contract.classify_observed_environment(
+                        registration_state="valid",
+                        candidate_present=True,
+                        incomplete_operation=False,
+                        host_observations="confirmed",
+                        confirmed_mismatch=True,
+                    ),
+                    contract.EnvironmentClassification.INCOMPLETE,
+                )
+
 
 class CreationStepTests(unittest.TestCase):
     def test_order_is_exact_stable_and_typed(self) -> None:
