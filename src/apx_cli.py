@@ -14,6 +14,15 @@ import subprocess
 import sys
 from typing import Callable, Iterable, Sequence, TextIO
 
+from apx_environment import (
+    CreationPreconditions,
+    EnvironmentIdentity,
+    create_plan,
+    derive_identity,
+    render_creation_plan,
+    validate_logical_name,
+)
+
 
 FINDMNT_TIMEOUT = 3.0
 BTRFS_TIMEOUT = 5.0
@@ -147,6 +156,16 @@ def create_parser() -> argparse.ArgumentParser:
         "inspect", help="inspect one candidate account"
     )
     inspect_parser.add_argument("name", help="exact candidate account name")
+    create_environment = environment_commands.add_parser(
+        "create", help="plan creation of an APX Environment"
+    )
+    create_environment.add_argument("logical_name", help="canonical logical name")
+    create_environment.add_argument(
+        "--dry-run",
+        action="store_true",
+        required=True,
+        help="produce a plan without applying changes",
+    )
 
     session = commands.add_parser("session", help="inspect read-only APX sessions")
     session_commands = session.add_subparsers(
@@ -591,6 +610,39 @@ def observe_sessions(
     return SessionListObservation(tuple(sessions), overall_status, explanation, truncated)
 
 
+def observe_creation_preconditions(
+    identity: EnvironmentIdentity,
+    accounts: Sequence[object],
+    candidates: Sequence[Candidate],
+    stat_func: Callable[[str], os.stat_result],
+    command_runner: CommandRunner,
+) -> CreationPreconditions:
+    account_exists = any(
+        account.pw_name == identity.account for account in accounts
+    )
+    candidate_exists = any(
+        candidate.name == identity.account for candidate in candidates
+    )
+    try:
+        stat_func(identity.home)
+    except FileNotFoundError:
+        home_absent = "confirmed"
+    except OSError:
+        home_absent = "unavailable"
+    else:
+        home_absent = "no"
+
+    mount = observe_mount("/home", command_runner)
+    return CreationPreconditions(
+        account_absent="no" if account_exists else "confirmed",
+        home_absent=home_absent,
+        candidate_exists="yes" if candidate_exists else "no",
+        filesystem_type=mount.filesystem_type or "unavailable",
+        filesystem_status=mount.status,
+        host_confirmation_required=True,
+    )
+
+
 def render_status(candidates: Sequence[Candidate]) -> str:
     consistent = sum(candidate.state == "consistent" for candidate in candidates)
     warning_count = sum(len(candidate.warnings) for candidate in candidates)
@@ -731,8 +783,20 @@ def run(
     stderr: TextIO = sys.stderr,
 ) -> int:
     args = create_parser().parse_args(argv)
+    if (
+        args.command == "environment"
+        and args.environment_command == "create"
+    ):
+        name_error = validate_logical_name(args.logical_name)
+        if name_error:
+            print(
+                f"Invalid Environment logical name '{args.logical_name}': {name_error}.",
+                file=stderr,
+            )
+            return 2
     try:
-        candidates = discover_candidates(accounts_provider(), stat_func)
+        accounts = list(accounts_provider())
+        candidates = discover_candidates(accounts, stat_func)
     except Exception as error:
         print(f"APX observation error: {error}", file=stderr)
         return 1
@@ -752,6 +816,19 @@ def run(
 
     if args.environment_command == "list":
         print(render_list(candidates), file=stdout)
+        return 0
+
+    if args.environment_command == "create":
+        try:
+            identity = derive_identity(args.logical_name)
+            preconditions = observe_creation_preconditions(
+                identity, accounts, candidates, stat_func, command_runner
+            )
+            plan = create_plan(identity, preconditions)
+        except Exception as error:
+            print(f"APX observation error: {error}", file=stderr)
+            return 1
+        print(render_creation_plan(plan), file=stdout)
         return 0
 
     candidate = next(

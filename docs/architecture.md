@@ -67,6 +67,65 @@ The intended Environment model maps each Environment to:
 
 The Linux user boundary provides ownership and process separation. The Btrfs subvolume provides storage structure, snapshot support, and lifecycle management. The KDE session provides an independent interactive workspace.
 
+### Environment Identity Contract
+
+The confirmed intended identity mapping is:
+
+```text
+Logical name: <slug>
+Linux account: apx-<slug>
+Home path: /home/apx-<slug>
+```
+
+The logical name is the APX-facing identifier supplied by a user. The Linux account and home path are derived internally and are never independent caller inputs.
+
+A canonical logical name:
+
+- contains 1 to 27 characters;
+- contains only lowercase ASCII letters, ASCII digits, and hyphens;
+- begins with a letter;
+- ends with a letter or digit;
+- contains no repeated hyphens;
+- does not begin with `apx-`, because APX adds that prefix;
+- is not `root`, `nobody`, or `system`.
+
+In regular-expression form, the structural grammar is:
+
+```text
+[a-z](?:[a-z0-9]|-(?=[a-z0-9])){0,26}
+```
+
+Reserved names are rejected in addition to the structural grammar. A name is also unavailable when its derived account would conflict with an existing account or reserved system identity. Account and path conflicts are runtime preconditions rather than reasons to broaden the naming grammar.
+
+The built-in identities use the same mapping:
+
+```text
+Logical name: hub
+Linux account: apx-hub
+Home path: /home/apx-hub
+Role: hub
+```
+
+```text
+Logical name: development
+Linux account: apx-development
+Home path: /home/apx-development
+Role: development
+```
+
+All other valid logical names have the `standard` role. The Hub does not have a separate identity mechanism.
+
+The identity states are:
+
+- **Candidate Environment:** an observed Linux account whose name begins with `apx-`. Candidate discovery alone does not establish APX registration or architectural consistency.
+- **Registered APX Environment:** an Environment with future APX-managed metadata that binds one canonical logical name to its derived account, home, role, and lifecycle state. Registration is intended architecture; no registration store exists yet.
+- **Consistent Environment:** a registered Environment whose account, home, storage, ownership, and metadata are all confirmed to match the contract.
+- **Incomplete Environment:** a candidate or registered Environment for which one or more required resources are confirmed missing, conflicting, or inconsistent. An unregistered candidate is incomplete rather than implicitly registered.
+- **Unavailable or unconfirmed state:** APX cannot confirm the identity or a required resource because observation is restricted, ambiguous, or unavailable. Lack of confirmation is not proof of consistency or inconsistency.
+- **Archived Environment:** a future registered lifecycle state in which an Environment is not available as an active login Environment but retains APX-managed recovery information. Archival behavior and storage layout remain future intended architecture and are not implemented.
+
+The current read-only prototype's candidate state named `consistent` covers only the account and home observations it implements. It does not establish the formal **Consistent Environment** state defined above.
+
 ### Linux User
 
 The Linux user is the primary identity boundary.

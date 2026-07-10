@@ -731,6 +731,24 @@ class EntryPointTests(unittest.TestCase):
         self.assertIn("APX status\n", result.stdout)
         self.assertEqual(result.stderr, "")
 
+    def test_entry_point_disables_bytecode_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as working_directory:
+            cache_prefix = Path(working_directory) / "python-cache"
+            environment = os.environ.copy()
+            environment["PYTHONPYCACHEPREFIX"] = str(cache_prefix)
+            result = subprocess.run(
+                [str(ROOT / "apx"), "status"],
+                cwd=working_directory,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            cache_created = cache_prefix.exists()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(cache_created)
+
 
 if __name__ == "__main__":
     unittest.main()
