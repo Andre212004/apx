@@ -94,6 +94,10 @@ class ParserTests(unittest.TestCase):
         args = apx_cli.create_parser().parse_args(["environment", "list"])
         self.assertEqual(args.environment_command, "list")
 
+    def test_environment_removal_plan_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["environment", "removal-plan", "trial"])
+        self.assertEqual((args.environment_command, args.logical_name), ("removal-plan", "trial"))
+
     def test_environment_inspect_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(
             ["environment", "inspect", "apx-hub"]

@@ -43,6 +43,7 @@ from apx_registration import (
 )
 from apx_host import observe_host_readiness, render_host_readiness
 from apx_practical import observe_practical, render_practical
+from apx_removal import observe_removal_evidence, build_removal_report, render_removal_report
 
 
 FINDMNT_TIMEOUT = 3.0
@@ -201,6 +202,10 @@ def create_parser() -> argparse.ArgumentParser:
         required=True,
         help="produce a plan without applying changes",
     )
+    removal_plan = environment_commands.add_parser(
+        "removal-plan", help="produce a non-executing Environment removal plan"
+    )
+    removal_plan.add_argument("logical_name", help="canonical logical Environment name")
 
     session = commands.add_parser("session", help="inspect read-only APX sessions")
     session_commands = session.add_subparsers(
@@ -967,7 +972,7 @@ def run(
     args = create_parser().parse_args(argv)
     if (
         args.command == "environment"
-        and args.environment_command == "create"
+        and args.environment_command in {"create", "removal-plan"}
     ):
         name_error = validate_logical_name(args.logical_name)
         if name_error:
@@ -1052,6 +1057,28 @@ def run(
             print(f"APX observation error: {error}", file=stderr)
             return 1
         print(render_creation_plan(plan), file=stdout)
+        return 0
+
+    if args.environment_command == "removal-plan":
+        try:
+            identity = derive_identity(args.logical_name)
+            session_result = observe_sessions(candidates, command_runner)
+            registration = observe_registration(
+                args.logical_name, registration_directory, uid_resolver, gid_resolver
+            )
+            evidence = observe_removal_evidence(
+                logical_name=identity.logical_name, account_name=identity.account,
+                canonical_home=identity.home, accounts=accounts, sessions=session_result,
+                mount_observer=lambda path: observe_mount(path, command_runner),
+                btrfs_observer=lambda path, mount: observe_btrfs(path, mount, command_runner),
+                command_runner=command_runner, registration=registration,
+                lstat_func=lstat_func, scandir_func=scandir_func,
+            )
+            report = build_removal_report(evidence)
+        except Exception as error:
+            print(f"APX observation error: {error}", file=stderr)
+            return 1
+        print(render_removal_report(report), file=stdout)
         return 0
 
     candidate = next(

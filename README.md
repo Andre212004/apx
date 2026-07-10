@@ -89,6 +89,8 @@ This repository contains architecture documentation and a read-only inspection a
 
 `apx host validate` performs the read-only Milestone 3A practical inspection. It summarizes the three fixed APX accounts, removal-blocker evidence, Brave installation and per-user data state, and factual session-switching prerequisites. It does not remove or change host resources and does not claim deletion safety.
 
+`apx environment removal-plan <name>` produces a read-only, non-executing plan with explicit blockers, unknown evidence, data-loss scope, privilege boundaries, irreversibility, and post-removal validation. The Hub returns a protected result and no removal plan.
+
 SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
 
 No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
