@@ -68,6 +68,11 @@ class ParserTests(unittest.TestCase):
         )
         self.assertEqual(args.name, "apx-hub")
 
+    def test_session_list_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["session", "list"])
+        self.assertEqual(args.command, "session")
+        self.assertEqual(args.session_command, "list")
+
 
 class DiscoveryTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -426,6 +431,289 @@ class CommandRunnerTests(unittest.TestCase):
         result = apx_cli.run_command(("findmnt",), 3.0)
         self.assertEqual(len(result.stdout), apx_cli.COMMAND_OUTPUT_LIMIT)
         self.assertEqual(len(result.stderr), apx_cli.COMMAND_OUTPUT_LIMIT)
+
+
+def session_properties(
+    *,
+    session_id: str = "3",
+    name: str = "apx-development",
+    uid: str = "1002",
+    state: str | None = "active",
+    active: str | None = "yes",
+    session_type: str | None = "wayland",
+    session_class: str | None = "user",
+    seat: str | None = "seat0",
+    remote: str | None = "no",
+    extra: str = "",
+) -> str:
+    values = {
+        "Id": session_id,
+        "Name": name,
+        "User": uid,
+        "State": state,
+        "Active": active,
+        "Type": session_type,
+        "Class": session_class,
+        "Seat": seat,
+        "Remote": remote,
+        "Service": "test-service",
+    }
+    lines = [f"{key}={value}" for key, value in values.items() if value is not None]
+    if extra:
+        lines.append(extra)
+    return "\n".join(lines) + "\n"
+
+
+class SessionObservationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        accounts = [
+            Account("apx-hub", 1001, "/home/apx-hub"),
+            Account("apx-development", 1002, "/home/apx-development"),
+        ]
+        self.candidates = apx_cli.discover_candidates(
+            accounts, lambda path: stat_result(uid=1001 if path.endswith("hub") else 1002)
+        )
+
+    def observe(
+        self,
+        enumeration: apx_cli.CommandResult,
+        details: dict[str, apx_cli.CommandResult] | None = None,
+    ) -> tuple[apx_cli.SessionListObservation, Mock]:
+        details = details or {}
+
+        def execute(arguments: tuple[str, ...], _timeout: float) -> apx_cli.CommandResult:
+            if arguments[1] == "list-sessions":
+                return enumeration
+            return details[arguments[2]]
+
+        runner = Mock(side_effect=execute)
+        return apx_cli.observe_sessions(self.candidates, runner), runner
+
+    def test_no_sessions(self) -> None:
+        result, runner = self.observe(apx_cli.CommandResult(0, "", ""))
+        self.assertEqual(result.sessions, ())
+        self.assertEqual(result.status, "confirmed")
+        runner.assert_called_once_with(
+            ("loginctl", "list-sessions", "--no-legend", "--no-pager"), 3.0
+        )
+
+    def test_one_graphical_apx_session_and_exact_commands(self) -> None:
+        result, runner = self.observe(
+            apx_cli.CommandResult(0, "3 1002 apx-development seat0 tty2\n", ""),
+            {"3": apx_cli.CommandResult(0, session_properties(), "")},
+        )
+        session = result.sessions[0]
+        self.assertEqual(session.username, "apx-development")
+        self.assertEqual(session.graphical, "yes")
+        self.assertEqual(session.status, "confirmed")
+        show_arguments, timeout = runner.call_args_list[1].args
+        self.assertEqual(
+            show_arguments,
+            (
+                "loginctl", "show-session", "3", "--no-pager",
+                "--property=Id", "--property=Name", "--property=User",
+                "--property=State", "--property=Active", "--property=Type",
+                "--property=Class", "--property=Seat", "--property=Remote",
+                "--property=Service",
+            ),
+        )
+        self.assertEqual(timeout, 3.0)
+        self.assertNotIn("sudo", show_arguments)
+        self.assertNotIn(show_arguments[0], {"systemctl", "login", "logout"})
+
+    def test_apx_tty_session_is_not_graphical(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "7 1001 apx-hub seat0 tty1\n", ""),
+            {
+                "7": apx_cli.CommandResult(
+                    0,
+                    session_properties(
+                        session_id="7", name="apx-hub", uid="1001",
+                        session_type="tty",
+                    ),
+                    "",
+                )
+            },
+        )
+        self.assertEqual(result.sessions[0].graphical, "no")
+
+    def test_multiple_sessions_and_numeric_aware_ordering(self) -> None:
+        enumeration = "10 1002 apx-development - -\nc1 1002 apx-development - -\n2 1002 apx-development - -\n"
+        details = {
+            session_id: apx_cli.CommandResult(
+                0, session_properties(session_id=session_id), ""
+            )
+            for session_id in ("10", "c1", "2")
+        }
+        result, _ = self.observe(apx_cli.CommandResult(0, enumeration, ""), details)
+        self.assertEqual(
+            [session.session_id for session in result.sessions], ["2", "10", "c1"]
+        )
+
+    def test_unrelated_users_are_filtered(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "4 2000 ordinary-user - -\n", ""),
+            {
+                "4": apx_cli.CommandResult(
+                    0,
+                    session_properties(name="ordinary-user", uid="2000"),
+                    "",
+                )
+            },
+        )
+        self.assertEqual(result.sessions, ())
+
+    def test_missing_properties_are_unavailable(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "3 1002 apx-development - -\n", ""),
+            {
+                "3": apx_cli.CommandResult(
+                    0,
+                    session_properties(state=None, session_type=None, seat=None),
+                    "",
+                )
+            },
+        )
+        session = result.sessions[0]
+        self.assertEqual(session.state, "unavailable")
+        self.assertEqual(session.graphical, "unavailable")
+        self.assertEqual(session.status, "unavailable")
+
+    def test_identity_conflict_is_ambiguous(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "3 1001 apx-hub - -\n", ""),
+            {"3": apx_cli.CommandResult(0, session_properties(), "")},
+        )
+        self.assertEqual(result.sessions[0].username, "ambiguous")
+        self.assertEqual(result.sessions[0].status, "ambiguous")
+
+    def test_detailed_session_id_conflict_is_ambiguous(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "3 1002 apx-development - -\n", ""),
+            {
+                "3": apx_cli.CommandResult(
+                    0, session_properties(session_id="different"), ""
+                )
+            },
+        )
+        self.assertEqual(result.sessions[0].status, "ambiguous")
+
+    def test_one_failed_session_does_not_discard_another(self) -> None:
+        enumeration = "3 1002 apx-development - -\n7 1001 apx-hub - -\n"
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, enumeration, ""),
+            {
+                "3": apx_cli.CommandResult(0, session_properties(), ""),
+                "7": apx_cli.CommandResult(None, "", "", "timeout"),
+            },
+        )
+        self.assertEqual(len(result.sessions), 2)
+        self.assertEqual(result.sessions[0].status, "confirmed")
+        self.assertEqual(result.sessions[1].status, "unavailable")
+
+    def test_missing_loginctl_is_unavailable(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(None, "", "", "missing executable")
+        )
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("missing executable", result.explanation or "")
+
+    def test_logind_unavailable_is_structured(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(1, "", "System has not been booted with systemd")
+        )
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("exit code 1", result.explanation or "")
+
+    def test_enumeration_timeout_is_unavailable(self) -> None:
+        result, _ = self.observe(apx_cli.CommandResult(None, "", "", "timeout"))
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("timeout", result.explanation or "")
+
+    def test_malformed_enumeration_and_session_id_are_not_executed(self) -> None:
+        result, runner = self.observe(
+            apx_cli.CommandResult(0, "--bad 1002 apx-development\nmalformed\n", "")
+        )
+        self.assertEqual(result.status, "ambiguous")
+        self.assertIn("Malformed", result.explanation or "")
+        self.assertEqual(runner.call_count, 1)
+
+    def test_malformed_property_output_is_ambiguous(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "3 1002 apx-development - -\n", ""),
+            {
+                "3": apx_cli.CommandResult(
+                    0, session_properties(extra="malformed-property"), ""
+                )
+            },
+        )
+        self.assertEqual(result.sessions[0].status, "ambiguous")
+
+    def test_conflicting_type_is_graphically_ambiguous(self) -> None:
+        result, _ = self.observe(
+            apx_cli.CommandResult(0, "3 1002 apx-development - -\n", ""),
+            {
+                "3": apx_cli.CommandResult(
+                    0, session_properties(extra="Type=tty"), ""
+                )
+            },
+        )
+        self.assertEqual(result.sessions[0].session_type, "ambiguous")
+        self.assertEqual(result.sessions[0].graphical, "ambiguous")
+
+    def test_session_cap_is_reported_and_bounded(self) -> None:
+        enumeration = "\n".join(
+            f"{number} 2000 ordinary-user - -" for number in range(101)
+        )
+        details = {
+            str(number): apx_cli.CommandResult(
+                0,
+                session_properties(
+                    session_id=str(number), name="ordinary-user", uid="2000"
+                ),
+                "",
+            )
+            for number in range(100)
+        }
+        result, runner = self.observe(
+            apx_cli.CommandResult(0, enumeration + "\n", ""), details
+        )
+        self.assertTrue(result.truncated)
+        self.assertIn("truncated to 100", result.explanation or "")
+        self.assertEqual(runner.call_count, 101)
+
+    def test_render_unavailable_result(self) -> None:
+        result = apx_cli.SessionListObservation(
+            (), "unavailable", "loginctl missing executable.", False
+        )
+        self.assertEqual(
+            apx_cli.render_session_list(result),
+            "APX sessions\n"
+            "Status: unavailable\n"
+            "Sessions: none\n"
+            "Explanation: loginctl missing executable.",
+        )
+
+    def test_unavailable_logind_command_returns_zero(self) -> None:
+        stdout = StringIO()
+        stderr = StringIO()
+        code = apx_cli.run(
+            ["session", "list"],
+            accounts_provider=lambda: [
+                Account("apx-development", 1002, "/home/apx-development")
+            ],
+            stat_func=lambda _path: stat_result(uid=1002),
+            command_runner=Mock(
+                return_value=apx_cli.CommandResult(
+                    None, "", "", "missing executable"
+                )
+            ),
+            stdout=stdout,
+            stderr=stderr,
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("Status: unavailable\n", stdout.getvalue())
+        self.assertEqual(stderr.getvalue(), "")
 
 
 class EntryPointTests(unittest.TestCase):

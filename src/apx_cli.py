@@ -17,7 +17,10 @@ from typing import Callable, Iterable, Sequence, TextIO
 
 FINDMNT_TIMEOUT = 3.0
 BTRFS_TIMEOUT = 5.0
+LOGINCTL_TIMEOUT = 3.0
 COMMAND_OUTPUT_LIMIT = 8192
+SESSION_LIMIT = 100
+SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")
 
 
 @dataclass(frozen=True)
@@ -58,6 +61,28 @@ class BtrfsObservation:
     filesystem: str
     subvolume: str
     explanation: str
+
+
+@dataclass(frozen=True)
+class SessionObservation:
+    session_id: str
+    username: str
+    state: str
+    active: str
+    session_type: str
+    session_class: str
+    seat: str
+    remote: str
+    graphical: str
+    status: str
+
+
+@dataclass(frozen=True)
+class SessionListObservation:
+    sessions: tuple[SessionObservation, ...]
+    status: str
+    explanation: str | None
+    truncated: bool
 
 
 CommandRunner = Callable[[Sequence[str], float], CommandResult]
@@ -122,6 +147,12 @@ def create_parser() -> argparse.ArgumentParser:
         "inspect", help="inspect one candidate account"
     )
     inspect_parser.add_argument("name", help="exact candidate account name")
+
+    session = commands.add_parser("session", help="inspect read-only APX sessions")
+    session_commands = session.add_subparsers(
+        dest="session_command", required=True
+    )
+    session_commands.add_parser("list", help="list observable APX sessions")
     return parser
 
 
@@ -338,6 +369,228 @@ def observe_btrfs(
     return BtrfsObservation("yes", "unavailable", f"{reason}{detail}.")
 
 
+def session_sort_key(session_id: str) -> tuple[int, int | str]:
+    if session_id.isdigit():
+        return (0, int(session_id))
+    return (1, session_id)
+
+
+def candidate_names_for_identity(
+    uid_text: str | None,
+    username: str | None,
+    candidates_by_uid: dict[int, Candidate],
+    candidates_by_name: dict[str, Candidate],
+) -> set[str]:
+    names: set[str] = set()
+    if uid_text is not None and uid_text.isdigit():
+        candidate = candidates_by_uid.get(int(uid_text))
+        if candidate:
+            names.add(candidate.name)
+    if username in candidates_by_name:
+        names.add(username)
+    return names
+
+
+def unavailable_session(
+    session_id: str, username: str, status: str = "unavailable"
+) -> SessionObservation:
+    return SessionObservation(
+        session_id,
+        username,
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        "unavailable",
+        status,
+    )
+
+
+def observe_sessions(
+    candidates: Sequence[Candidate], command_runner: CommandRunner
+) -> SessionListObservation:
+    list_arguments = (
+        "loginctl",
+        "list-sessions",
+        "--no-legend",
+        "--no-pager",
+    )
+    result = command_runner(list_arguments, LOGINCTL_TIMEOUT)
+    if result.failure:
+        return SessionListObservation(
+            (), "unavailable", f"loginctl session enumeration {result.failure}.", False
+        )
+    if result.returncode != 0:
+        diagnostic = result_diagnostic(result)
+        detail = f": {diagnostic}" if diagnostic else ""
+        return SessionListObservation(
+            (),
+            "unavailable",
+            f"loginctl session enumeration failed with exit code "
+            f"{result.returncode}{detail}.",
+            False,
+        )
+
+    enumerated: list[tuple[str, str | None, str | None]] = []
+    malformed_enumeration = False
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        fields = line.split()
+        if len(fields) < 3 or not SESSION_ID_PATTERN.fullmatch(fields[0]):
+            malformed_enumeration = True
+            continue
+        enumerated.append((fields[0], fields[1], fields[2]))
+    enumerated.sort(key=lambda item: session_sort_key(item[0]))
+    truncated = len(enumerated) > SESSION_LIMIT
+    enumerated = enumerated[:SESSION_LIMIT]
+
+    candidates_by_uid = {candidate.uid: candidate for candidate in candidates}
+    candidates_by_name = {candidate.name: candidate for candidate in candidates}
+    sessions: list[SessionObservation] = []
+    properties = (
+        "Id",
+        "Name",
+        "User",
+        "State",
+        "Active",
+        "Type",
+        "Class",
+        "Seat",
+        "Remote",
+        "Service",
+    )
+    for session_id, listed_uid, listed_name in enumerated:
+        show_arguments = (
+            "loginctl",
+            "show-session",
+            session_id,
+            "--no-pager",
+            *(f"--property={name}" for name in properties),
+        )
+        detail_result = command_runner(show_arguments, LOGINCTL_TIMEOUT)
+        listed_candidates = candidate_names_for_identity(
+            listed_uid, listed_name, candidates_by_uid, candidates_by_name
+        )
+        if detail_result.failure or detail_result.returncode != 0:
+            if listed_candidates:
+                username = (
+                    next(iter(listed_candidates))
+                    if len(listed_candidates) == 1
+                    else "ambiguous"
+                )
+                sessions.append(unavailable_session(session_id, username))
+            continue
+
+        known_properties = set(properties)
+        values: dict[str, set[str]] = {}
+        malformed_properties = False
+        for line in detail_result.stdout.splitlines():
+            if not line:
+                continue
+            if "=" not in line:
+                malformed_properties = True
+                continue
+            key, value = line.split("=", 1)
+            if key in known_properties:
+                values.setdefault(key, set()).add(value)
+
+        def single_value(key: str) -> str | None:
+            observed = values.get(key, set())
+            if len(observed) == 1:
+                value = next(iter(observed))
+                return value or None
+            return None
+
+        detailed_uid = single_value("User")
+        detailed_name = single_value("Name")
+        detailed_session_id = single_value("Id")
+        detailed_candidates = candidate_names_for_identity(
+            detailed_uid, detailed_name, candidates_by_uid, candidates_by_name
+        )
+        possible_candidates = listed_candidates | detailed_candidates
+        if not possible_candidates:
+            continue
+
+        conflicting_properties = any(len(observed) > 1 for observed in values.values())
+        identity_conflict = (
+            len(possible_candidates) > 1
+            or (
+                listed_uid is not None
+                and detailed_uid is not None
+                and listed_uid != detailed_uid
+            )
+            or (
+                listed_name is not None
+                and detailed_name is not None
+                and listed_name != detailed_name
+            )
+            or (
+                detailed_session_id is not None
+                and detailed_session_id != session_id
+            )
+        )
+        ambiguous = malformed_properties or conflicting_properties or identity_conflict
+        username = (
+            next(iter(possible_candidates))
+            if len(possible_candidates) == 1
+            else "ambiguous"
+        )
+
+        def rendered_property(key: str) -> str:
+            if len(values.get(key, set())) > 1:
+                return "ambiguous"
+            return single_value(key) or "unavailable"
+
+        state = rendered_property("State")
+        active = rendered_property("Active")
+        session_type = rendered_property("Type")
+        session_class = rendered_property("Class")
+        seat = rendered_property("Seat")
+        remote = rendered_property("Remote")
+        if session_type == "ambiguous":
+            graphical = "ambiguous"
+        elif session_type == "unavailable":
+            graphical = "unavailable"
+        elif session_type in {"wayland", "x11"}:
+            graphical = "yes"
+        else:
+            graphical = "no"
+        required_values = (state, active, session_type, session_class, seat, remote)
+        if ambiguous:
+            status = "ambiguous"
+        elif "unavailable" in required_values:
+            status = "unavailable"
+        else:
+            status = "confirmed"
+        sessions.append(
+            SessionObservation(
+                session_id,
+                username,
+                state,
+                active,
+                session_type,
+                session_class,
+                seat,
+                remote,
+                graphical,
+                status,
+            )
+        )
+
+    sessions.sort(key=lambda session: session_sort_key(session.session_id))
+    conditions = []
+    if malformed_enumeration:
+        conditions.append("Malformed session enumeration rows were ignored")
+    if truncated:
+        conditions.append(f"Results were truncated to {SESSION_LIMIT} sessions")
+    explanation = "; ".join(conditions) + "." if conditions else None
+    overall_status = "ambiguous" if conditions else "confirmed"
+    return SessionListObservation(tuple(sessions), overall_status, explanation, truncated)
+
+
 def render_status(candidates: Sequence[Candidate]) -> str:
     consistent = sum(candidate.state == "consistent" for candidate in candidates)
     warning_count = sum(len(candidate.warnings) for candidate in candidates)
@@ -371,6 +624,60 @@ def render_list(candidates: Sequence[Candidate]) -> str:
         ).rstrip()
 
     return "\n".join((format_row(headers), *(format_row(row) for row in rows)))
+
+
+def render_session_list(observation_result: SessionListObservation) -> str:
+    if not observation_result.sessions:
+        lines = [
+            "APX sessions",
+            f"Status: {observation_result.status}",
+            "Sessions: none",
+        ]
+        if observation_result.explanation:
+            lines.append(f"Explanation: {observation_result.explanation}")
+        return "\n".join(lines)
+
+    headers = (
+        "SESSION",
+        "USER",
+        "STATE",
+        "ACTIVE",
+        "TYPE",
+        "CLASS",
+        "SEAT",
+        "REMOTE",
+        "GRAPHICAL",
+        "STATUS",
+    )
+    rows = [
+        (
+            session.session_id,
+            session.username,
+            session.state,
+            session.active,
+            session.session_type,
+            session.session_class,
+            session.seat,
+            session.remote,
+            session.graphical,
+            session.status,
+        )
+        for session in observation_result.sessions
+    ]
+    widths = [
+        max(len(headers[index]), *(len(row[index]) for row in rows))
+        for index in range(len(headers))
+    ]
+
+    def format_row(row: tuple[str, ...]) -> str:
+        return "  ".join(
+            value.ljust(widths[index]) for index, value in enumerate(row)
+        ).rstrip()
+
+    lines = [format_row(headers), *(format_row(row) for row in rows)]
+    if observation_result.explanation:
+        lines.append(f"Explanation: {observation_result.explanation}")
+    return "\n".join(lines)
 
 
 def render_inspect(
@@ -432,6 +739,15 @@ def run(
 
     if args.command == "status":
         print(render_status(candidates), file=stdout)
+        return 0
+
+    if args.command == "session":
+        try:
+            session_result = observe_sessions(candidates, command_runner)
+        except Exception as error:
+            print(f"APX observation error: {error}", file=stderr)
+            return 1
+        print(render_session_list(session_result), file=stdout)
         return 0
 
     if args.environment_command == "list":
