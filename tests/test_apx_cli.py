@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +29,28 @@ def stat_result(*, uid: int, directory: bool = True) -> os.stat_result:
     mode = (stat.S_IFDIR if directory else stat.S_IFREG) | 0o700
     values = [mode, 0, 0, 0, uid, 0, 0, 0, 0, 0]
     return os.stat_result(values)
+
+
+def mount_json(
+    *,
+    fstype: str = "btrfs",
+    options: str = "rw,relatime",
+    filesystems: str | None = None,
+) -> str:
+    if filesystems is not None:
+        return filesystems
+    return (
+        '{"filesystems":[{"target":"/home","source":"/dev/test[/@home]",'
+        f'"fstype":"{fstype}","options":"{options}"}}]}}'
+    )
+
+
+def successful_mount_result(**kwargs: str) -> apx_cli.CommandResult:
+    return apx_cli.CommandResult(0, mount_json(**kwargs), "")
+
+
+def successful_btrfs_result() -> apx_cli.CommandResult:
+    return apx_cli.CommandResult(0, "Name: apx-development\nUUID: test\n", "")
 
 
 class ParserTests(unittest.TestCase):
@@ -124,6 +146,9 @@ class CommandTests(unittest.TestCase):
     def setUp(self) -> None:
         self.accounts = [Account("apx-hub", 1001, "/home/apx-hub")]
         self.stat_mock = Mock(return_value=stat_result(uid=1001))
+        self.command_runner = Mock(
+            side_effect=[successful_mount_result(), successful_btrfs_result()]
+        )
 
     def run_command(self, argv: list[str]) -> tuple[int, str, str]:
         stdout = StringIO()
@@ -132,6 +157,7 @@ class CommandTests(unittest.TestCase):
             argv,
             accounts_provider=lambda: self.accounts,
             stat_func=self.stat_mock,
+            command_runner=self.command_runner,
             stdout=stdout,
             stderr=stderr,
         )
@@ -200,6 +226,206 @@ class CommandTests(unittest.TestCase):
     def test_injected_observations_do_not_touch_real_machine(self) -> None:
         self.run_command(["status"])
         self.stat_mock.assert_called_once_with("/home/apx-hub")
+        self.command_runner.assert_not_called()
+
+
+class MountObservationTests(unittest.TestCase):
+    def observe(self, result: apx_cli.CommandResult) -> apx_cli.MountObservation:
+        runner = Mock(return_value=result)
+        observation = apx_cli.observe_mount("/home/apx-test", runner)
+        runner.assert_called_once_with(
+            ("findmnt", "--json", "--target", "/home/apx-test"), 3.0
+        )
+        return observation
+
+    def test_valid_btrfs_result(self) -> None:
+        result = self.observe(successful_mount_result())
+        self.assertEqual(result.status, "confirmed")
+        self.assertEqual(result.filesystem_type, "btrfs")
+        self.assertEqual(result.target, "/home")
+        self.assertEqual(result.source, "/dev/test[/@home]")
+
+    def test_valid_non_btrfs_result(self) -> None:
+        result = self.observe(successful_mount_result(fstype="ext4"))
+        self.assertEqual(result.filesystem_type, "ext4")
+
+    def test_ro_mount(self) -> None:
+        result = self.observe(successful_mount_result(options="ro,nosuid"))
+        self.assertTrue(result.read_only)
+        self.assertEqual(result.status, "confirmed")
+
+    def test_rw_mount(self) -> None:
+        result = self.observe(successful_mount_result(options="rw,nosuid"))
+        self.assertFalse(result.read_only)
+        self.assertEqual(result.status, "confirmed")
+
+    def test_missing_ro_rw_is_ambiguous(self) -> None:
+        result = self.observe(successful_mount_result(options="nosuid,nodev"))
+        self.assertIsNone(result.read_only)
+        self.assertEqual(result.status, "ambiguous")
+
+    def test_malformed_json_is_unavailable(self) -> None:
+        result = self.observe(apx_cli.CommandResult(0, "{", ""))
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("malformed JSON", result.explanation)
+
+    def test_unexpected_schema_is_unavailable(self) -> None:
+        result = self.observe(apx_cli.CommandResult(0, '{"filesystems":{}}', ""))
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("unexpected JSON schema", result.explanation)
+
+    def test_empty_result_is_unavailable(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(0, '{"filesystems":[]}', "")
+        )
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("no filesystem", result.explanation)
+
+    def test_multiple_results_are_ambiguous(self) -> None:
+        data = (
+            '{"filesystems":['
+            '{"target":"/","source":"a","fstype":"btrfs","options":"rw"},'
+            '{"target":"/home","source":"b","fstype":"btrfs","options":"rw"}]}'
+        )
+        result = self.observe(apx_cli.CommandResult(0, data, ""))
+        self.assertEqual(result.status, "ambiguous")
+
+    def test_missing_executable_is_unavailable(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(None, "", "", "missing executable")
+        )
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("missing executable", result.explanation)
+
+    def test_timeout_is_unavailable(self) -> None:
+        result = self.observe(apx_cli.CommandResult(None, "", "", "timeout"))
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("timeout", result.explanation)
+
+    def test_unexpected_nonzero_is_unavailable(self) -> None:
+        result = self.observe(apx_cli.CommandResult(7, "", "unexpected"))
+        self.assertEqual(result.status, "unavailable")
+        self.assertIn("exit code 7", result.explanation)
+
+
+class BtrfsObservationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.mount = apx_cli.MountObservation(
+            "confirmed", "btrfs", "/home", "/dev/test", "rw", False, "observed"
+        )
+
+    def observe(self, result: apx_cli.CommandResult) -> apx_cli.BtrfsObservation:
+        runner = Mock(return_value=result)
+        observation = apx_cli.observe_btrfs(
+            "/home/apx-test", self.mount, runner
+        )
+        runner.assert_called_once_with(
+            ("btrfs", "subvolume", "show", "/home/apx-test"), 5.0
+        )
+        return observation
+
+    def test_confirmed_subvolume(self) -> None:
+        result = self.observe(successful_btrfs_result())
+        self.assertEqual(result.subvolume, "yes")
+
+    def test_narrowly_confirmed_non_subvolume(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(
+                1, "", "ERROR: Not a Btrfs subvolume: Invalid argument\n"
+            )
+        )
+        self.assertEqual(result.subvolume, "no")
+
+    def test_non_btrfs_is_not_applicable_and_skips_command(self) -> None:
+        mount = apx_cli.MountObservation(
+            "confirmed", "ext4", "/", "/dev/test", "rw", False, "observed"
+        )
+        runner = Mock()
+        result = apx_cli.observe_btrfs("/home/apx-test", mount, runner)
+        self.assertEqual(result.filesystem, "no")
+        self.assertEqual(result.subvolume, "not applicable")
+        runner.assert_not_called()
+
+    def test_permission_denied_is_unavailable(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(1, "", "ERROR: Permission denied")
+        )
+        self.assertEqual(result.subvolume, "unavailable")
+        self.assertIn("Permission denied", result.explanation)
+
+    def test_missing_executable_is_unavailable(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(None, "", "", "missing executable")
+        )
+        self.assertEqual(result.subvolume, "unavailable")
+        self.assertIn("missing executable", result.explanation)
+
+    def test_inaccessible_path_is_unavailable(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(1, "", "No such file or directory")
+        )
+        self.assertEqual(result.subvolume, "unavailable")
+        self.assertIn("inaccessible", result.explanation)
+
+    def test_timeout_is_unavailable(self) -> None:
+        result = self.observe(apx_cli.CommandResult(None, "", "", "timeout"))
+        self.assertEqual(result.subvolume, "unavailable")
+        self.assertIn("timeout", result.explanation)
+
+    def test_unexpected_nonzero_is_not_classified_as_no(self) -> None:
+        result = self.observe(apx_cli.CommandResult(1, "", "unknown failure"))
+        self.assertEqual(result.subvolume, "unavailable")
+        self.assertNotEqual(result.subvolume, "no")
+
+    def test_success_with_malformed_output_is_ambiguous(self) -> None:
+        result = self.observe(apx_cli.CommandResult(0, "unexpected", ""))
+        self.assertEqual(result.subvolume, "ambiguous")
+
+    def test_diagnostic_is_sanitized(self) -> None:
+        result = self.observe(
+            apx_cli.CommandResult(1, "", "failure\nwith\tcontrol\x1b[31m")
+        )
+        self.assertNotIn("\n", result.explanation)
+        self.assertNotIn("\x1b", result.explanation)
+
+
+class CommandRunnerTests(unittest.TestCase):
+    @patch("apx_cli.subprocess.run")
+    def test_runner_uses_safe_arguments_timeout_and_locale(
+        self, subprocess_run: Mock
+    ) -> None:
+        subprocess_run.return_value = subprocess.CompletedProcess(
+            ("findmnt",), 0, "output", ""
+        )
+        result = apx_cli.run_command(
+            ("findmnt", "--json", "--target", "/home/apx-test"), 3.0
+        )
+        self.assertEqual(result.returncode, 0)
+        arguments, = subprocess_run.call_args.args
+        self.assertEqual(
+            arguments,
+            ("findmnt", "--json", "--target", "/home/apx-test"),
+        )
+        options = subprocess_run.call_args.kwargs
+        self.assertFalse(options["shell"])
+        self.assertEqual(options["timeout"], 3.0)
+        self.assertEqual(options["env"]["LC_ALL"], "C")
+        self.assertNotIn("sudo", arguments)
+        self.assertNotIn(arguments[0], {"mount", "umount", "chown", "chmod"})
+
+    @patch("apx_cli.subprocess.run", side_effect=FileNotFoundError)
+    def test_runner_structures_missing_executable(self, _run: Mock) -> None:
+        result = apx_cli.run_command(("findmnt",), 3.0)
+        self.assertEqual(result.failure, "missing executable")
+
+    @patch("apx_cli.subprocess.run")
+    def test_runner_bounds_output(self, subprocess_run: Mock) -> None:
+        subprocess_run.return_value = subprocess.CompletedProcess(
+            ("findmnt",), 1, "x" * 9000, "y" * 9000
+        )
+        result = apx_cli.run_command(("findmnt",), 3.0)
+        self.assertEqual(len(result.stdout), apx_cli.COMMAND_OUTPUT_LIMIT)
+        self.assertEqual(len(result.stderr), apx_cli.COMMAND_OUTPUT_LIMIT)
 
 
 class EntryPointTests(unittest.TestCase):

@@ -5,11 +5,19 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import json
 import os
 import pwd
+import re
 import stat
+import subprocess
 import sys
 from typing import Callable, Iterable, Sequence, TextIO
+
+
+FINDMNT_TIMEOUT = 3.0
+BTRFS_TIMEOUT = 5.0
+COMMAND_OUTPUT_LIMIT = 8192
 
 
 @dataclass(frozen=True)
@@ -24,6 +32,77 @@ class Candidate:
     ownership_matches: bool | None
     state: str
     warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CommandResult:
+    returncode: int | None
+    stdout: str
+    stderr: str
+    failure: str | None = None
+
+
+@dataclass(frozen=True)
+class MountObservation:
+    status: str
+    filesystem_type: str | None
+    target: str | None
+    source: str | None
+    options: str | None
+    read_only: bool | None
+    explanation: str
+
+
+@dataclass(frozen=True)
+class BtrfsObservation:
+    filesystem: str
+    subvolume: str
+    explanation: str
+
+
+CommandRunner = Callable[[Sequence[str], float], CommandResult]
+
+
+def sanitize_diagnostic(value: str) -> str:
+    cleaned = "".join(
+        character if character.isprintable() else " " for character in value
+    )
+    return " ".join(cleaned.split())[:COMMAND_OUTPUT_LIMIT]
+
+
+def run_command(arguments: Sequence[str], timeout: float) -> CommandResult:
+    if isinstance(arguments, (str, bytes)):
+        raise TypeError("command arguments must be a sequence of strings")
+    command = tuple(arguments)
+    if not command or not all(isinstance(argument, str) for argument in command):
+        raise TypeError("command arguments must be a non-empty sequence of strings")
+    environment = os.environ.copy()
+    environment["LC_ALL"] = "C"
+    try:
+        completed = subprocess.run(
+            command,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=environment,
+        )
+    except FileNotFoundError:
+        return CommandResult(None, "", "", "missing executable")
+    except subprocess.TimeoutExpired as error:
+        return CommandResult(
+            None,
+            str(error.stdout or "")[:COMMAND_OUTPUT_LIMIT],
+            str(error.stderr or "")[:COMMAND_OUTPUT_LIMIT],
+            "timeout",
+        )
+    except OSError as error:
+        return CommandResult(None, "", "", f"execution error: {error}")
+    return CommandResult(
+        completed.returncode,
+        completed.stdout[:COMMAND_OUTPUT_LIMIT],
+        completed.stderr[:COMMAND_OUTPUT_LIMIT],
+    )
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -128,6 +207,137 @@ def observation(value: object) -> str:
     return str(value)
 
 
+def unavailable_mount(explanation: str) -> MountObservation:
+    return MountObservation(
+        "unavailable", None, None, None, None, None, explanation
+    )
+
+
+def observe_mount(home: str, command_runner: CommandRunner) -> MountObservation:
+    result = command_runner(("findmnt", "--json", "--target", home), FINDMNT_TIMEOUT)
+    if result.failure:
+        return unavailable_mount(f"findmnt {result.failure}.")
+    if result.returncode != 0:
+        diagnostic = sanitize_diagnostic(result.stderr or result.stdout)
+        detail = f": {diagnostic}" if diagnostic else ""
+        return unavailable_mount(f"findmnt failed with exit code {result.returncode}{detail}.")
+
+    try:
+        document = json.loads(result.stdout)
+    except (json.JSONDecodeError, TypeError):
+        return unavailable_mount("findmnt returned malformed JSON.")
+    if not isinstance(document, dict) or set(document) != {"filesystems"}:
+        return unavailable_mount("findmnt returned an unexpected JSON schema.")
+    filesystems = document["filesystems"]
+    if not isinstance(filesystems, list):
+        return unavailable_mount("findmnt returned an unexpected JSON schema.")
+    if not filesystems:
+        return unavailable_mount("findmnt returned no filesystem for the home path.")
+    if len(filesystems) != 1:
+        return MountObservation(
+            "ambiguous",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "findmnt returned multiple filesystems for the home path.",
+        )
+
+    filesystem = filesystems[0]
+    required = ("fstype", "target", "source", "options")
+    if not isinstance(filesystem, dict) or any(
+        not isinstance(filesystem.get(field), str) or not filesystem[field]
+        for field in required
+    ):
+        return unavailable_mount("findmnt returned an unexpected JSON schema.")
+
+    options = filesystem["options"]
+    option_tokens = set(options.split(","))
+    has_ro = "ro" in option_tokens
+    has_rw = "rw" in option_tokens
+    if has_ro == has_rw:
+        mount_status = "ambiguous"
+        read_only = None
+        explanation = (
+            "Mount options do not contain one unambiguous ro or rw token; "
+            "values are observations from the current execution context."
+        )
+    else:
+        mount_status = "confirmed"
+        read_only = has_ro
+        explanation = "Observed in the current execution context; host state is not implied."
+    return MountObservation(
+        mount_status,
+        filesystem["fstype"],
+        filesystem["target"],
+        filesystem["source"],
+        options,
+        read_only,
+        explanation,
+    )
+
+
+def result_diagnostic(result: CommandResult) -> str:
+    return sanitize_diagnostic(result.stderr or result.stdout)
+
+
+def observe_btrfs(
+    home: str, mount: MountObservation, command_runner: CommandRunner
+) -> BtrfsObservation:
+    if mount.filesystem_type is None:
+        return BtrfsObservation(
+            "unavailable",
+            "unavailable",
+            "The containing filesystem could not be established.",
+        )
+    if mount.filesystem_type.lower() != "btrfs":
+        return BtrfsObservation(
+            "no",
+            "not applicable",
+            "The containing filesystem was confirmed as non-Btrfs in the current execution context.",
+        )
+
+    result = command_runner(
+        ("btrfs", "subvolume", "show", home), BTRFS_TIMEOUT
+    )
+    if result.failure:
+        return BtrfsObservation(
+            "yes", "unavailable", f"btrfs inspection {result.failure}."
+        )
+    diagnostic = result_diagnostic(result)
+    if result.returncode == 0:
+        if not result.stdout.strip() or not re.search(
+            r"(?m)^\s*[^:\n]+:\s*\S", result.stdout
+        ):
+            return BtrfsObservation(
+                "yes",
+                "ambiguous",
+                "btrfs returned successful but malformed output.",
+            )
+        return BtrfsObservation(
+            "yes",
+            "yes",
+            "Confirmed by btrfs subvolume show in the current execution context.",
+        )
+
+    if diagnostic == "ERROR: Not a Btrfs subvolume: Invalid argument":
+        return BtrfsObservation(
+            "yes",
+            "no",
+            "btrfs explicitly reported that the path is not a subvolume.",
+        )
+    lowered = diagnostic.lower()
+    if "permission denied" in lowered or "operation not permitted" in lowered:
+        reason = "Permission denied while inspecting the path"
+    elif "no such file or directory" in lowered or "cannot access" in lowered:
+        reason = "The path was inaccessible"
+    else:
+        reason = f"Unexpected btrfs failure with exit code {result.returncode}"
+    detail = f": {diagnostic}" if diagnostic else ""
+    return BtrfsObservation("yes", "unavailable", f"{reason}{detail}.")
+
+
 def render_status(candidates: Sequence[Candidate]) -> str:
     consistent = sum(candidate.state == "consistent" for candidate in candidates)
     warning_count = sum(len(candidate.warnings) for candidate in candidates)
@@ -163,7 +373,11 @@ def render_list(candidates: Sequence[Candidate]) -> str:
     return "\n".join((format_row(headers), *(format_row(row) for row in rows)))
 
 
-def render_inspect(candidate: Candidate) -> str:
+def render_inspect(
+    candidate: Candidate,
+    mount: MountObservation,
+    btrfs: BtrfsObservation,
+) -> str:
     lines = [
         f"Environment candidate: {candidate.name}",
         f"Role: {candidate.role}",
@@ -181,6 +395,22 @@ def render_inspect(candidate: Candidate) -> str:
         lines.extend(f"- {warning}" for warning in candidate.warnings)
     else:
         lines.append("Warnings: none")
+    lines.extend(
+        (
+            "Filesystem:",
+            f"  Status: {mount.status}",
+            f"  Type: {observation(mount.filesystem_type)}",
+            f"  Mount target: {observation(mount.target)}",
+            f"  Mount source: {observation(mount.source)}",
+            f"  Mount options: {observation(mount.options)}",
+            f"  Read-only: {observation(mount.read_only)}",
+            f"  Explanation: {mount.explanation}",
+            "Btrfs:",
+            f"  Filesystem: {btrfs.filesystem}",
+            f"  Subvolume: {btrfs.subvolume}",
+            f"  Explanation: {btrfs.explanation}",
+        )
+    )
     return "\n".join(lines)
 
 
@@ -189,6 +419,7 @@ def run(
     *,
     accounts_provider: Callable[[], Iterable[object]] = pwd.getpwall,
     stat_func: Callable[[str], os.stat_result] = os.stat,
+    command_runner: CommandRunner = run_command,
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
 ) -> int:
@@ -213,7 +444,13 @@ def run(
     if candidate is None:
         print(f"Unknown Environment candidate: {args.name}", file=stderr)
         return 2
-    print(render_inspect(candidate), file=stdout)
+    try:
+        mount = observe_mount(candidate.home, command_runner)
+        btrfs = observe_btrfs(candidate.home, mount, command_runner)
+    except Exception as error:
+        print(f"APX observation error: {error}", file=stderr)
+        return 1
+    print(render_inspect(candidate, mount, btrfs), file=stdout)
     return 0
 
 
