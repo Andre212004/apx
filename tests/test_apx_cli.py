@@ -71,6 +71,10 @@ class ParserTests(unittest.TestCase):
         args = apx_cli.create_parser().parse_args(["host", "check"])
         self.assertEqual((args.command, args.host_command), ("host", "check"))
 
+    def test_host_validate_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "validate"])
+        self.assertEqual((args.command, args.host_command), ("host", "validate"))
+
     def test_host_check_complete_report_returns_zero(self) -> None:
         stdout = StringIO()
         with patch("apx_cli.observe_registration", return_value=SimpleNamespace(state="absent")), \
@@ -620,6 +624,7 @@ def session_properties(
     session_class: str | None = "user",
     seat: str | None = "seat0",
     remote: str | None = "no",
+    vt: str | None = "2",
     extra: str = "",
 ) -> str:
     values = {
@@ -633,6 +638,7 @@ def session_properties(
         "Seat": seat,
         "Remote": remote,
         "Service": "test-service",
+        "VTNr": vt,
     }
     lines = [f"{key}={value}" for key, value in values.items() if value is not None]
     if extra:
@@ -691,8 +697,10 @@ class SessionObservationTests(unittest.TestCase):
                 "--property=State", "--property=Active", "--property=Type",
                 "--property=Class", "--property=Seat", "--property=Remote",
                 "--property=Service",
+                "--property=VTNr",
             ),
         )
+        self.assertEqual(session.vt, "2")
         self.assertEqual(timeout, 3.0)
         self.assertNotIn("sudo", show_arguments)
         self.assertNotIn(show_arguments[0], {"systemctl", "login", "logout"})

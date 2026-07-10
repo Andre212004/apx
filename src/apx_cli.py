@@ -42,6 +42,7 @@ from apx_registration import (
     observe_uuid_uniqueness,
 )
 from apx_host import observe_host_readiness, render_host_readiness
+from apx_practical import observe_practical, render_practical
 
 
 FINDMNT_TIMEOUT = 3.0
@@ -112,6 +113,7 @@ class SessionObservation:
     remote: str
     graphical: str
     status: str
+    vt: str = "unavailable"
 
 
 @dataclass(frozen=True)
@@ -176,6 +178,7 @@ def create_parser() -> argparse.ArgumentParser:
     host = commands.add_parser("host", help="inspect host readiness")
     host_commands = host.add_subparsers(dest="host_command", required=True)
     host_commands.add_parser("check", help="check readiness for the trial experiment")
+    host_commands.add_parser("validate", help="inspect practical host state for milestone 3A")
 
     environment = commands.add_parser(
         "environment", help="inspect candidate APX Environment accounts"
@@ -566,6 +569,7 @@ def observe_sessions(
         "Seat",
         "Remote",
         "Service",
+        "VTNr",
     )
     for session_id, listed_uid, listed_name in enumerated:
         show_arguments = (
@@ -655,6 +659,7 @@ def observe_sessions(
         session_class = rendered_property("Class")
         seat = rendered_property("Seat")
         remote = rendered_property("Remote")
+        vt = rendered_property("VTNr")
         if session_type == "ambiguous":
             graphical = "ambiguous"
         elif session_type == "unavailable":
@@ -682,6 +687,7 @@ def observe_sessions(
                 remote,
                 graphical,
                 status,
+                vt,
             )
         )
 
@@ -983,6 +989,18 @@ def run(
 
     if args.command == "host":
         try:
+            if args.host_command == "validate":
+                current_sessions = observe_sessions(candidates, command_runner)
+                report = observe_practical(
+                    accounts=accounts, sessions=current_sessions,
+                    mount_observer=lambda path: observe_mount(path, command_runner),
+                    btrfs_observer=lambda path, mount: observe_btrfs(path, mount, command_runner),
+                    command_runner=command_runner, lstat_func=lstat_func,
+                    scandir_func=scandir_func, which_func=which_func,
+                    readlink_func=readlink_func,
+                )
+                print(render_practical(report), file=stdout)
+                return 0
             trial_registration = observe_registration(
                 "trial", registration_directory, uid_resolver, gid_resolver
             )
