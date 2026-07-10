@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import grp
 import json
 import os
 import pwd
@@ -13,22 +14,31 @@ import stat
 import subprocess
 import sys
 from typing import Callable, Iterable, Sequence, TextIO
+import uuid
 
 from apx_environment import (
     CreationPreconditions,
     EnvironmentClassification,
     EnvironmentIdentity,
+    INCOMPLETE_OPERATION_ROOT,
     classify_observed_environment,
     create_plan,
     derive_identity,
     render_creation_plan,
     validate_logical_name,
 )
+from apx_consistency import (
+    ConsistencyVerification,
+    observe_home_metadata,
+    observe_incomplete_operation,
+    verify_consistency,
+)
 from apx_registration import (
     DEFAULT_REGISTRATION_DIRECTORY,
     RegistrationObservation,
     RegistrationObservationState,
     observe_registration,
+    observe_uuid_uniqueness,
 )
 
 
@@ -78,6 +88,14 @@ class BtrfsObservation:
     filesystem: str
     subvolume: str
     explanation: str
+    subvolume_id: int | None = None
+    subvolume_uuid: str | None = None
+    parent_uuid: str | None = None
+    parent_uuid_observed: bool = False
+    identity_status: str = "unavailable"
+    subvolume_id_status: str = "unavailable"
+    subvolume_uuid_status: str = "unavailable"
+    parent_uuid_status: str = "unavailable"
 
 
 @dataclass(frozen=True)
@@ -373,10 +391,64 @@ def observe_btrfs(
                 "ambiguous",
                 "btrfs returned successful but malformed output.",
             )
+        fields: dict[str, list[str]] = {}
+        for line in result.stdout.splitlines():
+            if ":" not in line:
+                continue
+            key, value = line.split(":", 1)
+            fields.setdefault(key.strip(), []).append(value.strip())
+        subvolume_id: int | None = None
+        subvolume_uuid: str | None = None
+        parent_uuid: str | None = None
+        parent_observed = False
+        id_values = fields.get("Subvolume ID", [])
+        uuid_values = fields.get("UUID", [])
+        parent_values = fields.get("Parent UUID", [])
+        id_status = "confirmed"
+        uuid_status = "confirmed"
+        parent_status = "confirmed"
+        if len(id_values) == 1 and id_values[0].isdigit() and int(id_values[0]) > 0:
+            subvolume_id = int(id_values[0])
+        else:
+            id_status = "unavailable" if not id_values else "ambiguous"
+        if len(uuid_values) == 1:
+            try:
+                canonical = str(uuid.UUID(uuid_values[0]))
+                if canonical == uuid_values[0]:
+                    subvolume_uuid = canonical
+                else:
+                    uuid_status = "ambiguous"
+            except ValueError:
+                uuid_status = "ambiguous"
+        else:
+            uuid_status = "unavailable" if not uuid_values else "ambiguous"
+        if len(parent_values) == 1:
+            if parent_values[0] in {"-", "none", "None"}:
+                parent_uuid = None
+                parent_observed = True
+            else:
+                try:
+                    canonical_parent = str(uuid.UUID(parent_values[0]))
+                    if canonical_parent == parent_values[0]:
+                        parent_uuid = canonical_parent
+                        parent_observed = True
+                    else:
+                        parent_status = "ambiguous"
+                except ValueError:
+                    parent_status = "ambiguous"
+        else:
+            parent_status = "unavailable" if not parent_values else "ambiguous"
+        statuses = {id_status, uuid_status, parent_status}
+        identity_status = (
+            "ambiguous" if "ambiguous" in statuses
+            else "unavailable" if "unavailable" in statuses
+            else "confirmed"
+        )
         return BtrfsObservation(
-            "yes",
-            "yes",
+            "yes", "yes",
             "Confirmed by btrfs subvolume show in the current execution context.",
+            subvolume_id, subvolume_uuid, parent_uuid, parent_observed,
+            identity_status, id_status, uuid_status, parent_status,
         )
 
     if diagnostic == "ERROR: Not a Btrfs subvolume: Invalid argument":
@@ -753,6 +825,7 @@ def render_inspect(
     btrfs: BtrfsObservation,
     registration: RegistrationObservation,
     classification: EnvironmentClassification,
+    consistency: ConsistencyVerification | None = None,
 ) -> str:
     lines = [
         f"Environment candidate: {candidate.name}",
@@ -765,7 +838,6 @@ def render_inspect(
         f"Home is directory: {observation(candidate.home_is_directory)}",
         f"Home ownership UID: {observation(candidate.home_owner_uid)}",
         f"Ownership matches account UID: {observation(candidate.ownership_matches)}",
-        f"Formal classification: {render_environment_classification(classification)}",
     ]
     if candidate.warnings:
         lines.append("Warnings:")
@@ -789,6 +861,51 @@ def render_inspect(
         )
     elif registration.reason:
         lines.append(f"  Reason: {registration.reason}")
+    lines.append("Consistency:")
+    if consistency is None:
+        lines.append("  Verification: unavailable (valid registration required)")
+    else:
+        post = consistency.postconditions
+        lines.extend(
+            (
+                f"  Registration ownership: {post.registration_host_owned}",
+                f"  Registration mode: {post.registration_mode_matches}",
+                f"  Home ownership: {post.ownership_matches}",
+                f"  Home group: {post.group_matches}",
+                f"  Home mode: {post.mode_matches}",
+                f"  Home writable in current context: {consistency.home.writable}",
+                f"  Home filesystem Btrfs: {post.home_filesystem_btrfs}",
+                f"  Dedicated Btrfs subvolume: {post.dedicated_btrfs_subvolume}",
+                f"  Subvolume ID match: {post.subvolume_id_matches}",
+                f"  Subvolume UUID match: {post.subvolume_uuid_matches}",
+                f"  Parent UUID match: {post.parent_uuid_matches}",
+                f"  UUID uniqueness: {post.uuid_unique}",
+                f"  Incomplete operation absent: {post.incomplete_marker_absent}",
+            )
+        )
+        if post.mode_matches == "not-satisfied" and consistency.home.mode is not None:
+            lines.extend(("    Expected: 0700", f"    Observed: {consistency.home.mode:04o}"))
+        if post.ownership_matches == "not-satisfied" and consistency.home.uid is not None:
+            lines.extend((f"    Expected owner UID: {candidate.uid}", f"    Observed owner UID: {consistency.home.uid}"))
+        if post.group_matches == "not-satisfied" and consistency.home.gid is not None:
+            lines.append(f"    Observed home GID: {consistency.home.gid}")
+        if post.registration_mode_matches == "not-satisfied" and consistency.registration_metadata is not None:
+            lines.extend(("    Registration expected: 0644", f"    Registration observed: {consistency.registration_metadata.mode:04o}"))
+        if consistency.registration_metadata is not None:
+            if post.registration_owner_matches == "not-satisfied":
+                lines.extend(("    Registration expected owner UID: 0", f"    Registration observed owner UID: {consistency.registration_metadata.uid}"))
+            if post.registration_group_matches == "not-satisfied":
+                lines.extend(("    Registration expected group GID: 0", f"    Registration observed group GID: {consistency.registration_metadata.gid}"))
+        storage = registration.registration.storage if registration.registration else None
+        if storage is not None and post.subvolume_id_matches == "not-satisfied":
+            lines.extend((f"    Expected subvolume ID: {storage.subvolume_id}", f"    Observed subvolume ID: {btrfs.subvolume_id}"))
+        if storage is not None and post.subvolume_uuid_matches == "not-satisfied":
+            lines.extend((f"    Expected subvolume UUID: {storage.subvolume_uuid}", f"    Observed subvolume UUID: {btrfs.subvolume_uuid}"))
+        if storage is not None and post.parent_uuid_matches == "not-satisfied":
+            lines.extend((f"    Expected parent UUID: {storage.parent_uuid}", f"    Observed parent UUID: {btrfs.parent_uuid}"))
+    lines.append(
+        f"Formal classification: {render_environment_classification(classification)}"
+    )
     lines.extend(
         (
             "Filesystem:",
@@ -823,6 +940,11 @@ def run(
     stat_func: Callable[[str], os.stat_result] = os.stat,
     command_runner: CommandRunner = run_command,
     registration_directory: str | os.PathLike[str] = DEFAULT_REGISTRATION_DIRECTORY,
+    incomplete_operation_directory: str | os.PathLike[str] = INCOMPLETE_OPERATION_ROOT,
+    lstat_func: Callable[[str], os.stat_result] = os.lstat,
+    access_func: Callable[..., bool] = os.access,
+    uid_resolver: Callable[[int], object] = pwd.getpwuid,
+    gid_resolver: Callable[[int], object] = grp.getgrgid,
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
 ) -> int:
@@ -886,7 +1008,9 @@ def run(
         identity = derive_identity(logical_name)
         if identity.account != candidate.name:
             raise ValueError("candidate account is not canonical")
-        registration = observe_registration(logical_name, registration_directory)
+        registration = observe_registration(
+            logical_name, registration_directory, uid_resolver, gid_resolver
+        )
     except ValueError:
         registration = RegistrationObservation(
             str(registration_directory),
@@ -899,25 +1023,43 @@ def run(
     except Exception as error:
         print(f"APX observation error: {error}", file=stderr)
         return 1
-    confirmed_mismatch = candidate.state == "inconsistent"
-    if confirmed_mismatch:
-        host_observations = "confirmed"
-    elif candidate.state == "unavailable" or btrfs.subvolume in {
-        "unavailable", "ambiguous", "not applicable"
-    }:
-        host_observations = "unavailable"
+    consistency = None
+    if registration.state is RegistrationObservationState.VALID:
+        account = next((item for item in accounts if item.pw_name == candidate.name), None)
+        home = observe_home_metadata(
+            candidate.home, lstat_func=lstat_func, access_func=access_func,
+            uid_resolver=uid_resolver, gid_resolver=gid_resolver,
+        )
+        uniqueness = observe_uuid_uniqueness(
+            registration.registration, registration_directory
+        )
+        incomplete = observe_incomplete_operation(
+            logical_name, incomplete_operation_directory, lstat_func=lstat_func
+        )
+        consistency = verify_consistency(
+            identity=identity,
+            registration_observation=registration,
+            account=account,
+            home=home,
+            filesystem_type=mount.filesystem_type,
+            filesystem_status=mount.status,
+            btrfs=btrfs,
+            uuid_uniqueness=uniqueness,
+            incomplete_operation=incomplete,
+        )
+        classification = consistency.classification
     else:
-        # Storage UUID/ID and registration file ownership are not observed yet.
-        host_observations = "unavailable"
-    classification = classify_observed_environment(
-        registration_state=registration.state,
-        candidate_present=True,
-        incomplete_operation=False,
-        host_observations=host_observations,
-        confirmed_mismatch=confirmed_mismatch,
-    )
+        classification = classify_observed_environment(
+            registration_state=registration.state,
+            candidate_present=True,
+            incomplete_operation=False,
+            host_observations="unavailable",
+            confirmed_mismatch=candidate.state == "inconsistent",
+        )
     print(
-        render_inspect(candidate, mount, btrfs, registration, classification),
+        render_inspect(
+            candidate, mount, btrfs, registration, classification, consistency
+        ),
         file=stdout,
     )
     return 0

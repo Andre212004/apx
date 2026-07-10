@@ -51,7 +51,14 @@ def successful_mount_result(**kwargs: str) -> apx_cli.CommandResult:
 
 
 def successful_btrfs_result() -> apx_cli.CommandResult:
-    return apx_cli.CommandResult(0, "Name: apx-development\nUUID: test\n", "")
+    return apx_cli.CommandResult(
+        0,
+        "Name: apx-development\n"
+        "Subvolume ID: 256\n"
+        "UUID: 11111111-1111-4111-8111-111111111111\n"
+        "Parent UUID: -\n",
+        "",
+    )
 
 
 class ParserTests(unittest.TestCase):
@@ -254,7 +261,7 @@ class CommandTests(unittest.TestCase):
                 self.assertIn(f"/{logical_name}.json\n", output)
                 self.assertIn("  Observation: valid\n", output)
                 self.assertIn(f"  Logical name: {logical_name}\n", output)
-                self.assertIn("Formal classification: unconfirmed\n", output)
+                self.assertIn("Formal classification: incomplete\n", output)
 
     def test_absent_and_malformed_registration_render_safely(self) -> None:
         absent_code, absent, _ = self.run_inspect_with_registration(
@@ -439,6 +446,48 @@ class BtrfsObservationTests(unittest.TestCase):
     def test_confirmed_subvolume(self) -> None:
         result = self.observe(successful_btrfs_result())
         self.assertEqual(result.subvolume, "yes")
+        self.assertEqual(result.subvolume_id, 256)
+        self.assertEqual(result.subvolume_uuid, "11111111-1111-4111-8111-111111111111")
+        self.assertIsNone(result.parent_uuid)
+        self.assertTrue(result.parent_uuid_observed)
+        self.assertEqual(result.identity_status, "confirmed")
+
+    def test_missing_or_malformed_identity_is_not_confirmed(self) -> None:
+        missing = self.observe(apx_cli.CommandResult(0, "Name: work\n", ""))
+        malformed = self.observe(
+            apx_cli.CommandResult(
+                0,
+                "Name: work\nSubvolume ID: x\nUUID: invalid\nParent UUID: invalid\n",
+                "",
+            )
+        )
+        self.assertEqual(missing.identity_status, "unavailable")
+        self.assertEqual(malformed.identity_status, "ambiguous")
+        self.assertIsNone(malformed.subvolume_uuid)
+        self.assertFalse(malformed.parent_uuid_observed)
+
+    def test_duplicate_and_malformed_identity_fields_are_ambiguous_per_field(self) -> None:
+        duplicate = self.observe(
+            apx_cli.CommandResult(
+                0,
+                "Subvolume ID: 256\nSubvolume ID: 257\n"
+                "UUID: 11111111-1111-4111-8111-111111111111\n"
+                "Parent UUID: -\n",
+                "",
+            )
+        )
+        malformed = self.observe(
+            apx_cli.CommandResult(
+                0,
+                "Subvolume ID: 0\n"
+                "UUID: 11111111-1111-4111-8111-111111111111\n"
+                "Parent UUID: -\n",
+                "",
+            )
+        )
+        self.assertEqual(duplicate.subvolume_id_status, "ambiguous")
+        self.assertEqual(malformed.subvolume_id_status, "ambiguous")
+        self.assertEqual(duplicate.subvolume_uuid_status, "confirmed")
 
     def test_narrowly_confirmed_non_subvolume(self) -> None:
         result = self.observe(

@@ -128,7 +128,7 @@ The current read-only prototype's candidate state named `consistent` covers only
 
 The current `apx environment inspect` command inspects a discovered candidate by its exact Linux account name, for example `apx environment inspect apx-hub`. Creation instead accepts the logical Environment name, for example `apx environment create hub --dry-run`. The inspection command does not resolve logical-name aliases.
 
-Candidate inspection also performs a bounded read-only lookup of the corresponding registration. It reports the registration observation separately from the prototype's legacy candidate state and renders a formal combined classification. The current observer cannot yet confirm registration file ownership or the registered Btrfs subvolume ID, UUID, and parent UUID, so a valid registration normally remains `unconfirmed` in live CLI output unless a confirmed host mismatch makes it `incomplete`. It does not infer formal consistency from the narrower legacy candidate checks.
+Candidate inspection also performs a bounded read-only lookup of the corresponding registration and, when it is valid, freshly compares it with host-visible account, home, filesystem, Btrfs, registration-file, UUID-uniqueness, and incomplete-operation observations. It reports the registration observation separately from the prototype's legacy candidate state and renders every formal postcondition state before the combined classification. It does not infer formal consistency from the narrower legacy candidate checks or from unavailable sandbox evidence.
 
 ### Linux User
 
@@ -160,7 +160,7 @@ The storage terms are distinct:
 - **Parent UUID:** the UUID describing Btrfs snapshot ancestry, or null for a newly created non-snapshot subvolume.
 - **Top-level filesystem path:** the path to the subvolume as resolved within the Btrfs filesystem namespace; it is observational metadata, not the canonical Environment home identity.
 
-A mount target or Btrfs filesystem type alone does not prove that a home is a dedicated subvolume. After creation APX must freshly confirm that the home exists, is a directory, is on Btrfs, is the root of a dedicated subvolume, has the registered subvolume ID and UUID, does not resolve to another Environment's registered subvolume identity, is writable in the intended host context, and has policy ownership and permissions.
+A mount target or Btrfs filesystem type alone does not prove that a home is a dedicated subvolume. After creation APX must freshly confirm that the home exists, is a directory, is on Btrfs, is the root of a dedicated subvolume, has the registered subvolume ID and UUID, does not resolve to another Environment's registered subvolume identity, and has policy ownership and permissions. Current-context writability is supporting evidence rather than an independent consistency postcondition.
 
 Subvolume IDs and UUIDs are unknown before creation and must never be fabricated in a plan. Sandbox-visible mount data is non-authoritative until a future privileged host observer repeats it.
 
@@ -223,7 +223,15 @@ Registration observation states are `absent`, `valid`, `malformed`, `unsupported
 
 The configured registration directory itself and the canonical registration file must not be symbolic links. Both are opened read-only with no-follow semantics, and the file is opened relative to the already opened directory. The Arch Linux implementation requires `O_NOFOLLOW`, `O_DIRECTORY`, and `O_CLOEXEC`; if those primitives are unavailable, observation is explicitly unavailable rather than falling back to unsafe opening. A symbolic link is reported unavailable even if it would resolve within the same filesystem or directory. Parent components of the configured directory are part of the trusted configuration boundary; no CLI input can change them.
 
-`registered` means the registration is valid and every host observation made so far is available and matching, but at least one required postcondition has not yet been observed. `unconfirmed` means at least one required observation was attempted or required but is unavailable or ambiguous. `consistent` requires every required postcondition to be freshly confirmed. The current CLI does not observe registration ownership/mode, incomplete-operation state, full subvolume identity, or UUID uniqueness, so it cannot report `consistent` and normally reports a valid registration as `unconfirmed`.
+`registered` means the registration is valid and every host observation made so far is available and matching, but at least one required postcondition has not yet been attempted. `unconfirmed` means at least one required observation was attempted or required but is unavailable or ambiguous. `consistent` requires every required postcondition to be freshly confirmed. The current CLI attempts the full read-only verification, but sandbox restrictions, missing metadata, or incomplete Btrfs output keep the result `unconfirmed`; a confirmed mismatch produces `incomplete`.
+
+Read-only verification records numeric home and registration UID/GID, resolves owner and group names when the local databases permit, records exact permission bits, and observes writability only in the current execution context. Current-context writability is rendered evidence but is not by itself a formal consistency decision because it depends on the inspecting identity. Home and registration symlinks are never followed.
+
+The bounded Btrfs parser accepts a positive `Subvolume ID`, canonical UUIDs, and a `Parent UUID` of `-`, `none`, or `None` as an explicitly observed null snapshot parent. Missing fields remain unavailable; duplicates or malformed values are ambiguous. A successful subvolume command confirms only dedicated-subvolume status unless each identity field is also valid.
+
+UUID uniqueness scans at most 1024 non-recursive directory entries, validates canonical JSON filenames, skips the current Environment, and compares only valid schema-v1 registrations. Confirmed duplicate UUIDs are `not-satisfied`. Malformed or conflicting non-registrations are ignored as invalid records; an unavailable, symlinked, or unsupported potentially relevant registration prevents confirmed uniqueness. No scanned file is followed through a symlink.
+
+The future incomplete-operation location is `/var/lib/apx/incomplete-operations/<logical-name>.json`. Its directory and canonical record are inspected with no-follow, directory-relative metadata calls only. A missing directory or record confirms marker absence; a regular canonical record makes absence `not-satisfied`; unsafe or unreadable state is unavailable. Inspection never creates, removes, or repairs a marker.
 
 ### Linux Account and Permission Policy
 
@@ -280,7 +288,7 @@ Every precondition is one of `confirmed`, `not-satisfied`, `unavailable`, or `am
 
 ### Creation Postconditions
 
-Success requires a fresh observation confirming all of the following: registration parses as supported schema; account exists; account name and home match derivation; role matches registration; home exists and is a directory; filesystem is Btrfs; home is the root of the dedicated registered subvolume; subvolume ID, UUID, and parent UUID match registration; no other Environment registration binds the same subvolume UUID; home is writable in the intended host context; owner is the resolved account; group is the private primary group; mode is `0700`; registration is `root:root` mode `0644`; no incomplete marker remains; and the resulting classification is consistent.
+Success requires a fresh observation confirming all of the following: registration parses as supported schema; account exists; account name and home match derivation; role matches registration; home exists and is a directory; filesystem is Btrfs; home is the root of the dedicated registered subvolume; subvolume ID, UUID, and parent UUID match registration; no other Environment registration binds the same subvolume UUID; owner is the canonical account UID; group is the account's private primary GID; mode is `0700`; registration is `root:root` mode `0644`; no incomplete marker remains; and the resulting classification is consistent. Current-context writability may be reported but does not independently determine consistency.
 
 A mutation sequence that exits successfully but fails or cannot complete these observations is not successful. Verification must not reuse planning observations.
 

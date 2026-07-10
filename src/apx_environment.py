@@ -14,6 +14,7 @@ REGISTRATION_SCHEMA_VERSION = 1
 PLAN_SCHEMA_VERSION = 2
 PRIVILEGED_REQUEST_PROTOCOL_VERSION = None
 REGISTRATION_ROOT = "/var/lib/apx/environments"
+INCOMPLETE_OPERATION_ROOT = "/var/lib/apx/incomplete-operations"
 MAX_LOGICAL_NAME_LENGTH = 27
 LOGICAL_NAME_PATTERN = re.compile(
     rf"[a-z](?:[a-z0-9]|-(?=[a-z0-9])){{0,{MAX_LOGICAL_NAME_LENGTH - 1}}}"
@@ -43,6 +44,7 @@ class ObservationClassification(str, Enum):
     NOT_SATISFIED = "not-satisfied"
     UNAVAILABLE = "unavailable"
     AMBIGUOUS = "ambiguous"
+    NOT_ATTEMPTED = "not-attempted"
 
 
 class EnvironmentClassification(str, Enum):
@@ -234,13 +236,15 @@ def classify_environment(
         )
     if registration.lifecycle_state == LifecycleState.ARCHIVED.value:
         return EnvironmentClassification.ARCHIVED
+    if confirmed_mismatch:
+        return EnvironmentClassification.INCOMPLETE
     if observations in {
         ObservationClassification.UNAVAILABLE.value,
         ObservationClassification.AMBIGUOUS.value,
     }:
         return EnvironmentClassification.UNCONFIRMED
-    if confirmed_mismatch:
-        return EnvironmentClassification.INCOMPLETE
+    if observations == ObservationClassification.NOT_ATTEMPTED.value:
+        return EnvironmentClassification.REGISTERED
     if observations == ObservationClassification.CONFIRMED.value:
         return EnvironmentClassification.CONSISTENT
     raise ContractError("invalid environment observation classification")
@@ -355,16 +359,27 @@ class CreationPostconditions:
     account_home_matches: str
     role_matches: str
     home_directory_exists: str
+    home_filesystem_btrfs: str
     dedicated_btrfs_subvolume: str
     storage_identity_matches: str
+    subvolume_id_matches: str
+    subvolume_uuid_matches: str
+    parent_uuid_matches: str
+    uuid_unique: str
     ownership_matches: str
     group_matches: str
     mode_matches: str
     registration_host_owned: str
+    registration_owner_matches: str
+    registration_group_matches: str
+    registration_mode_matches: str
     incomplete_marker_absent: str
 
     def classification(self) -> EnvironmentClassification:
         values = tuple(asdict(self).values())
+        allowed = {item.value for item in ObservationClassification}
+        if any(value not in allowed for value in values):
+            raise ContractError("invalid postcondition classification")
         if ObservationClassification.NOT_SATISFIED.value in values:
             return EnvironmentClassification.INCOMPLETE
         if any(
@@ -377,6 +392,8 @@ class CreationPostconditions:
             return EnvironmentClassification.UNCONFIRMED
         if all(value == ObservationClassification.CONFIRMED.value for value in values):
             return EnvironmentClassification.CONSISTENT
+        if ObservationClassification.NOT_ATTEMPTED.value in values:
+            return EnvironmentClassification.REGISTERED
         raise ContractError("invalid postcondition classification")
 
 

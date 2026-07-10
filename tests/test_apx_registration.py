@@ -19,7 +19,7 @@ import apx_registration
 UUID = "11111111-1111-4111-8111-111111111111"
 
 
-def registration_text(name: str = "work") -> str:
+def registration_text(name: str = "work", subvolume_uuid: str = UUID) -> str:
     identity = contract.derive_identity(name)
     registration = contract.EnvironmentRegistration(
         schema_version=1,
@@ -28,7 +28,7 @@ def registration_text(name: str = "work") -> str:
         account_name=identity.account,
         home_path=identity.home,
         lifecycle_state="active",
-        storage=contract.StorageIdentity("btrfs", 256, UUID, None),
+        storage=contract.StorageIdentity("btrfs", 256, subvolume_uuid, None),
     )
     return contract.serialize_registration(registration)
 
@@ -49,6 +49,21 @@ class RegistrationObservationTests(unittest.TestCase):
         self.assertEqual(result.state, "valid")
         self.assertEqual(result.registration.logical_name, "work")
         self.assertIsNone(result.reason)
+        self.assertIsNotNone(result.metadata)
+        self.assertEqual(result.metadata.mode, 0o644)
+
+    def test_registration_owner_and_group_names_resolve_independently(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            Path(directory, "work.json").write_text(
+                registration_text(), encoding="utf-8"
+            )
+            result = apx_registration.observe_registration(
+                "work", directory,
+                lambda uid: type("User", (), {"pw_name": f"user-{uid}"})(),
+                lambda gid: type("Group", (), {"gr_name": f"group-{gid}"})(),
+            )
+        self.assertEqual(result.metadata.owner_name, f"user-{result.metadata.uid}")
+        self.assertEqual(result.metadata.group_name, f"group-{result.metadata.gid}")
 
     def test_absent_file(self) -> None:
         result = self.observe_with(None)
@@ -211,6 +226,104 @@ class RegistrationObservationTests(unittest.TestCase):
         self.assertEqual(
             result.reason, "required safe read-only file flags are unavailable"
         )
+
+
+class UUIDUniquenessTests(unittest.TestCase):
+    OTHER_UUID = "22222222-2222-4222-8222-222222222222"
+
+    def write(self, directory: str, name: str, content: str) -> None:
+        Path(directory, f"{name}.json").write_text(content, encoding="utf-8")
+
+    def observe(self, directory: str, name: str = "work") -> apx_registration.UUIDUniquenessObservation:
+        current = apx_registration.observe_registration(name, directory)
+        self.assertEqual(current.state, "valid")
+        return apx_registration.observe_uuid_uniqueness(current.registration, directory)
+
+    def test_one_registration_and_two_different_uuids_are_unique(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            self.assertEqual(self.observe(directory).state, "confirmed")
+            self.write(directory, "other", registration_text("other", self.OTHER_UUID))
+            self.assertEqual(self.observe(directory).state, "confirmed")
+
+    def test_duplicate_uuid_is_not_satisfied_and_self_is_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            self.write(directory, "other", registration_text("other"))
+            result = self.observe(directory)
+        self.assertEqual(result.state, "not-satisfied")
+        self.assertEqual(result.duplicate_logical_names, ("other",))
+
+    def test_malformed_and_oversized_unrelated_files_are_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            self.write(directory, "broken", "{")
+            Path(directory, "large.json").write_bytes(
+                b"x" * (apx_registration.MAX_REGISTRATION_BYTES + 1)
+            )
+            self.assertEqual(self.observe(directory).state, "confirmed")
+
+    def test_symlink_or_unsupported_registration_prevents_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            Path(directory, "other.json").symlink_to(Path(directory, "work.json"))
+            self.assertEqual(self.observe(directory).state, "unavailable")
+            Path(directory, "other.json").unlink()
+            data = json.loads(registration_text("other", self.OTHER_UUID))
+            data["schema_version"] = 2
+            self.write(directory, "other", json.dumps(data))
+            self.assertEqual(self.observe(directory).state, "unavailable")
+
+    def test_enumerated_registration_that_disappears_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            self.write(directory, "other", registration_text("other", self.OTHER_UUID))
+            current = apx_registration.observe_registration("work", directory)
+            vanished = apx_registration.RegistrationObservation(
+                str(Path(directory, "other.json")),
+                apx_registration.RegistrationObservationState.ABSENT,
+            )
+            with patch("apx_registration._observe_registration_at", return_value=vanished):
+                result = apx_registration.observe_uuid_uniqueness(
+                    current.registration, directory
+                )
+        self.assertEqual(result.state, "unavailable")
+
+    def test_directory_change_during_scan_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            current = apx_registration.observe_registration("work", directory)
+            real_scandir = os.scandir
+            calls = 0
+
+            def changing_scandir(path: object):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    self.write(directory, "other", registration_text("other", self.OTHER_UUID))
+                return real_scandir(path)
+
+            with patch("apx_registration.os.scandir", side_effect=changing_scandir):
+                result = apx_registration.observe_uuid_uniqueness(
+                    current.registration, directory
+                )
+        self.assertEqual(result.state, "unavailable")
+        self.assertIn("changed", result.reason or "")
+
+    def test_hub_development_and_standard_use_same_rules(self) -> None:
+        for name in ("hub", "development", "work"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                self.write(directory, name, registration_text(name))
+                self.assertEqual(self.observe(directory, name).state, "confirmed")
+
+    def test_scan_entry_limit_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            self.write(directory, "work", registration_text())
+            for number in range(apx_registration.MAX_REGISTRATION_ENTRIES):
+                Path(directory, f"ignored-{number}").touch()
+            result = self.observe(directory)
+        self.assertEqual(result.state, "unavailable")
+        self.assertIn("scan limit", result.reason or "")
 
 
 if __name__ == "__main__":
