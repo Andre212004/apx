@@ -2,38 +2,103 @@
 
 APX is a personal operating environment platform built on top of Arch Linux.
 
-APX does not replace Linux. The host remains a single Arch Linux installation with one kernel, one package database, and one KDE Plasma installation. APX adds an orchestration layer for managing isolated personal environments on that system.
+APX does not replace Linux. The host remains a single Arch Linux installation with one kernel, one package database, and one KDE Plasma installation. APX adds an orchestration layer for managing isolated personal Environments on that system.
 
-## Status
+## What APX Is
 
-APX is in the foundation phase.
+APX is an architecture for managing multiple isolated personal Environments on one Arch Linux host.
 
-The current repository contains project documentation only. Implementation should begin after the architecture, boundaries, and operational model are documented clearly enough to guide long-term development.
+Each Environment is intended to provide a separate personal workspace with its own Linux identity, home data, configuration, graphical session, processes, and APX metadata.
 
-## Core Model
+In the intended architecture, applications are shared globally through the host Arch Linux system while user data and session state are separated by Environment.
+
+## What APX Is Not
+
+APX is not:
+
+- a Linux distribution
+- a replacement operating system
+- a container runtime
+- a virtual machine manager
+- a second package manager
+- a replacement desktop shell
+- a development workspace inside the Hub
+
+These boundaries keep APX focused on orchestration rather than duplicating operating system responsibilities.
+
+## Single-Arch Architecture
+
+An APX system has:
+
+- one Arch Linux installation
+- one kernel
+- one package database
+- one KDE Plasma installation
+- one shared set of globally installed applications
+
+APX does not create a separate operating system per Environment. The host system remains the authority for packages, services, kernel updates, and the system-level KDE Plasma installation.
+
+## Environments
 
 An APX Environment is represented by:
 
 - one Linux user
-- one Btrfs subvolume
+- one intended Btrfs home subvolume
 - one independent KDE session
 - independent configuration
-- independent processes
+- user-owned processes separated by Linux user ownership
 - independent metadata
 
-Applications are installed globally through the host Arch Linux system. User data and configuration are isolated per Environment.
+The Linux user is the primary identity boundary. It defines file ownership, process ownership, user-level permissions, home ownership, and session identity.
+
+Current manually created users still have ordinary homes under the existing `@home` subvolume. Dedicated Btrfs home subvolumes are the intended APX architecture, not the current implemented state.
+
+## Hub
+
+The Hub is the default APX Environment and the management entry point.
+
+The Hub's planned responsibility is to provide APX operations such as listing, creating, archiving, restoring, snapshotting, templating, and launching Environments.
+
+The Hub is not a general-purpose desktop or a development workspace. Source repositories, IDEs, build tools, Git workflow tools, development browser profiles, and implementation artifacts belong in the APX Development Environment.
+
+The Hub must be destroyable and recreatable like every other Environment. No APX implementation decision may require a unique lifecycle exception for the Hub.
+
+## Btrfs
+
+Btrfs is the intended storage foundation for Environment homes.
+
+The target model is one dedicated home subvolume per Environment. This should support snapshots, archival, restoration, and templates.
+
+The exact subvolume layout is not implemented yet and must be validated before implementation.
+
+## KDE Plasma
+
+KDE Plasma is shared at the system level.
+
+Environment separation is expected to come from separate Linux users, separate user configuration, separate home data, and separate graphical sessions. APX does not intend to install a separate KDE Plasma copy per Environment.
+
+Only one graphical Environment should run at a time in the intended session model.
+
+## Current Development Status
+
+APX is in the documentation and architecture foundation phase.
+
+This repository currently contains documentation only. No functional APX implementation exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
+
+SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
+
+No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
 
 ## Repository Structure
 
 ```text
 .
+├── AGENTS.md
 ├── docs/
-│   ├── README.md
 │   ├── architecture.md
-│   ├── development-environment.md
-│   ├── environments.md
-│   ├── hub.md
-│   └── repository.md
+│   ├── development-principles.md
+│   ├── roadmap.md
+│   └── session-management.md
 ├── .gitignore
 └── README.md
 ```
@@ -52,4 +117,3 @@ Applications are installed globally through the host Arch Linux system. User dat
 ## Documentation
 
 Start with [docs/architecture.md](docs/architecture.md).
-
