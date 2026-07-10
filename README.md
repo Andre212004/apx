@@ -83,7 +83,7 @@ Only one graphical Environment should run at a time in the intended session mode
 
 APX is in the documentation and architecture foundation phase.
 
-This repository currently contains documentation only. No functional APX implementation exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
+This repository contains architecture documentation and a read-only inspection and creation-planning prototype. No privileged creation or mutating APX runtime exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
 
 SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
 
@@ -99,7 +99,12 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── development-principles.md
 │   ├── roadmap.md
 │   └── session-management.md
+├── src/
+│   ├── apx_cli.py
+│   └── apx_environment.py
+├── tests/
 ├── .gitignore
+├── apx
 └── README.md
 ```
 

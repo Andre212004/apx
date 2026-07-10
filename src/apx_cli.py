@@ -630,16 +630,23 @@ def observe_creation_preconditions(
     except OSError:
         home_absent = "unavailable"
     else:
-        home_absent = "no"
+        home_absent = "not-satisfied"
 
     mount = observe_mount("/home", command_runner)
+    if mount.status == "confirmed" and mount.filesystem_type == "btrfs":
+        btrfs_context = "confirmed"
+    elif mount.status == "confirmed":
+        btrfs_context = "not-satisfied"
+    else:
+        btrfs_context = mount.status
     return CreationPreconditions(
-        account_absent="no" if account_exists else "confirmed",
+        account_absent="not-satisfied" if account_exists else "confirmed",
         home_absent=home_absent,
-        candidate_exists="yes" if candidate_exists else "no",
+        candidate_absent="not-satisfied" if candidate_exists else "confirmed",
         filesystem_type=mount.filesystem_type or "unavailable",
         filesystem_status=mount.status,
         host_confirmation_required=True,
+        btrfs_context=btrfs_context,
     )
 
 

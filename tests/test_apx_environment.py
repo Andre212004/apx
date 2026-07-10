@@ -42,10 +42,19 @@ def preconditions(**changes: object) -> apx_environment.CreationPreconditions:
     values: dict[str, object] = {
         "account_absent": "confirmed",
         "home_absent": "confirmed",
-        "candidate_exists": "no",
+        "candidate_absent": "confirmed",
         "filesystem_type": "btrfs",
         "filesystem_status": "confirmed",
         "host_confirmation_required": True,
+        "registration_absent": "confirmed",
+        "malformed_registration_absent": "confirmed",
+        "registration_target_absent": "confirmed",
+        "parent_paths_valid": "confirmed",
+        "btrfs_context": "confirmed",
+        "host_observation_authoritative": "confirmed",
+        "helper_compatible": "confirmed",
+        "approved_plan_current": "confirmed",
+        "human_authorization_valid": "confirmed",
     }
     values.update(changes)
     return apx_environment.CreationPreconditions(**values)
@@ -139,7 +148,7 @@ class PlanningTests(unittest.TestCase):
     def test_conflict_blocks_architectural_eligibility(self) -> None:
         plan = apx_environment.create_plan(
             apx_environment.derive_identity("work"),
-            preconditions(account_absent="no"),
+            preconditions(account_absent="not-satisfied"),
         )
         self.assertEqual(plan.architectural_eligibility, "blocked")
 
@@ -196,7 +205,7 @@ class PlanningTests(unittest.TestCase):
         )
         second = apx_environment.create_plan(
             apx_environment.derive_identity("work"),
-            preconditions(home_absent="no"),
+            preconditions(home_absent="not-satisfied"),
         )
         self.assertNotEqual(
             apx_environment.plan_digest(first),
@@ -266,14 +275,14 @@ class CreationCommandTests(unittest.TestCase):
         account = Account("apx-work", 1003, "/home/apx-work")
         code, output, _, _ = self.run_create(accounts=[account])
         self.assertEqual(code, 0)
-        self.assertIn("Account absent: no", output)
-        self.assertIn("Candidate exists: yes", output)
+        self.assertIn("Account absent: not-satisfied", output)
+        self.assertIn("Candidate absent: not-satisfied", output)
         self.assertIn("Architectural eligibility: blocked", output)
 
     def test_existing_home_blocks(self) -> None:
         code, output, _, _ = self.run_create(stat_func=lambda _path: stat_result())
         self.assertEqual(code, 0)
-        self.assertIn("Home absent: no", output)
+        self.assertIn("Home absent: not-satisfied", output)
         self.assertIn("Architectural eligibility: blocked", output)
 
     def test_non_btrfs_parent_blocks(self) -> None:
