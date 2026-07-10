@@ -10,6 +10,7 @@ import json
 import os
 import pwd
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -40,6 +41,7 @@ from apx_registration import (
     observe_registration,
     observe_uuid_uniqueness,
 )
+from apx_host import observe_host_readiness, render_host_readiness
 
 
 FINDMNT_TIMEOUT = 3.0
@@ -170,6 +172,10 @@ def create_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     commands.add_parser("status", help="summarize read-only APX observations")
+
+    host = commands.add_parser("host", help="inspect host readiness")
+    host_commands = host.add_subparsers(dest="host_command", required=True)
+    host_commands.add_parser("check", help="check readiness for the trial experiment")
 
     environment = commands.add_parser(
         "environment", help="inspect candidate APX Environment accounts"
@@ -945,6 +951,10 @@ def run(
     access_func: Callable[..., bool] = os.access,
     uid_resolver: Callable[[int], object] = pwd.getpwuid,
     gid_resolver: Callable[[int], object] = grp.getgrgid,
+    which_func: Callable[[str], str | None] = shutil.which,
+    scandir_func: Callable[..., object] = os.scandir,
+    readlink_func: Callable[[str | os.PathLike[str]], str] = os.readlink,
+    host_authoritative: bool = False,
     stdout: TextIO = sys.stdout,
     stderr: TextIO = sys.stderr,
 ) -> int:
@@ -969,6 +979,35 @@ def run(
 
     if args.command == "status":
         print(render_status(candidates), file=stdout)
+        return 0
+
+    if args.command == "host":
+        try:
+            trial_registration = observe_registration(
+                "trial", registration_directory, uid_resolver, gid_resolver
+            )
+            trial_marker = observe_incomplete_operation(
+                "trial", incomplete_operation_directory, lstat_func=lstat_func
+            )
+            home_mount = observe_mount("/home", command_runner)
+            current_sessions = observe_sessions(candidates, command_runner)
+            report = observe_host_readiness(
+                accounts=accounts,
+                mount=home_mount,
+                registration=trial_registration,
+                incomplete_operation=trial_marker,
+                sessions=current_sessions,
+                lstat_func=lstat_func,
+                command_runner=command_runner,
+                which_func=which_func,
+                scandir_func=scandir_func,
+                readlink_func=readlink_func,
+                authoritative_host=host_authoritative,
+            )
+        except Exception as error:
+            print(f"APX observation error: {error}", file=stderr)
+            return 1
+        print(render_host_readiness(report), file=stdout)
         return 0
 
     if args.command == "session":

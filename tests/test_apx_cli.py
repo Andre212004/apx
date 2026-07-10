@@ -8,6 +8,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
@@ -65,6 +66,25 @@ class ParserTests(unittest.TestCase):
     def test_status_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(["status"])
         self.assertEqual(args.command, "status")
+
+    def test_host_check_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "check"])
+        self.assertEqual((args.command, args.host_command), ("host", "check"))
+
+    def test_host_check_complete_report_returns_zero(self) -> None:
+        stdout = StringIO()
+        with patch("apx_cli.observe_registration", return_value=SimpleNamespace(state="absent")), \
+             patch("apx_cli.observe_incomplete_operation", return_value=SimpleNamespace(absent="confirmed")), \
+             patch("apx_cli.observe_mount", return_value=SimpleNamespace(status="unavailable")), \
+             patch("apx_cli.observe_sessions", return_value=SimpleNamespace(status="unavailable")), \
+             patch("apx_cli.observe_host_readiness", return_value=SimpleNamespace(checks=(), overall="requires-host-confirmation", manual_plan=())):
+            result = apx_cli.run(
+                ["host", "check"],
+                accounts_provider=lambda: (),
+                stdout=stdout,
+            )
+        self.assertEqual(result, 0)
+        self.assertIn("Overall readiness: requires-host-confirmation", stdout.getvalue())
 
     def test_environment_list_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(["environment", "list"])

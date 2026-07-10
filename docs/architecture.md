@@ -130,6 +130,14 @@ The current `apx environment inspect` command inspects a discovered candidate by
 
 Candidate inspection also performs a bounded read-only lookup of the corresponding registration and, when it is valid, freshly compares it with host-visible account, home, filesystem, Btrfs, registration-file, UUID-uniqueness, and incomplete-operation observations. It reports the registration observation separately from the prototype's legacy candidate state and renders every formal postcondition state before the combined classification. It does not infer formal consistency from the narrower legacy candidate checks or from unavailable sandbox evidence.
 
+### Experimental Host Readiness
+
+The current `apx host check` command is a read-only, experiment-specific inspection for the proposed standard Environment `trial` (`apx-trial`, `/home/apx-trial`). It checks the existing Hub and Development identities, target absence, APX metadata absence, `/home` storage context, KDE and SDDM evidence, graphical session definitions, current sessions, and account-policy prerequisites. It does not provide a general host-management framework and does not execute the rendered manual plan.
+
+Every readiness check is classified independently as `ready`, `blocked`, `requires-host-confirmation`, `unavailable`, or `not-applicable`. Confirmed conflicts make overall readiness `blocked`. Unavailable authoritative evidence or positive observations made only through a restricted execution context make overall readiness `requires-host-confirmation`. Only complete authoritative matching evidence produces `ready-for-manual-experiment`. Manual creation remains a separately approved future action; the lack of an APX apply mode is not itself a readiness failure.
+
+`/home` may be a distinct mount or a directory within another mount. Readiness depends on the containing filesystem being an authoritatively confirmed writable Btrfs context and on `/home` being a safe non-symlink directory, not on `/home` having a dedicated mount.
+
 ### Linux User
 
 The Linux user is the primary identity boundary.

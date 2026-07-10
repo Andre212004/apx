@@ -85,6 +85,8 @@ APX is in the documentation and architecture foundation phase.
 
 This repository contains architecture documentation and a read-only inspection and creation-planning prototype. No privileged creation or mutating APX runtime exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
 
+`apx host check` performs a read-only readiness inspection for the proposed first experimental Environment, `trial`. It reports identity, storage, graphical-session, and account-policy evidence independently, marks sandbox-visible evidence as requiring authoritative host confirmation, and emits a deterministic non-executing manual plan. It does not create or modify host resources.
+
 SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
 
 No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
@@ -102,6 +104,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 ├── src/
 │   ├── apx_cli.py
 │   ├── apx_consistency.py
+│   ├── apx_host.py
 │   ├── apx_environment.py
 │   └── apx_registration.py
 ├── tests/
