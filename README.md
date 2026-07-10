@@ -91,6 +91,8 @@ This repository contains architecture documentation and a read-only inspection a
 
 `apx environment removal-plan <name>` produces a read-only, non-executing plan with explicit blockers, unknown evidence, data-loss scope, privilege boundaries, irreversibility, and post-removal validation. The Hub returns a protected result and no removal plan.
 
+`apx host brave-isolation` reports current Brave installation and visibility, per-user data evidence, available isolation approaches, and a non-executing first-experiment recommendation with backup, rollback, and approval requirements.
+
 SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
 
 No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.

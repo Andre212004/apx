@@ -44,6 +44,7 @@ from apx_registration import (
 from apx_host import observe_host_readiness, render_host_readiness
 from apx_practical import observe_practical, render_practical
 from apx_removal import observe_removal_evidence, build_removal_report, render_removal_report
+from apx_brave import build_brave_isolation_report, render_brave_isolation
 
 
 FINDMNT_TIMEOUT = 3.0
@@ -180,6 +181,9 @@ def create_parser() -> argparse.ArgumentParser:
     host_commands = host.add_subparsers(dest="host_command", required=True)
     host_commands.add_parser("check", help="check readiness for the trial experiment")
     host_commands.add_parser("validate", help="inspect practical host state for milestone 3A")
+    host_commands.add_parser(
+        "brave-isolation", help="plan a read-only Brave isolation experiment"
+    )
 
     environment = commands.add_parser(
         "environment", help="inspect candidate APX Environment accounts"
@@ -994,7 +998,7 @@ def run(
 
     if args.command == "host":
         try:
-            if args.host_command == "validate":
+            if args.host_command in {"validate", "brave-isolation"}:
                 current_sessions = observe_sessions(candidates, command_runner)
                 report = observe_practical(
                     accounts=accounts, sessions=current_sessions,
@@ -1004,7 +1008,11 @@ def run(
                     scandir_func=scandir_func, which_func=which_func,
                     readlink_func=readlink_func,
                 )
-                print(render_practical(report), file=stdout)
+                if args.host_command == "brave-isolation":
+                    isolation = build_brave_isolation_report(report.brave, which_func)
+                    print(render_brave_isolation(isolation), file=stdout)
+                else:
+                    print(render_practical(report), file=stdout)
                 return 0
             trial_registration = observe_registration(
                 "trial", registration_directory, uid_resolver, gid_resolver

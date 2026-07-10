@@ -75,6 +75,10 @@ class ParserTests(unittest.TestCase):
         args = apx_cli.create_parser().parse_args(["host", "validate"])
         self.assertEqual((args.command, args.host_command), ("host", "validate"))
 
+    def test_host_brave_isolation_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "brave-isolation"])
+        self.assertEqual((args.command, args.host_command), ("host", "brave-isolation"))
+
     def test_host_check_complete_report_returns_zero(self) -> None:
         stdout = StringIO()
         with patch("apx_cli.observe_registration", return_value=SimpleNamespace(state="absent")), \
