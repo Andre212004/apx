@@ -93,6 +93,10 @@ This repository contains architecture documentation and a read-only inspection a
 
 `apx host brave-isolation` reports current Brave installation and visibility, per-user data evidence, available isolation approaches, and a non-executing first-experiment recommendation with backup, rollback, and approval requirements.
 
+The first approved extracted-build experiment and its unresolved validation
+results are recorded in
+[docs/brave-user-local-experiment.md](docs/brave-user-local-experiment.md).
+
 SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
 
 No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
@@ -104,6 +108,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 ├── AGENTS.md
 ├── docs/
 │   ├── architecture.md
+│   ├── brave-user-local-experiment.md
 │   ├── development-principles.md
 │   ├── roadmap.md
 │   └── session-management.md
