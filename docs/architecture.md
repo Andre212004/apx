@@ -32,7 +32,7 @@ The host owns:
 
 - one kernel
 - one package database
-- one KDE Plasma installation
+- one shared set of system-level compositors, desktop components, and applications
 - global system services
 - globally installed applications
 
@@ -60,12 +60,12 @@ The intended Environment model maps each Environment to:
 
 - one Linux user
 - one dedicated Btrfs home subvolume
-- one independent KDE session
+- one independent graphical login session
 - independent configuration
 - user-owned processes separated by Linux user ownership
 - independent metadata
 
-The Linux user boundary provides ownership and process separation. The Btrfs subvolume provides storage structure, snapshot support, and lifecycle management. The KDE session provides an independent interactive workspace.
+The Linux user boundary provides ownership and process separation. The Btrfs subvolume provides storage structure, snapshot support, and lifecycle management. The login session provides an independent interactive workspace.
 
 ### Environment Identity Contract
 
@@ -132,7 +132,7 @@ Candidate inspection also performs a bounded read-only lookup of the correspondi
 
 ### Experimental Host Readiness
 
-The current `apx host check` command is a read-only, experiment-specific inspection for the proposed standard Environment `trial` (`apx-trial`, `/home/apx-trial`). It checks the existing Hub and Development identities, target absence, APX metadata absence, `/home` storage context, KDE and SDDM evidence, graphical session definitions, current sessions, and account-policy prerequisites. It does not provide a general host-management framework and does not execute the rendered manual plan.
+The current `apx host check` command is a read-only, experiment-specific inspection for the proposed standard Environment `trial` (`apx-trial`, `/home/apx-trial`). It checks the existing Hub and Development identities, target absence, APX metadata absence, `/home` storage context, Hyprland availability, display-manager configuration, graphical session definitions, current sessions, and account-policy prerequisites. It does not provide a general host-management framework and does not execute the rendered manual plan.
 
 Every readiness check is classified independently as `ready`, `blocked`, `requires-host-confirmation`, `unavailable`, or `not-applicable`. Confirmed conflicts make overall readiness `blocked`. Unavailable authoritative evidence or positive observations made only through a restricted execution context make overall readiness `requires-host-confirmation`. Only complete authoritative matching evidence produces `ready-for-manual-experiment`. Manual creation remains a separately approved future action; the lack of an APX apply mode is not itself a readiness failure.
 
@@ -174,11 +174,13 @@ Subvolume IDs and UUIDs are unknown before creation and must never be fabricated
 
 Snapshot, quota, compression, backup, archival-storage, and subvolume top-level layout policies remain intentionally deferred.
 
-### KDE Session
+### Graphical Session
 
-Each Environment is intended to have its own independent KDE Plasma session.
+Each Environment is intended to have its own independent graphical login session. Hyprland is the intended primary compositor, but APX must remain compositor-independent.
 
-KDE Plasma is shared at the system level, but user configuration, session state, and user-level services are separate per Environment.
+User configuration, session state, and user-level services are separate per Environment. APX must not rely on KDE autostart, Plasma-specific behavior, or KDE APIs for lifecycle management.
+
+Normal Environment user services start with the Environment's systemd user manager and stop when its final login session ends. `Linger=no` is the default. Persistent background execution requires a future explicit Hub-level exception; it is not a normal Environment property.
 
 ### Processes
 
@@ -234,6 +236,8 @@ The configured registration directory itself and the canonical registration file
 `registered` means the registration is valid and every host observation made so far is available and matching, but at least one required postcondition has not yet been attempted. `unconfirmed` means at least one required observation was attempted or required but is unavailable or ambiguous. `consistent` requires every required postcondition to be freshly confirmed. The current CLI attempts the full read-only verification, but sandbox restrictions, missing metadata, or incomplete Btrfs output keep the result `unconfirmed`; a confirmed mismatch produces `incomplete`.
 
 Read-only verification records numeric home and registration UID/GID, resolves owner and group names when the local databases permit, records exact permission bits, and observes writability only in the current execution context. Current-context writability is rendered evidence but is not by itself a formal consistency decision because it depends on the inspecting identity. Home and registration symlinks are never followed.
+
+Numeric ownership in an account's configured `/etc/subuid` or `/etc/subgid` range is not unnamed or unknown merely because `getpwuid` or `getgrgid` has no entry. APX preserves the host numeric ID and may render its allocated rootless owner and namespace ID. For the usual rootless mapping, the account's real UID maps namespace ID 0 and subordinate range offset zero maps namespace ID 1. Range allocation identifies the owning rootless namespace; it does not by itself prove which container created a path.
 
 The bounded Btrfs parser accepts a positive `Subvolume ID`, canonical UUIDs, and a `Parent UUID` of `-`, `none`, or `None` as an explicitly observed null snapshot parent. Missing fields remain unavailable; duplicates or malformed values are ambiguous. A successful subvolume command confirms only dedicated-subvolume status unless each identity field is also valid.
 
@@ -381,7 +385,7 @@ These states are provisional and should be refined when lifecycle workflows are 
 
 APX should use ordinary Linux primitives before inventing APX-specific abstractions.
 
-Initial boundaries are Linux users, Btrfs subvolumes, KDE sessions, process ownership, filesystem permissions, and metadata files or records.
+Initial boundaries are Linux users, Btrfs subvolumes, graphical login sessions, process ownership, filesystem permissions, and metadata files or records.
 
 ### Applications Are Global
 
@@ -412,21 +416,23 @@ Implementation should follow documented architecture. When a design question is 
 ## Confirmed Intended Architecture
 
 - APX is an orchestration layer on top of Arch Linux, not a replacement operating system.
-- The host architecture is single Arch installation, single kernel, single package database, and single system-level KDE Plasma installation.
+- The host architecture is one Arch installation, one kernel, one package database, and one shared set of system-level graphical software.
 - Applications are globally installed.
 - Environment data, configuration, session state, processes, and metadata are separated by Environment.
 - Each Environment corresponds to one dedicated Linux user and one intended dedicated Btrfs home subvolume.
-- Each Environment has its own KDE session, with only one graphical Environment active at a time.
+- Each Environment has its own graphical login session, with only one graphical Environment active at a time.
 - The Hub is an Environment dedicated to APX management.
 - The Hub is the default Environment in the intended session model.
 - The intended lifecycle is `Boot -> Hub -> Environment -> Hub`.
 - The Hub must not become a development workspace.
 - No implementation decision may require a unique lifecycle exception for the Hub.
 - Linux user boundaries are sufficient as the primary identity and ownership boundary.
+- Hyprland is the intended primary compositor, while APX service and session lifecycle remains compositor-independent.
+- Normal Environment services use `Linger=no` and stop with the Environment's final login session.
 
 ## Ideas Under Evaluation
 
-- `greetd` is the preferred candidate under evaluation for replacing SDDM in the future session handoff model.
+- The display-manager and session-handoff mechanism remains under evaluation; `greetd` has not been adopted.
 
 ## Open Questions
 

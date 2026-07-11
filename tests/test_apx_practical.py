@@ -25,10 +25,12 @@ def result(code: int = 0, output: str = "") -> apx_cli.CommandResult:
 
 
 class PracticalTests(unittest.TestCase):
-    def observe(self, *, commands: dict[tuple[str, ...], apx_cli.CommandResult] | None = None, unavailable: bool = False):
+    def observe(self, *, commands: dict[tuple[str, ...], apx_cli.CommandResult] | None = None, unavailable: bool = False, subordinate_uid_text: str = ""):
         accounts = [Account(name, 1000 + index) for index, (_, name, _) in enumerate(apx_practical.ENVIRONMENTS, 1)]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            subordinate_uid_file = root / "subuid"
+            subordinate_uid_file.write_text(subordinate_uid_text, encoding="utf-8")
             homes = {}
             for logical, name, home in apx_practical.ENVIRONMENTS:
                 path = root / name
@@ -67,6 +69,7 @@ class PracticalTests(unittest.TestCase):
                 btrfs_observer=lambda path, mount: SimpleNamespace(subvolume="yes"),
                 command_runner=runner, lstat_func=lstat, scandir_func=scandir,
                 which_func=which, readlink_func=lambda path: "/usr/lib/systemd/system/sddm.service",
+                subordinate_uid_file=subordinate_uid_file,
             )
             return report, calls
 
@@ -102,6 +105,12 @@ class PracticalTests(unittest.TestCase):
         second, _ = self.observe()
         self.assertEqual(apx_practical.render_practical(first), apx_practical.render_practical(second))
         self.assertNotIn("evidence.txt: ", apx_practical.render_practical(first))
+
+    def test_subordinate_uid_is_not_reported_as_unknown(self) -> None:
+        report, _ = self.observe(subordinate_uid_text="owner:1:999999\n")
+        rendered = apx_practical.render_practical(report)
+        self.assertIn("allocated to owner rootless range", rendered)
+        self.assertNotIn("owner UID: UNKNOWN", rendered)
 
     def test_only_fixed_observational_commands(self) -> None:
         _, calls = self.observe()

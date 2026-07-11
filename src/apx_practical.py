@@ -8,6 +8,8 @@ from pathlib import Path
 import stat
 from typing import Callable, Iterable, Sequence
 
+from apx_ownership import describe_numeric_owner, read_subordinate_ranges
+
 
 ENVIRONMENTS = (
     ("hub", "apx-hub", "/home/apx-hub"),
@@ -90,9 +92,11 @@ def observe_practical(
     lstat_func: Callable[[str], os.stat_result] = os.lstat,
     scandir_func: Callable[[str], Iterable[object]] = os.scandir,
     which_func: Callable[[str], str | None], readlink_func: Callable[[str], str] = os.readlink,
+    subordinate_uid_file: Path = Path("/etc/subuid"),
 ) -> PracticalReport:
     by_name = {getattr(account, "pw_name", ""): account for account in accounts}
     session_items = getattr(sessions, "sessions", ())
+    subordinate_uids = read_subordinate_ranges(subordinate_uid_file)
     environments: list[PracticalEnvironment] = []
     for logical, name, home in ENVIRONMENTS:
         account = by_name.get(name)
@@ -111,7 +115,10 @@ def observe_practical(
             contents = "absent"
         except OSError:
             contents = "unavailable"
-        owner = str(metadata.st_uid) if metadata else home_state
+        owner = (
+            describe_numeric_owner(metadata.st_uid, subordinate_uids, identifier="UID")
+            if metadata else home_state
+        )
         mode = f"{stat.S_IMODE(metadata.st_mode):04o}" if metadata else home_state
         blockers = []
         unknown = []
@@ -161,7 +168,7 @@ def observe_practical(
 
     dm_state, dm_meta = _metadata("/etc/systemd/system/display-manager.service", lstat_func)
     display_manager = readlink_func("/etc/systemd/system/display-manager.service") if dm_state == "present" and dm_meta and stat.S_ISLNK(dm_meta.st_mode) else dm_state
-    tools = tuple((name, "available" if which_func(name) else "unavailable") for name in ("loginctl", "sddm", "sddm-greeter", "qdbus6", "dm-tool", "kscreenlocker_greet"))
+    tools = tuple((name, "available" if which_func(name) else "unavailable") for name in ("loginctl", "systemctl", "Hyprland", "podman"))
     seat_state, seat_output = _command(command_runner, ("loginctl", "list-seats", "--no-legend", "--no-pager"))
     return PracticalReport(tuple(environments), brave, sessions, display_manager, tools, seat_output if seat_state == "confirmed" else "unavailable")
 

@@ -26,7 +26,7 @@ Goals:
 - validate the session handoff model
 - validate Hub permissions
 - validate lifecycle states and transitions
-- decide whether `greetd` should replace SDDM
+- validate a compositor-independent display-manager and session-handoff mechanism
 
 ## Phase 2: Minimal Prototype Design
 
@@ -81,7 +81,7 @@ The Hub must remain an Environment and must not require unique lifecycle excepti
 ## Confirmed Intended Architecture
 
 - APX is an orchestration layer on one Arch Linux installation.
-- The host has one kernel, one package database, and one system-level KDE Plasma installation.
+- The host has one kernel, one package database, and one shared set of system-level graphical software.
 - Applications are globally installed.
 - Each Environment corresponds to one dedicated Linux user and one intended dedicated Btrfs home subvolume.
 - Environment data and configuration are isolated per Environment.
@@ -91,10 +91,12 @@ The Hub must remain an Environment and must not require unique lifecycle excepti
 - Only one graphical Environment is active at a time in the intended model.
 - Linux user ownership is sufficient as the primary identity boundary.
 - APX should avoid namespaces unless a future design proves they are necessary.
+- Hyprland is the intended primary compositor, while APX lifecycle behavior remains compositor-independent.
+- Normal Environment user services use `Linger=no` and stop after the final Environment logout.
 
 ## Ideas Under Evaluation
 
-- `greetd` is the preferred candidate under evaluation for APX session handoff.
+- The display-manager and session-handoff mechanism remains under evaluation; `greetd` is not adopted.
 - APX metadata may track Environment identifiers, display names, lifecycle states, Linux users, Btrfs subvolumes, creation times, archival states, template origins, and snapshot references.
 
 ## Open Questions

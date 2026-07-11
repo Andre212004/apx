@@ -40,7 +40,7 @@ MANUAL_TRIAL_PLAN = (
     "Apply apx-trial ownership, its private primary group, and mode 0700.",
     "Publish the schema-v1 APX registration for trial from freshly observed storage identity as the late commit boundary.",
     "Verify the account, home, Btrfs identity, ownership, group, mode, registration, and marker absence.",
-    "Test graphical login from Hub to apx-trial, use global KDE applications, logout, and return to Hub.",
+    "Test graphical login from Hub to apx-trial with the configured Wayland session, logout, and return to Hub.",
     "Inspect apx-trial with APX and retain the complete consistency evidence.",
     "Stop without automatic cleanup and preserve evidence on any unexpected state.",
 )
@@ -188,30 +188,17 @@ def observe_host_readiness(
     )
     checks.append(_check("Storage", "dedicated trial subvolume can be created in principle", principle_class, "requires a writable Btrfs context and safe /home parent"))
 
-    plasma_paths = tuple(filter(None, (which_func("startplasma-wayland"), which_func("plasmashell"))))
+    hyprland_path = which_func("Hyprland")
     checks.append(_check(
-        "Graphical session stack", "KDE Plasma availability",
-        _positive(authoritative_host) if plasma_paths else _conflict(authoritative_host),
-        "executable availability confirmed" if plasma_paths else "Plasma executables not found",
+        "Graphical session stack", "Hyprland availability",
+        _positive(authoritative_host) if hyprland_path else _conflict(authoritative_host),
+        "Hyprland executable found" if hyprland_path else "Hyprland executable not found",
     ))
-    sddm_path = which_func("sddm")
-    checks.append(_check(
-        "Graphical session stack", "SDDM installation",
-        _positive(authoritative_host) if sddm_path else _conflict(authoritative_host),
-        "sddm executable found" if sddm_path else "sddm executable not found",
-    ))
-    service_result = command_runner(("systemctl", "is-active", "sddm.service"), 3.0)
-    service_class, service_evidence = _command_state(service_result, active=True)
-    if service_class == "ready":
-        service_class = _positive(authoritative_host)
-    elif service_class == "blocked" and not authoritative_host:
-        service_class = "requires-host-confirmation"
-    checks.append(_check("Graphical session stack", "SDDM service state", service_class, service_evidence))
     try:
         dm_metadata = lstat_func(display_manager_link)
         if stat.S_ISLNK(dm_metadata.st_mode):
             target = readlink_func(display_manager_link)
-            dm_class = _positive(authoritative_host) if "sddm" in target.lower() else _conflict(authoritative_host)
+            dm_class = _positive(authoritative_host)
             dm_evidence = f"display-manager.service -> {target}"
         else:
             dm_class, dm_evidence = "requires-host-confirmation", "display-manager.service is not a symlink"
@@ -253,7 +240,7 @@ def observe_host_readiness(
     for name, evidence in (
         ("normal UID/GID allocation", "requires authoritative account-policy confirmation"),
         ("private primary group", "requires authoritative account-policy confirmation"),
-        ("graphical login account", "requires authoritative SDDM and shell policy confirmation"),
+        ("graphical login account", "requires authoritative display-manager and shell policy confirmation"),
         ("home mode 0700", "supported by the planned explicit permission policy"),
         ("account creation without automatic home", "useradd supports explicit no-create-home policy"),
     ):
@@ -262,11 +249,14 @@ def observe_host_readiness(
             _positive(authoritative_host) if useradd else _conflict(authoritative_host),
             evidence if useradd else "useradd executable not found",
         ))
-    global_apps = tuple(filter(None, (which_func("dolphin"), which_func("konsole"))))
+    global_apps = tuple(filter(None, (
+        which_func("brave"), which_func("foot"), which_func("alacritty"),
+        which_func("kitty"),
+    )))
     checks.append(_check(
         "Account policy readiness", "globally installed applications",
         _positive(authoritative_host) if global_apps else "requires-host-confirmation",
-        "global KDE application executables found" if global_apps else "application visibility requires host confirmation",
+        "global application executables found" if global_apps else "application visibility requires host confirmation",
     ))
 
     checks_tuple = tuple(checks)

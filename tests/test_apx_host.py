@@ -63,7 +63,7 @@ class HostReadinessTests(unittest.TestCase):
             root = Path(directory)
             sessions = root / "sessions"
             sessions.mkdir()
-            (sessions / "plasma.desktop").write_text("[Desktop Entry]\n", encoding="utf-8")
+            (sessions / "hyprland.desktop").write_text("[Desktop Entry]\n", encoding="utf-8")
             display_link = root / "display-manager.service"
             display_link.symlink_to("/usr/lib/systemd/system/sddm.service")
 
@@ -138,19 +138,16 @@ class HostReadinessTests(unittest.TestCase):
         self.assertEqual(self.state(report, "filesystem containing /home"), "unavailable")
         self.assertEqual(report.overall, "requires-host-confirmation")
 
-    def test_unavailable_system_bus_and_sddm_active(self) -> None:
+    def test_unavailable_sessions_remain_unavailable(self) -> None:
         unavailable = self.report(
             sessions=SimpleNamespace(status="unavailable"),
             command_runner=Mock(return_value=apx_cli.CommandResult(1, "", "bus unavailable")),
         )
-        active = self.report()
         self.assertEqual(self.state(unavailable, "current sessions"), "unavailable")
-        self.assertEqual(self.state(unavailable, "SDDM service state"), "unavailable")
-        self.assertEqual(self.state(active, "SDDM service state"), "ready")
 
-    def test_sddm_unavailable(self) -> None:
-        report = self.report(which_func=lambda name: None if name == "sddm" else f"/usr/bin/{name}")
-        self.assertEqual(self.state(report, "SDDM installation"), "blocked")
+    def test_hyprland_unavailable(self) -> None:
+        report = self.report(which_func=lambda name: None if name == "Hyprland" else f"/usr/bin/{name}")
+        self.assertEqual(self.state(report, "Hyprland availability"), "blocked")
 
     def test_graphical_session_definition_found_and_absent(self) -> None:
         found = self.report()
@@ -185,7 +182,7 @@ class HostReadinessTests(unittest.TestCase):
     def test_only_read_only_commands_are_invoked(self) -> None:
         self.report()
         commands = [call.args[0] for call in self.runner.call_args_list]
-        self.assertEqual(commands, [("systemctl", "is-active", "sddm.service")])
+        self.assertEqual(commands, [])
         rendered = repr(commands).lower()
         for forbidden in (
             "sudo", "useradd", "groupadd", "btrfs", "chown", "chmod",

@@ -54,7 +54,7 @@ def build_brave_isolation_report(
         IsolationOption(
             "User-local AppImage or extracted bundle",
             "possible in principle",
-            "No system package exposure, but updates, authenticity checks, sandboxing, and KDE desktop integration become manual and upstream artifact availability must be verified.",
+            "No system package exposure, but updates, authenticity checks, sandboxing, and desktop integration become manual and upstream artifact availability must be verified.",
         ),
         IsolationOption(
             "Distrobox or container",
@@ -70,7 +70,7 @@ def build_brave_isolation_report(
     recommendation = (
         "First experiment: preserve the apx-development profile, then test Brave as a per-user Flatpak owned by apx-development. "
         + ("Flatpak is already available." if flatpak_available else "Flatpak is not installed, so installing it requires separate explicit approval.")
-        + " Do not remove the global Arch package until the isolated instance, profile migration, KDE launch integration, and updates are validated."
+        + " Do not remove the global Arch package until the isolated instance, profile migration, compositor-independent launch integration, and updates are validated."
     )
     backup = (
         "Back up /home/apx-development/.config/BraveSoftware before profile migration.",

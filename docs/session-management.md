@@ -16,7 +16,7 @@ Each Environment is represented by a dedicated Linux user.
 
 Each Environment is intended to have its own Btrfs home subvolume. This is not yet true for the current manually created users, which still have ordinary homes under the existing `@home` subvolume.
 
-KDE Plasma is shared at the system level. Environment separation comes from Linux users, home data, user configuration, session state, user-owned processes, and APX metadata.
+Hyprland is the intended primary compositor. Environment separation comes from Linux users, home data, user configuration, session state, user-owned processes, and APX metadata. APX must remain compositor-independent and must not depend on Plasma, KDE autostart, or KDE APIs.
 
 The Hub is the default Environment.
 
@@ -62,17 +62,29 @@ In the intended flow, control returns to the Hub when the user exits or switches
 
 APX lifecycle operations must account for running user-owned processes before archive, restore, snapshot, destruction, or session handoff operations occur.
 
-## KDE Plasma
+## Graphical Environment
 
-KDE Plasma is installed once at the system level.
+Graphical software is installed once at the system level. Hyprland is the intended primary compositor; this direction does not assert that it is currently installed or adopted.
 
-Each Environment is intended to have separate KDE configuration and session state through its dedicated Linux user and home data.
+Each Environment has separate compositor configuration and session state through its dedicated Linux user and home data.
 
-APX should not install or manage a separate KDE Plasma copy per Environment.
+APX does not install or manage a separate compositor copy per Environment.
+
+## Environment Service Lifecycle
+
+Normal Environment services use the systemd user manager and do not linger after the final login session ends.
+
+- `Linger=no` is the default.
+- User services start with the Environment user manager.
+- The user manager stopping after the final logout stops its services.
+- Services that launch rootless containers must explicitly stop those containers in `ExecStop`.
+- Persistent background services require a future explicit Hub-level exception.
+
+This model is compatible with Hyprland and other Wayland compositors because it relies on logind and systemd user-session lifecycle rather than desktop autostart mechanisms.
 
 ## Display Manager Direction
 
-`greetd` is only the preferred direction under evaluation for future APX session handoff. It has not been adopted or implemented.
+The display-manager and session-handoff mechanism remains under evaluation. `greetd` has not been adopted or implemented.
 
 SDDM currently manages graphical sessions.
 
@@ -102,7 +114,7 @@ The current manually created users still have ordinary homes under the existing 
 
 ## Ideas Under Evaluation
 
-- Replace SDDM with `greetd` for APX-controlled session handoff.
+- Evaluate a display-manager/session-handoff mechanism that can launch Hyprland without making APX depend on it.
 - Use APX metadata to track each Environment's user, home subvolume, state, snapshots, archives, and template origin.
 
 ## Open Questions

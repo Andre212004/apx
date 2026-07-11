@@ -2,7 +2,7 @@
 
 APX is a personal operating environment platform built on top of Arch Linux.
 
-APX does not replace Linux. The host remains a single Arch Linux installation with one kernel, one package database, and one KDE Plasma installation. APX adds an orchestration layer for managing isolated personal Environments on that system.
+APX does not replace Linux. The host remains a single Arch Linux installation with one kernel, one package database, and one shared set of system-level graphical software. APX adds an orchestration layer for managing isolated personal Environments on that system.
 
 ## What APX Is
 
@@ -33,10 +33,10 @@ An APX system has:
 - one Arch Linux installation
 - one kernel
 - one package database
-- one KDE Plasma installation
+- one shared set of system-level compositors, desktop components, and applications
 - one shared set of globally installed applications
 
-APX does not create a separate operating system per Environment. The host system remains the authority for packages, services, kernel updates, and the system-level KDE Plasma installation.
+APX does not create a separate operating system per Environment. The host system remains the authority for packages, services, kernel updates, compositors, and desktop components.
 
 ## Environments
 
@@ -44,7 +44,7 @@ An APX Environment is represented by:
 
 - one Linux user
 - one intended Btrfs home subvolume
-- one independent KDE session
+- one independent graphical login session
 - independent configuration
 - user-owned processes separated by Linux user ownership
 - independent metadata
@@ -71,11 +71,11 @@ The target model is one dedicated home subvolume per Environment. This should su
 
 The exact subvolume layout is not implemented yet and must be validated before implementation.
 
-## KDE Plasma
+## Graphical Environment
 
-KDE Plasma is shared at the system level.
+Hyprland is the intended primary compositor. This is an architectural direction, not a claim that Hyprland has been installed or adopted on the current host.
 
-Environment separation is expected to come from separate Linux users, separate user configuration, separate home data, and separate graphical sessions. APX does not intend to install a separate KDE Plasma copy per Environment.
+Environment separation comes from separate Linux users, home data, configuration, processes, and login sessions. APX lifecycle behavior must use compositor-independent systemd and logind primitives and must not require Plasma, KDE autostart, or KDE APIs.
 
 Only one graphical Environment should run at a time in the intended session model.
 
@@ -97,7 +97,7 @@ The first approved extracted-build experiment and its unresolved validation
 results are recorded in
 [docs/brave-user-local-experiment.md](docs/brave-user-local-experiment.md).
 
-SDDM currently manages graphical sessions. The future session-management direction is documented in [docs/session-management.md](docs/session-management.md). `greetd` remains only a preferred direction under evaluation; it has not been adopted or implemented.
+SDDM remains the last confirmed current display manager. The future compositor-independent session-management direction is documented in [docs/session-management.md](docs/session-management.md). No display-manager replacement has been adopted or implemented.
 
 No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
 
