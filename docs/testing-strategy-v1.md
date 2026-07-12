@@ -214,6 +214,9 @@ boundaries, raw-diagnostic minimization, and strict parsing. It does not perform
 lifecycle effects or use an authoritative host path. Pure capacity fixtures
 also exercise dynamic growth, independent Environment/pool/physical ceilings,
 host and metadata reserves, unhealthy quota states, and malformed evidence.
+The pure installation fixture verifies that backup and recovery precede host
+testing, KDE remains available through parallel graphical validation, cutover
+does not imply cleanup, and complete evidence yields only cleanup review.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are

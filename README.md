@@ -177,6 +177,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── environment-local-administration-v1.md
 │   ├── human-identity-and-session-handoff-v1.md
 │   ├── hub-experience-v1.md
+│   ├── installation-migration-v1.md
 │   ├── isolation-architecture.md
 │   ├── lifecycle-threat-model-review-v1.md
 │   ├── privileged-executor-protocol-v1.md
@@ -195,6 +196,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_executor_journal.py
 │   ├── apx_host.py
 │   ├── apx_hub.py
+│   ├── apx_installation.py
 │   ├── apx_policy.py
 │   ├── apx_trust_evidence.py
 │   ├── apx_environment.py

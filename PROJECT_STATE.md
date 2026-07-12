@@ -397,6 +397,16 @@ preserved pending separately approved cleanup. This proves one leaf limit, not
 the intended hierarchy, snapshots, concurrency, restart recovery, or executor
 attestation; the complete capacity gate therefore remains blocked.
 
+The repository now implements the pure parallel-installation contract in
+`src/apx_installation.py` and documents it in
+`docs/installation-migration-v1.md`. Installation beside the current KDE
+session, APX cutover, and optional legacy cleanup are separate gates. Remote
+project history, restore-tested personal backup, boot-tested recovery media,
+headless and two-Environment isolation, graphical Hub/handoff, application
+isolation, and destructive recovery are ordered evidence requirements. Even
+complete evidence permits only a package-by-package cleanup review; it never
+authorizes KDE removal. No installer or cleanup implementation exists.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or
