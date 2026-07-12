@@ -220,6 +220,10 @@ does not imply cleanup, and complete evidence yields only cleanup review.
 The Stage 2 final-gate fixture independently fails every boolean gate, rejects
 cross-plan and malformed digests, and proves that complete evidence still
 requires a separate execution approval.
+The acquisition boundary fixture rejects alternate origins, insecure schemes,
+redirects, URL credentials and suffixes, traversal, unsafe or duplicate names,
+unreviewed repositories and architectures, ordering changes, byte-limit
+violations, incomplete files, symbolic links, and transfer identity mismatch.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are

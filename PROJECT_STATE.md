@@ -417,6 +417,15 @@ journaling, and separate cleanup scope. No single positive can override a
 missing gate. Complete evidence yields only eligibility for a separate Stage 2
 execution approval and never includes graphical use, KDE removal, or cleanup.
 
+`src/apx_acquisition.py` now implements the pure network/file boundary for the
+fixed dated Arch base acquisition. It accepts only HTTPS at the exact Arch
+Linux Archive origin and date, the reviewed repositories and architectures,
+safe unique canonical filenames, and bounded file/aggregate sizes. Credentials,
+ports, queries, fragments, redirects, traversal, unexpected repositories,
+wrong ordering, duplicate files, incomplete transfers, symbolic links, and
+hash/size/identity disagreement fail closed. It validates supplied manifests
+and post-transfer evidence only; it performs no network or filesystem access.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

@@ -40,6 +40,13 @@ Changing any fixed input creates a different policy revision and invalidates a
 previous plan digest. A Hub request may select an already reviewed base ID but
 must never inject these values.
 
+`src/apx_acquisition.py` implements the pure acquisition boundary. It validates
+the exact HTTPS origin/date/path, repository and architecture set, safe unique
+canonical filenames, per-file and aggregate bounds, and supplied post-transfer
+URI, size, digest, regular-file, symlink, and completion evidence. Redirects or
+any identity disagreement are rejected. The module has no network client and
+does not open, create, or delete files.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the
