@@ -1,0 +1,215 @@
+# APX Testing Strategy v1
+
+Status: staged test proposal; only repository-level tests are currently
+authorized and running.
+
+## Plain-Language Summary
+
+APX will become testable gradually. We will not move directly from documents to
+changing the real computer.
+
+Each level answers a different question:
+
+1. Do the rules reject unsafe requests?
+2. Can disposable fake data exercise failures safely?
+3. Can one empty experimental Environment run without touching personal data?
+4. Can two Environments prove separation from each other?
+5. Can graphical use, applications, hardware, and switching work safely?
+6. Can APX recover after crashes and deliberate attacks?
+
+Passing one level does not automatically authorize the next.
+
+## Level 1: Repository Contracts
+
+Status: active today.
+
+These tests run only against code and fake evidence inside the repository. They
+do not create users, storage, containers, sessions, services, or packages.
+
+Current coverage includes:
+
+- names, registrations, creation and removal plans;
+- read-only host and session observations;
+- snapshot evidence and Stage 2 review plans;
+- fixed normal and high-security isolation-policy contracts;
+- fixed Hub operation plans and approval binding;
+- rejection of commands, paths, unknown fields, stale generations, expired
+  confirmations, reused nonces, wrong sessions, and changed plans.
+
+Exit requirement: all tests pass deterministically and every new privileged
+effect first has a pure contract and negative tests.
+
+## Level 2: Disposable Filesystem Fixtures
+
+Status: not started.
+
+Tests use repository-owned temporary fixtures or an explicitly approved
+disposable test area. They model files, journals, manifests, interrupted writes,
+and corrupt records without representing them as real host resources.
+
+Required scenarios include:
+
+- crash before and after every journal step;
+- duplicate, missing, oversized, and corrupted metadata;
+- path replacement and symbolic-link attacks;
+- fake storage identity reuse;
+- quota and capacity evidence becoming unavailable;
+- approval replay and clock rollback;
+- recovery preserving uncertain data.
+
+Exit requirement: no test can delete or adopt a fixture without exact recorded
+identity and ownership evidence.
+
+## Level 3: One Headless Experimental Environment
+
+Status: designed but not authorized.
+
+This is the first level that changes host state. It requires a separate preview
+and explicit approval. The fixed `isolation-trial` identity is used, with no
+desktop, GPU, audio, camera, microphone, input devices, personal data, Hub,
+Odysseus, or Codex.
+
+The test proves:
+
+- isolated root and home creation;
+- independent package database;
+- local `sudo pacman` cannot change host packages;
+- private processes, mounts, users, IPC, and network;
+- enforced CPU, memory, process, and storage limits;
+- complete stop and cleanup evidence;
+- safe refusal when any identity is uncertain.
+
+Before starting, APX must show exact downloads, storage, accounts, processes,
+network effects, rollback limits, and cleanup plan.
+
+Exit requirement: repeated create, boot, local package change, stop, restart,
+and separately approved cleanup complete without host or unrelated changes.
+
+## Level 4: Two-Environment Separation
+
+Status: not designed in executable form.
+
+Two disposable Environments install the same harmless package independently.
+Tests then attempt, from normal user and local root, to access the other
+Environment and the host.
+
+Required denials include:
+
+- files and package databases;
+- processes, IPC, sockets, D-Bus, and services;
+- mounts, snapshots, metadata, and operation records;
+- network identity and undeclared host services;
+- devices, secrets, clipboard, and portals;
+- CPU, memory, process, and storage-limit removal;
+- surviving processes after stop.
+
+Deleting one Environment must leave the other byte-for-byte and semantically
+unchanged where the measurement is meaningful.
+
+Exit requirement: every attempted crossing is denied or the architecture is
+stopped and revised. “Mostly isolated” is not accepted.
+
+## Level 5: Graphical and Daily-Use Tests
+
+Status: future.
+
+Only after headless separation works do we add, one at a time:
+
+- minimal Wayland display;
+- mediated input;
+- audio;
+- notifications and file portal;
+- clipboard and secret storage;
+- removable storage;
+- AMD graphics;
+- NVIDIA graphics;
+- Hyprland, KDE Plasma, and GNOME;
+- Hub-to-Environment and return flow.
+
+Each addition repeats separation and teardown tests. If a feature needs broad
+host access, it remains disabled until a narrower design exists.
+
+Exit requirement: the owner can use and switch Environments without seeing
+internal Linux accounts, leaking data, leaving background runtimes, or losing a
+recovery route to the Hub.
+
+## Level 6: Attack and Recovery Campaign
+
+Status: future.
+
+Disposable Environments deliberately run malicious fixtures as normal user and
+local root. Failures are injected during creation, activation, package
+installation, stop, snapshot, archive, restore, and destroy.
+
+The campaign tests:
+
+- hostile package hooks and install scripts;
+- resource exhaustion;
+- namespace, capability, device, and socket escape attempts;
+- stale approvals and journal tampering;
+- forced power loss and executor restart;
+- broken graphics and incomplete teardown;
+- uncertain cleanup and protected-neighbour verification.
+
+High-security shared-kernel tests cannot prove immunity to every future kernel
+bug. Workloads requiring that promise need a separately tested virtual-machine
+profile.
+
+## User Test Experience
+
+When Level 3 is ready, the user should receive one plain-language test preview:
+
+- what will be created;
+- how much storage and memory may be used;
+- whether anything will be downloaded;
+- which network and process activity will occur;
+- confirmation that no personal Environment or Hub data is used;
+- how the test stops;
+- what cleanup would delete;
+- which evidence will prove success or failure.
+
+The user can approve the experiment without also approving cleanup, graphical
+access, GPU access, or later levels. Each requires its own decision.
+
+## Stop Conditions
+
+Testing stops immediately when:
+
+- host, Hub, base, or unrelated Environment state changes unexpectedly;
+- an unavailable observation is needed to claim safety;
+- identity or ownership becomes uncertain;
+- quota or capacity enforcement is inconsistent;
+- a process, mount, network object, device client, or session survives stop;
+- a request accepts an unknown command, path, device, or policy;
+- rollback would require guessing or deleting modified data;
+- the observed isolation is weaker than the user-facing claim.
+
+Stopping a test is a successful safety response, not permission to bypass the
+failed check.
+
+## Evidence and Handoff
+
+Every level produces a concise report explaining:
+
+- what was tested;
+- what passed;
+- what failed or could not be confirmed;
+- what changed;
+- what remained untouched;
+- what data or resources remain;
+- whether cleanup is safe and separately approved;
+- whether the next level is eligible for review.
+
+Technical logs remain bounded and separate. They do not contain unrelated
+personal data or secrets.
+
+## Current Readiness
+
+Level 1 is established and growing. Level 2 is the next safe implementation
+target. Level 3 already has architecture and review documents, but its real
+base, executor, authentication, quota topology, and host-changing approval are
+not ready.
+
+The project must not describe future user testing as available until the exact
+experiment preview, rollback boundary, and independently verified cleanup are
+implemented and reviewed.

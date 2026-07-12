@@ -79,6 +79,84 @@ class ParserTests(unittest.TestCase):
         args = apx_cli.create_parser().parse_args(["host", "brave-isolation"])
         self.assertEqual((args.command, args.host_command), ("host", "brave-isolation"))
 
+    def test_host_isolation_readiness_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "isolation-readiness"])
+        self.assertEqual(
+            (args.command, args.host_command), ("host", "isolation-readiness")
+        )
+
+    def test_host_isolation_plan_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "isolation-plan"])
+        self.assertEqual((args.command, args.host_command), ("host", "isolation-plan"))
+
+    def test_host_snapshot_plan_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "snapshot-plan"])
+        self.assertEqual((args.command, args.host_command), ("host", "snapshot-plan"))
+
+    def test_host_snapshot_readiness_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "snapshot-readiness"])
+        self.assertEqual(
+            (args.command, args.host_command), ("host", "snapshot-readiness")
+        )
+
+    def test_host_stage2_dossier_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "stage2-dossier"])
+        self.assertEqual((args.command, args.host_command), ("host", "stage2-dossier"))
+
+    def test_fixed_stage_plans_reject_caller_arguments(self) -> None:
+        for command in ("snapshot-plan", "stage2-dossier"):
+            with self.assertRaises(SystemExit):
+                apx_cli.create_parser().parse_args(["host", command, "/tmp/injected"])
+
+    def test_snapshot_plan_command_is_non_observing_and_blocked(self) -> None:
+        stdout = StringIO()
+        result = apx_cli.run(
+            ["host", "snapshot-plan"],
+            accounts_provider=lambda: (),
+            stdout=stdout,
+        )
+        self.assertEqual(result, 0)
+        self.assertIn("Mode: plan only; no network", stdout.getvalue())
+        self.assertIn("Approval: blocked-plan-only", stdout.getvalue())
+
+    def test_snapshot_readiness_command_is_fixed_and_read_only(self) -> None:
+        stdout = StringIO()
+        commands = []
+
+        def runner(arguments, timeout):
+            commands.append(tuple(arguments))
+            return apx_cli.CommandResult(0, "fixture", "")
+
+        result = apx_cli.run(
+            ["host", "snapshot-readiness"],
+            accounts_provider=lambda: (),
+            command_runner=runner,
+            which_func=lambda name: f"/usr/bin/{name}",
+            lstat_func=lambda path: SimpleNamespace(
+                st_mode=stat.S_IFREG | 0o644,
+                st_dev=1,
+                st_ino=2,
+                st_size=3,
+                st_uid=0,
+                st_gid=0,
+            ),
+            stdout=stdout,
+        )
+        self.assertEqual(result, 0)
+        self.assertIn("read-only fixed observation", stdout.getvalue())
+        self.assertEqual(len(commands), 6)
+
+    def test_stage2_dossier_command_is_review_only_and_blocked(self) -> None:
+        stdout = StringIO()
+        result = apx_cli.run(
+            ["host", "stage2-dossier"],
+            accounts_provider=lambda: (),
+            stdout=stdout,
+        )
+        self.assertEqual(result, 0)
+        self.assertIn("Mode: review only", stdout.getvalue())
+        self.assertIn("blocked-pending-review", stdout.getvalue())
+
     def test_host_check_complete_report_returns_zero(self) -> None:
         stdout = StringIO()
         with patch("apx_cli.observe_registration", return_value=SimpleNamespace(state="absent")), \

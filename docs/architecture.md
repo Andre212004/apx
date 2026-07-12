@@ -16,8 +16,7 @@ APX is not:
 
 - a Linux distribution
 - a replacement operating system
-- a container runtime
-- a virtual machine manager
+- necessarily a virtual-machine manager with one kernel per Environment
 - a second package manager
 - a replacement desktop shell
 - a development environment inside the Hub
@@ -31,26 +30,77 @@ An APX system has exactly one host Arch Linux installation.
 The host owns:
 
 - one kernel
-- one package database
-- one shared set of system-level compositors, desktop components, and applications
+- the boot and hardware integration needed to start Environments
 - global system services
-- globally installed applications
 
-APX does not duplicate these resources per Environment.
+The boundary between minimal host software and Environment-local software is
+under evaluation. One host kernel is confirmed; one globally shared application
+and package set is not.
 
-## Shared Applications, Isolated Data
+## Environment-Local Applications and Data
 
-Applications are shared globally through the Arch package database.
+Applications and their dependencies are intended to be local to an Environment.
+Installing an application in one Environment must not expose it in another, and
+deleting the Environment must remove its application state without affecting
+the others.
 
 The intended Environment isolation applies to:
 
+- applications and dependencies
 - user home data
 - configuration
 - session state
 - user-owned processes
 - APX metadata
 
-This avoids duplicating applications while preserving independent personal workspaces.
+The implementation mechanism is not selected. Container/root filesystem,
+image, package overlay, namespace, and similar approaches must be compared
+against desktop, GPU, update, template, deletion, and security requirements.
+
+### Host, Base, Role, and Environment Layers
+
+The intended design distinguishes four concerns:
+
+- **Host:** kernel, hardware drivers, firmware, physical device management,
+  machine-wide networking capability, and the minimum APX runtime.
+- **APX base:** a reviewed, versioned, reproducible baseline that may provide
+  common runtime integration, fonts, certificates, and safe defaults.
+- **Role template:** Hub, development, gaming, university, or another declared
+  software and policy profile layered on the base.
+- **Environment state:** local applications, data, configuration, secrets, and
+  runtime state belonging to one Environment.
+
+These are intended responsibilities, not an implemented storage layout. Wi-Fi
+credentials and secrets require particular care: the host may provide network
+connectivity without copying credentials into every Environment. The precise
+boundary must be threat-modeled and validated.
+
+The live Hub is not a base image. Both Hub and workload Environments derive from
+the APX base plus different role templates. Hub management authority, metadata,
+credentials, widgets, and mutable state must not be inherited by workloads.
+
+### Environment Package Management
+
+Each Environment has its own writable software databases and root filesystem
+state. Package managers and installers issued inside it resolve against that
+local state. This includes `pacman`, `yay`, `apt`, Flatpak, language package
+managers, vendor installers, and installation scripts. Therefore
+`sudo pacman -S steam` inside `APX-Jogos1` installs Steam only there; the same
+command in `APX-Jogos2` creates a separate installation.
+
+Environment-local administrative privilege is not host administrative
+privilege. The Environment must not expose the host package database, host root
+filesystem, host package-manager lock, host signing configuration with private
+material, or a socket/helper that accepts arbitrary host package requests. APX
+host and base updates use a separate, explicitly authorized maintenance path.
+
+The complete proposed local-administrator, package-manager, service, device,
+update, recovery, and denial-test contract is maintained in
+`environment-local-administration-v1.md`.
+
+Templates may declare initial packages, but later local package operations
+remain owned by the Environment. Deleting the Environment deletes those package
+changes subject to the normal explicit data-loss and provenance checks.
 
 ## Environments
 
@@ -61,11 +111,16 @@ The intended Environment model maps each Environment to:
 - one Linux user
 - one dedicated Btrfs home subvolume
 - one independent graphical login session
+- independent applications and dependencies
 - independent configuration
 - user-owned processes separated by Linux user ownership
 - independent metadata
 
-The Linux user boundary provides ownership and process separation. The Btrfs subvolume provides storage structure, snapshot support, and lifecycle management. The login session provides an independent interactive workspace.
+The Linux user boundary provides internal identity and ownership separation. It
+is not, by itself, a VM-equivalent containment boundary. The Btrfs subvolume
+provides part of the storage structure, while the application/runtime storage
+model remains to be designed. The login session provides an independent
+interactive workspace.
 
 ### Environment Identity Contract
 
@@ -140,7 +195,7 @@ Every readiness check is classified independently as `ready`, `blocked`, `requir
 
 ### Linux User
 
-The Linux user is the primary identity boundary.
+The Linux user is the current internal identity and ownership boundary.
 
 It defines:
 
@@ -150,7 +205,10 @@ It defines:
 - home directory ownership
 - session identity
 
-APX should avoid creating hidden alternate identity systems when Linux users already provide the required primitive.
+The person sees one APX identity and named Environments, not these internal
+accounts or a normal display-manager user chooser. A future multi-person model
+may group Environments beneath separate human identities. Authentication and
+group ownership are not yet designed.
 
 ### Btrfs Home Subvolume
 
@@ -176,7 +234,9 @@ Snapshot, quota, compression, backup, archival-storage, and subvolume top-level 
 
 ### Graphical Session
 
-Each Environment is intended to have its own independent graphical login session. Hyprland is the intended primary compositor, but APX must remain compositor-independent.
+Each Environment is intended to have its own independent graphical login
+session. Hyprland, KDE Plasma, GNOME, and other viable choices should be
+supported without defining APX lifecycle semantics.
 
 User configuration, session state, and user-level services are separate per Environment. APX must not rely on KDE autostart, Plasma-specific behavior, or KDE APIs for lifecycle management.
 
@@ -188,7 +248,9 @@ Processes belong to the Environment user that launched them.
 
 APX should treat process ownership as part of the Environment boundary. Lifecycle operations that stop, archive, restore, or switch Environments must account for running processes.
 
-Process isolation through Linux namespaces is not implemented and is not a confirmed architectural requirement.
+Process isolation through Linux namespaces is not implemented. Stronger
+containment is now a product requirement, especially for an optional high-
+security profile, but the threat model and mechanism are not yet selected.
 
 ### Metadata
 
@@ -326,7 +388,7 @@ Atomic publication of final registration is the destructive rollback commit boun
 
 Unprivileged `apx` creates and renders a normalized plan. A human reviews and explicitly approves that exact operation. Future `apx-admin` independently validates the request, checks supported versions, re-observes authoritative host state, rejects stale or changed plans, performs only typed approved steps, and verifies the result.
 
-Approval binds the operation type, plan schema, logical name, derived account and home, role, normalized relevant preconditions, ordered typed mutations, and helper compatibility. It never authorizes arbitrary commands, different identities or paths, a broader operation, or failed preconditions. The digest is content identity, not authentication or authorization. Authentication mechanism, approval lifetime, and privileged request protocol version remain unresolved; no reusable token format is defined.
+Approval binds the operation type, plan schema, logical name, derived account and home, role, normalized relevant preconditions, ordered typed mutations, and helper compatibility. It never authorizes arbitrary commands, different identities or paths, a broader operation, or failed preconditions. The digest is content identity, not authentication or authorization. A bounded approval, replay-protection, journal, and recovery protocol is now proposed in `privileged-executor-protocol-v1.md`; the human authentication technology and final transport remain unresolved and nothing is implemented.
 
 Plan validity includes account, home, registration and candidate absence; parent and target path identity; Btrfs filesystem identity/capability; supported registration and plan versions; and future helper protocol compatibility. Transient diagnostics, timestamps, and random values are excluded. Content identity, host-state freshness, and authorization lifetime are separate. Digest equality cannot establish freshness: the privileged component must always re-observe, and any failed current precondition overrides a matching digest.
 
@@ -340,7 +402,10 @@ Future root-owned `apx-admin` may accept one small versioned typed request, vali
 
 The Hub is an Environment dedicated to APX management.
 
-The Hub is not a general desktop and must not become a development workspace. It exists to manage Environments and APX lifecycle operations.
+The Hub is not a general desktop and must not become a development workspace. It
+may include APX management UI, system status, visual customization, and tightly
+scoped widgets. General-purpose browsers, editors, games, and workload software
+do not belong there.
 
 The Hub is subject to the same architectural model as every other Environment. There are no special exceptions for the Hub beyond its purpose and permissions.
 
@@ -387,15 +452,21 @@ APX should use ordinary Linux primitives before inventing APX-specific abstracti
 
 Initial boundaries are Linux users, Btrfs subvolumes, graphical login sessions, process ownership, filesystem permissions, and metadata files or records.
 
-### Applications Are Global
+### Applications and Data Belong to Environments
 
-The system has one package database.
+Workload applications, their dependencies, data, configuration, and runtime
+state must be local to their Environment. The exact package/root filesystem
+mechanism remains under evaluation and must not be encoded before validation.
 
-APX should not create per-Environment package databases unless a future architecture document proves that the added complexity is necessary.
+Reviewed immutable content may be shared or inherited from a versioned APX base
+without permitting mutable cross-Environment application or data sharing.
 
 ### The Hub Is Clean
 
-The Hub must remain focused on APX management. Development tools, build artifacts, source repositories, and implementation work belong in the Development Environment.
+The Hub must remain focused on APX management, presentation, system summaries,
+and tightly scoped widgets. Development tools, general-purpose applications,
+build artifacts, source repositories, and implementation work belong in
+dedicated Environments.
 
 ### One Graphical Environment at a Time
 
@@ -416,9 +487,11 @@ Implementation should follow documented architecture. When a design question is 
 ## Confirmed Intended Architecture
 
 - APX is an orchestration layer on top of Arch Linux, not a replacement operating system.
-- The host architecture is one Arch installation, one kernel, one package database, and one shared set of system-level graphical software.
-- Applications are globally installed.
-- Environment data, configuration, session state, processes, and metadata are separated by Environment.
+- The host architecture is one Arch installation and one kernel.
+- Workload applications, dependencies, data, configuration, session state,
+  processes, and metadata are separated by Environment.
+- Package installation from inside an Environment always targets its own
+  package database and root filesystem, never the host or another Environment.
 - Each Environment corresponds to one dedicated Linux user and one intended dedicated Btrfs home subvolume.
 - Each Environment has its own graphical login session, with only one graphical Environment active at a time.
 - The Hub is an Environment dedicated to APX management.
@@ -426,13 +499,37 @@ Implementation should follow documented architecture. When a design question is 
 - The intended lifecycle is `Boot -> Hub -> Environment -> Hub`.
 - The Hub must not become a development workspace.
 - No implementation decision may require a unique lifecycle exception for the Hub.
-- Linux user boundaries are sufficient as the primary identity and ownership boundary.
-- Hyprland is the intended primary compositor, while APX service and session lifecycle remains compositor-independent.
+- Linux accounts are hidden internal identity and ownership boundaries, not a
+  complete VM-equivalent security boundary.
+- Hyprland, KDE Plasma, GNOME, and other viable graphical choices must not alter
+  APX service and session lifecycle semantics.
+- The normal interface presents one human identity and no ordinary Linux user
+  chooser.
+- The Hub and workloads derive independently from a versioned APX base; the
+  live Hub is never cloned into other Environments.
+- Selected Environments may run isolated Odysseus or Codex assistants under
+  explicit future Hub policy.
 - Normal Environment services use `Linger=no` and stop with the Environment's final login session.
 
 ## Ideas Under Evaluation
 
 - The display-manager and session-handoff mechanism remains under evaluation; `greetd` has not been adopted.
+- The per-Environment application/root filesystem and normal/high-security
+  isolation mechanisms remain under evaluation.
+
+The provisional first backend to validate is a bootable Arch system container
+using `systemd-nspawn`, Btrfs-backed state, user/network namespaces, explicit
+device policy, and verified teardown. This is not an implementation decision
+until the gates in [isolation-architecture.md](isolation-architecture.md) pass.
+The initial security assumptions and required validation are documented in
+[threat-model.md](threat-model.md).
+
+The repository-level Stage 2 candidate is now modeled as a deterministic,
+review-only package: a dated archive acquisition plan, five typed intended
+resources, creation gates, postconditions, failure states, risks, rollback
+rules, destructive-operation separation, blockers, and a dossier digest. This
+is a proposal under review, not host state, approval, or an executor. See
+[stage2-approval-dossier.md](stage2-approval-dossier.md).
 
 ## Open Questions
 
@@ -440,5 +537,18 @@ Implementation should follow documented architecture. When a design question is 
 - How should APX safely stop or hand off user processes during Environment switching?
 - What exact display-manager/session-manager integration should APX use?
 - What fixed login shell policy should future account creation use?
-- What authentication mechanism and lifetime should bind human approval to a future privileged request?
+- What authentication mechanism should implement the proposed approval
+  strengths and secure Hub session?
+- What replay-resistant typed protocol should carry the approved dossier to a
+  future independently validating executor?
+- Which exact trusted-host `archlinux-keyring` version/file hashes and matching
+  archive digest should instantiate the selected explicit bootstrap mechanism?
+- What exact Btrfs qgroup hierarchy and fresh enforcement check should bind the
+  8 GiB root and 2 GiB home budgets?
 - What snapshot, quota, compression, backup, and archival-storage policies should APX adopt?
+- What package, root filesystem, namespace, device, network, and security model
+  provides Environment-local applications with defensible isolation?
+- Which drivers, firmware, network facilities, fonts, certificates, and desktop
+  defaults belong to the host, APX base, or role templates?
+- How should Odysseus and optional Codex instances be provisioned and confined?
+- How should future human identities own and group Environments?

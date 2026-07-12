@@ -2,7 +2,9 @@
 
 APX is a personal operating environment platform built on top of Arch Linux.
 
-APX does not replace Linux. The host remains a single Arch Linux installation with one kernel, one package database, and one shared set of system-level graphical software. APX adds an orchestration layer for managing isolated personal Environments on that system.
+APX does not replace Linux. The host remains a single Arch Linux installation
+with one kernel. APX adds an orchestration layer that makes the computer behave
+like a collection of isolated, disposable personal Environments.
 
 ## What APX Is
 
@@ -10,7 +12,19 @@ APX is an architecture for managing multiple isolated personal Environments on o
 
 Each Environment is intended to provide a separate personal workspace with its own Linux identity, home data, configuration, graphical session, processes, and APX metadata.
 
-In the intended architecture, applications are shared globally through the host Arch Linux system while user data and session state are separated by Environment.
+In the intended product, applications, dependencies, data, configuration, and
+runtime state belong to an Environment. Installing an application in one
+Environment must not expose it in another. The mechanism that provides this
+while retaining one host kernel is still under architectural evaluation.
+
+Isolation does not require duplicating every safe default. The Hub and workload
+Environments may be built from a reviewed, versioned APX base that supplies
+common integration and presentation defaults. The live Hub is never cloned:
+Hub-only authority and mutable state must not enter other Environments.
+
+Package installation follows the same boundary. Running, for example,
+`sudo pacman -S steam` inside a games Environment installs Steam only there.
+The command must not change the host, Hub, base, or another Environment.
 
 ## What APX Is Not
 
@@ -18,7 +32,7 @@ APX is not:
 
 - a Linux distribution
 - a replacement operating system
-- a container runtime
+- necessarily a virtual-machine platform with a separate kernel per Environment
 - a virtual machine manager
 - a second package manager
 - a replacement desktop shell
@@ -32,11 +46,12 @@ An APX system has:
 
 - one Arch Linux installation
 - one kernel
-- one package database
-- one shared set of system-level compositors, desktop components, and applications
-- one shared set of globally installed applications
+- the minimal host facilities required to start and manage Environments
+- Environment-local workload applications and dependencies
 
-APX does not create a separate operating system per Environment. The host system remains the authority for packages, services, kernel updates, compositors, and desktop components.
+APX does not create a separate kernel per Environment. The host remains the
+authority for kernel updates, hardware integration, and global services. The
+boundary for packages, compositors, and desktop components is under evaluation.
 
 ## Environments
 
@@ -49,7 +64,10 @@ An APX Environment is represented by:
 - user-owned processes separated by Linux user ownership
 - independent metadata
 
-The Linux user is the primary identity boundary. It defines file ownership, process ownership, user-level permissions, home ownership, and session identity.
+Separate Linux users remain an internal identity and ownership boundary. The
+person using APX sees one human identity and named Environments rather than an
+ordinary Linux user chooser. Users and filesystem permissions alone are not a
+VM-equivalent security boundary; stronger containment remains to be designed.
 
 Current manually created users still have ordinary homes under the existing `@home` subvolume. Dedicated Btrfs home subvolumes are the intended APX architecture, not the current implemented state.
 
@@ -59,7 +77,10 @@ The Hub is the default APX Environment and the management entry point.
 
 The Hub's planned responsibility is to provide APX operations such as listing, creating, archiving, restoring, snapshotting, templating, and launching Environments.
 
-The Hub is not a general-purpose desktop or a development workspace. Source repositories, IDEs, build tools, Git workflow tools, development browser profiles, and implementation artifacts belong in the APX Development Environment.
+The Hub is not a general-purpose desktop or a development workspace. It may
+contain APX management UI, system summaries, visual customization, and tightly
+scoped widgets. Browsers, ordinary editors, games, source repositories, IDEs,
+build tools, and workload applications belong in dedicated Environments.
 
 The Hub must be destroyable and recreatable like every other Environment. No APX implementation decision may require a unique lifecycle exception for the Hub.
 
@@ -69,13 +90,19 @@ Btrfs is the intended storage foundation for Environment homes.
 
 The target model is one dedicated home subvolume per Environment. This should support snapshots, archival, restoration, and templates.
 
-The exact subvolume layout is not implemented yet and must be validated before implementation.
+The logical storage objects and lifecycle state machine now have a complete v1
+proposal. The physical subvolume layout, mount topology, and qgroup hierarchy
+are not selected or implemented and must be validated before implementation.
 
 ## Graphical Environment
 
-Hyprland is the intended primary compositor. This is an architectural direction, not a claim that Hyprland has been installed or adopted on the current host.
+APX is intended to support Hyprland, KDE Plasma, GNOME, and other viable desktop
+or compositor choices. No one graphical environment may define APX lifecycle
+semantics.
 
-Environment separation comes from separate Linux users, home data, configuration, processes, and login sessions. APX lifecycle behavior must use compositor-independent systemd and logind primitives and must not require Plasma, KDE autostart, or KDE APIs.
+Environment separation must cover applications, dependencies, home data,
+configuration, processes, services, and login sessions. APX lifecycle behavior
+must remain independent of desktop-specific autostart or APIs.
 
 Only one graphical Environment should run at a time in the intended session model.
 
@@ -93,6 +120,30 @@ This repository contains architecture documentation and a read-only inspection a
 
 `apx host brave-isolation` reports current Brave installation and visibility, per-user data evidence, available isolation approaches, and a non-executing first-experiment recommendation with backup, rollback, and approval requirements.
 
+`apx host isolation-readiness` performs the read-only Stage 0 inspection for the
+provisional system-container experiment. It checks the fixed experimental
+identity, required and optional tooling, kernel/systemd context, cgroup and user
+namespace evidence, machine collisions, and `/home` storage capacity. It never
+creates an image or container and treats restricted-context positives as
+requiring authoritative host confirmation.
+
+`apx host isolation-plan` renders the fixed, non-executing first headless
+system-container plan. It contains no commands or caller-selected paths and
+remains blocked until a separately approved host experiment.
+
+`apx host snapshot-plan` renders the fixed, non-executing dated-archive
+acquisition candidate, trust gaps, resource limits, phases, blockers, and plan
+digest. It performs no network or filesystem operation.
+
+`apx host snapshot-readiness` performs a fixed read-only observation of the
+pacman/GnuPG tools, installed package identities, and regular-file identities
+and hashes of the Arch keyring inputs. It accepts no paths or package names and
+does not download, refresh, import, sign, or mutate trust state.
+
+`apx host stage2-dossier` renders the fixed review-only Stage 2 resource and
+approval package, including downloads, host effects, gates, risks, failures,
+rollback rules, destructive-operation separation, blockers, and dossier digest.
+
 The first approved extracted-build experiment and its unresolved validation
 results are recorded in
 [docs/brave-user-local-experiment.md](docs/brave-user-local-experiment.md).
@@ -106,16 +157,33 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 ```text
 .
 ├── AGENTS.md
+├── PROJECT_STATE.md
 ├── docs/
 │   ├── architecture.md
+│   ├── base-and-storage-v1.md
+│   ├── base-and-role-template-model-v1.md
+│   ├── base-snapshot-acquisition-v1.md
+│   ├── btrfs-storage-layout-v1.md
 │   ├── brave-user-local-experiment.md
 │   ├── development-principles.md
+│   ├── environment-lifecycle-and-storage-v1.md
+│   ├── environment-local-administration-v1.md
+│   ├── human-identity-and-session-handoff-v1.md
+│   ├── isolation-architecture.md
+│   ├── lifecycle-threat-model-review-v1.md
+│   ├── privileged-executor-protocol-v1.md
 │   ├── roadmap.md
-│   └── session-management.md
+│   ├── session-management.md
+│   ├── stage2-approval-dossier.md
+│   ├── system-container-experiment.md
+│   ├── testing-strategy-v1.md
+│   └── threat-model.md
 ├── src/
 │   ├── apx_cli.py
 │   ├── apx_consistency.py
+│   ├── apx_executor_contract.py
 │   ├── apx_host.py
+│   ├── apx_policy.py
 │   ├── apx_environment.py
 │   └── apx_registration.py
 ├── tests/
@@ -130,11 +198,30 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 - architecture before implementation
 - no unnecessary abstractions
 - no exceptions for the Hub
-- global applications, isolated user data
+- Environment-local applications, dependencies, data, and state
+- one human-facing identity over hidden internal accounts
 - professional documentation
 - clean repository history
 - long-term maintainability
 
 ## Documentation
 
-Start with [docs/architecture.md](docs/architecture.md).
+Start with [docs/architecture.md](docs/architecture.md). The proposed storage
+and lifecycle contract is in
+[docs/environment-lifecycle-and-storage-v1.md](docs/environment-lifecycle-and-storage-v1.md).
+Its security review and proposed physical mapping are in
+[docs/lifecycle-threat-model-review-v1.md](docs/lifecycle-threat-model-review-v1.md)
+and [docs/btrfs-storage-layout-v1.md](docs/btrfs-storage-layout-v1.md).
+The proposed safety boundary between the Hub and future system-changing actions
+is documented in
+[docs/privileged-executor-protocol-v1.md](docs/privileged-executor-protocol-v1.md).
+The proposed owner unlock, Environment switching, and recovery experience is in
+[docs/human-identity-and-session-handoff-v1.md](docs/human-identity-and-session-handoff-v1.md).
+The proposed safe starting models for Hub, Games, University, Development, and
+other Environment roles are defined in
+[docs/base-and-role-template-model-v1.md](docs/base-and-role-template-model-v1.md).
+The proposed rules allowing software installation and administration inside one
+Environment without administering the host are in
+[docs/environment-local-administration-v1.md](docs/environment-local-administration-v1.md).
+The staged path from safe repository tests to later user-visible experiments is
+in [docs/testing-strategy-v1.md](docs/testing-strategy-v1.md).

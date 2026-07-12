@@ -10,7 +10,11 @@ Implementation should not begin until the repository clearly documents the archi
 - architecture before implementation
 - no unnecessary abstractions
 - no exceptions for the Hub
-- global applications, isolated user data
+- Environment-local applications, dependencies, data, and state
+- one human-facing identity over hidden internal Linux accounts
+- explicit isolation guarantees rather than VM-like claims
+- reviewed versioned baselines rather than cloning live Environments
+- Environment-local package administration with no host package-manager path
 - professional documentation
 - clean repository history
 - long-term maintainability
@@ -81,6 +85,25 @@ The following do not belong in the Hub:
 
 The Hub may receive APX management permissions, but it must not bypass the core APX Environment model without a documented architectural decision.
 
+The Hub may include APX management components, system summaries, visual
+customization, and tightly scoped widgets. This does not make it a general-
+purpose application Environment. Software selection for workload Environments
+must occur through reviewed templates or a future bounded management protocol,
+not an arbitrary privileged installer exposed by the Hub.
+
+The Hub must not be used as the live base image for other Environments. Common
+drivers, integration, fonts, certificates, and defaults belong to a reviewed,
+versioned APX base or to the host according to a documented boundary. Hub-only
+software, permissions, credentials, and mutable state remain confined to the
+Hub role.
+
+## Continuity Discipline
+
+`PROJECT_STATE.md` is the canonical project-continuity document. Every change to
+the objective, method, confirmed architecture, or an accepted deviation must
+update it in the same change. Architectural experiments must record both
+successful and unresolved evidence.
+
 ## Implementation Readiness
 
 Before implementation begins, APX should have documented decisions for:
@@ -92,6 +115,9 @@ Before implementation begins, APX should have documented decisions for:
 - Environment lifecycle states
 - snapshot, archive, restore, and template behavior
 - failure and recovery behavior
+- per-Environment application and dependency isolation
+- normal and high-security isolation threat models
+- local-assistant lifecycle and permissions
 
 ## Git Discipline
 

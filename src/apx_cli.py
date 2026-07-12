@@ -45,6 +45,19 @@ from apx_host import observe_host_readiness, render_host_readiness
 from apx_practical import observe_practical, render_practical
 from apx_removal import observe_removal_evidence, build_removal_report, render_removal_report
 from apx_brave import build_brave_isolation_report, render_brave_isolation
+from apx_isolation import (
+    EXPERIMENT_LOGICAL_NAME,
+    build_isolation_experiment_plan,
+    build_snapshot_acquisition_plan,
+    build_stage2_approval_dossier,
+    observe_isolation_readiness,
+    observe_snapshot_trust_readiness,
+    render_isolation_experiment_plan,
+    render_isolation_readiness,
+    render_snapshot_acquisition_plan,
+    render_snapshot_trust_readiness,
+    render_stage2_approval_dossier,
+)
 
 
 FINDMNT_TIMEOUT = 3.0
@@ -183,6 +196,26 @@ def create_parser() -> argparse.ArgumentParser:
     host_commands.add_parser("validate", help="inspect practical host state for milestone 3A")
     host_commands.add_parser(
         "brave-isolation", help="plan a read-only Brave isolation experiment"
+    )
+    host_commands.add_parser(
+        "isolation-readiness",
+        help="inspect readiness for the system-container experiment",
+    )
+    host_commands.add_parser(
+        "isolation-plan",
+        help="render the fixed non-executing system-container experiment plan",
+    )
+    host_commands.add_parser(
+        "snapshot-plan",
+        help="render the fixed non-executing base snapshot acquisition plan",
+    )
+    host_commands.add_parser(
+        "snapshot-readiness",
+        help="inspect fixed trust and tool evidence for snapshot acquisition",
+    )
+    host_commands.add_parser(
+        "stage2-dossier",
+        help="render the fixed review-only Stage 2 approval dossier",
     )
 
     environment = commands.add_parser(
@@ -998,6 +1031,66 @@ def run(
 
     if args.command == "host":
         try:
+            if args.host_command == "snapshot-plan":
+                print(
+                    render_snapshot_acquisition_plan(
+                        build_snapshot_acquisition_plan()
+                    ),
+                    file=stdout,
+                )
+                return 0
+            if args.host_command == "snapshot-readiness":
+                print(
+                    render_snapshot_trust_readiness(
+                        observe_snapshot_trust_readiness(
+                            command_runner=command_runner,
+                            which_func=which_func,
+                            lstat_func=lstat_func,
+                            authoritative_host=host_authoritative,
+                        )
+                    ),
+                    file=stdout,
+                )
+                return 0
+            if args.host_command == "stage2-dossier":
+                print(
+                    render_stage2_approval_dossier(
+                        build_stage2_approval_dossier()
+                    ),
+                    file=stdout,
+                )
+                return 0
+            if args.host_command == "isolation-plan":
+                print(
+                    render_isolation_experiment_plan(
+                        build_isolation_experiment_plan()
+                    ),
+                    file=stdout,
+                )
+                return 0
+            if args.host_command == "isolation-readiness":
+                experiment_registration = observe_registration(
+                    EXPERIMENT_LOGICAL_NAME,
+                    registration_directory,
+                    uid_resolver,
+                    gid_resolver,
+                )
+                experiment_marker = observe_incomplete_operation(
+                    EXPERIMENT_LOGICAL_NAME,
+                    incomplete_operation_directory,
+                    lstat_func=lstat_func,
+                )
+                isolation_report = observe_isolation_readiness(
+                    accounts=accounts,
+                    registration=experiment_registration,
+                    incomplete_operation=experiment_marker,
+                    command_runner=command_runner,
+                    which_func=which_func,
+                    lstat_func=lstat_func,
+                    authoritative_host=host_authoritative,
+                )
+                print(render_isolation_readiness(isolation_report), file=stdout)
+                return 0
             if args.host_command in {"validate", "brave-isolation"}:
                 current_sessions = observe_sessions(candidates, command_runner)
                 report = observe_practical(

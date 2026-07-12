@@ -1,127 +1,135 @@
 # Session Management
 
-This document records the confirmed intended APX session model and the parts that still require validation.
+This document records the intended APX session experience and the decisions
+still required. No functional APX session-management implementation exists.
+
+The complete v1 proposal for human identity, unlock, switching, unsaved-work
+handling, locking, and recovery is maintained in
+`human-identity-and-session-handoff-v1.md`. This overview remains the concise
+statement of direction and current reality.
 
 ## Current System
 
-No functional APX session-management implementation currently exists.
+SDDM currently manages graphical sessions. `greetd` has not been adopted or
+implemented. Current manually created users have ordinary homes under the
+existing `@home` subvolume. The normal system still exposes Linux account and
+display-manager behavior; the intended APX abstraction is not implemented.
 
-SDDM currently manages graphical sessions. `greetd` has not been adopted or implemented.
+## Human-Facing Identity
 
-Current manually created users have ordinary homes under the existing `@home` subvolume rather than dedicated Btrfs home subvolumes.
+The intended owner experience has one human identity and named Environments.
+APX may retain one internal Linux account per Environment for ownership and
+session separation, but normal boot and switching must not show an ordinary
+Linux user chooser or ask the owner to select internal accounts.
 
-## Confirmed Intended Architecture
-
-Each Environment is represented by a dedicated Linux user.
-
-Each Environment is intended to have its own Btrfs home subvolume. This is not yet true for the current manually created users, which still have ordinary homes under the existing `@home` subvolume.
-
-Hyprland is the intended primary compositor. Environment separation comes from Linux users, home data, user configuration, session state, user-owned processes, and APX metadata. APX must remain compositor-independent and must not depend on Plasma, KDE autostart, or KDE APIs.
-
-The Hub is the default Environment.
-
-Only one graphical Environment should run at a time in the intended APX model.
-
-The intended flow is:
-
-```text
-Boot -> Hub -> Environment -> Hub
-```
-
-The Hub must be destroyable and recreatable like every other Environment.
-
-No implementation decision may require a unique lifecycle exception for the Hub.
+Automatic entry into the Hub does not imply an unauthenticated computer. The
+secure login, unlock, credential lifetime, and recovery mechanism remain to be
+designed. A future multi-person model may group Environments beneath separate
+human identities, but must not be inferred from the current internal account
+mapping.
 
 ## Intended Flow
 
-### Boot to Hub
+Only one normal graphical workload Environment should be active at a time:
 
-The target system boots into the Hub as the default APX Environment.
+```text
+Boot -> secure Hub entry -> selected Environment -> Hub
+```
 
-The Hub is intended to provide APX management workflows:
+The proposed handoff uses a minimal host-owned transition and recovery surface.
+The Hub does not remain graphically active behind a workload Environment. This
+surface is trusted lifecycle machinery, not another Environment or general
+desktop.
 
-- list Environments
-- create Environments
-- archive Environments
-- restore Environments
-- snapshot Environments
-- manage templates
-- launch Environments
+### Hub
 
-The Hub is not a general-purpose desktop. It is the APX management entry point.
+The Hub is the default minimal Environment and management surface. It can list,
+create from templates, configure, launch, stop, snapshot, archive, restore, and
+delete Environments. It may provide system summaries, visual customization, and
+tightly scoped widgets. It is not a general-purpose browser, editor, gaming, or
+development Environment.
+
+The Hub selects declarative templates, software sets, and policies through a
+future bounded APX protocol. It must not expose an arbitrary privileged package
+installer or shell into other Environments.
 
 ### Hub to Environment
 
-In the intended flow, the user launches an Environment from the Hub.
-
-The target model should ensure that only the selected graphical Environment is active. The previous graphical Environment should not remain as an independent concurrent desktop session.
+Launching an Environment must establish its internal identity, local
+application/runtime view, storage, devices, services, desktop session, and
+isolation policy. The Hub's graphical session should not remain as an
+independent general desktop. The precise handoff mechanism is under evaluation.
 
 ### Environment to Hub
 
-In the intended flow, control returns to the Hub when the user exits or switches away from an Environment.
+Returning must account for unsaved work, graphical clients, user services,
+containers or namespaces, mounted storage, devices, and local assistants. APX
+must distinguish clean stop, refusal because work is active, failure, forced
+termination, and recoverable incomplete handoff.
 
-APX lifecycle operations must account for running user-owned processes before archive, restore, snapshot, destruction, or session handoff operations occur.
+## Desktop and Compositor Independence
 
-## Graphical Environment
+An Environment may use Hyprland, KDE Plasma, GNOME, or another supported
+desktop/compositor. Applications and dependencies are Environment-local in the
+intended product. The boundary between minimal host graphical facilities and
+per-Environment desktop packages remains an architecture question.
 
-Graphical software is installed once at the system level. Hyprland is the intended primary compositor; this direction does not assert that it is currently installed or adopted.
+The Hub and workload sessions may share a versioned APX baseline, but no
+workload session inherits the live Hub's management capabilities or mutable
+state. Host-provided hardware and network facilities must be distinguished from
+credentials or secrets copied into an Environment.
 
-Each Environment has separate compositor configuration and session state through its dedicated Linux user and home data.
+APX lifecycle must rely on stable system/session primitives and an explicit
+adapter contract where necessary. It must not encode Plasma, GNOME, Hyprland,
+KDE autostart, or another desktop API as the universal lifecycle mechanism.
 
-APX does not install or manage a separate compositor copy per Environment.
+## Process and Service Lifecycle
 
-## Environment Service Lifecycle
+Normal Environment services are intended to exist only while the Environment
+is active. `Linger=no` remains the current default direction. Services that
+start subordinate runtimes must stop them explicitly and APX must verify that
+no Environment-owned processes or mounts survive shutdown unless a future
+reviewed policy permits them.
 
-Normal Environment services use the systemd user manager and do not linger after the final login session ends.
+Linux ownership is useful but does not provide VM-equivalent containment.
+Namespace, cgroup, capability, seccomp, IPC, network, GPU, device, and high-
+security-profile behavior require a threat model and experiments.
 
-- `Linger=no` is the default.
-- User services start with the Environment user manager.
-- The user manager stopping after the final logout stops its services.
-- Services that launch rootless containers must explicitly stop those containers in `ExecStop`.
-- Persistent background services require a future explicit Hub-level exception.
+## Local Assistant Lifecycle
 
-This model is compatible with Hyprland and other Wayland compositors because it relies on logind and systemd user-session lifecycle rather than desktop autostart mechanisms.
+An Odysseus instance may be enabled for a selected Environment and is active
+only while that Environment is active. Initially it accesses only its own
+Environment. Any Hub control over access is a policy-management action, not
+implicit cross-Environment visibility. Communication or shared memory between
+assistants is deferred.
+
+Codex may later be provisioned in selected development Environments for coding
+and debugging. Its tools and data access must remain separate from Odysseus
+personal-assistant memory and permissions.
 
 ## Display Manager Direction
 
-The display-manager and session-handoff mechanism remains under evaluation. `greetd` has not been adopted or implemented.
+The display-manager and handoff mechanism remain under evaluation. SDDM is the
+last confirmed current manager. `greetd` is only a candidate. The chosen design
+must hide internal accounts, support secure Hub entry, recover from failed
+launches, and remain desktop-independent.
 
-SDDM currently manages graphical sessions.
-
-The display-manager decision must be validated before implementation changes are made.
-
-## Process Model
-
-Processes belong to the Linux user that launched them.
-
-APX should treat process ownership as part of the Environment boundary.
-
-Process isolation through Linux namespaces is not implemented and is not a confirmed requirement.
-
-## Storage Model
-
-The intended storage model is one Btrfs home subvolume per Environment.
-
-This is intended to support:
-
-- snapshots
-- archival
-- restoration
-- templates
-- clean lifecycle operations
-
-The current manually created users still have ordinary homes under the existing `@home` subvolume.
-
-## Ideas Under Evaluation
-
-- Evaluate a display-manager/session-handoff mechanism that can launch Hyprland without making APX depend on it.
-- Use APX metadata to track each Environment's user, home subvolume, state, snapshots, archives, and template origin.
+The Hub's privileged requests are separately bounded by the proposed
+`privileged-executor-protocol-v1.md`. That proposal does not solve login or
+session handoff: it depends on this document eventually defining how APX proves
+that the human-facing Hub session is genuinely unlocked.
 
 ## Open Questions
 
-- What is the exact technical handoff mechanism from Hub to another Environment and back?
-- How should APX handle unsaved work or long-running processes during Environment switching?
-- Should APX terminate, suspend, or refuse switching when user-owned processes are still running?
-- How should authentication work for launching another Environment from the Hub?
-- What minimal permissions does the Hub need to manage other Environments?
-- What display-manager/session-manager integration provides the cleanest model without making the Hub special?
+- Which host authentication and recovery-credential method implements the
+  proposed single owner identity?
+- How are internal Environment accounts hidden without weakening security?
+- Which display-manager and broker implementation best provides the proposed
+  fixed transition flow?
+- How does each supported desktop report unsaved-work refusal and secure lock?
+- Which Hub settings survive reconstruction without preserving unsafe live Hub
+  state?
+- Which graphical/runtime components live on the host versus in an Environment?
+- How do normal and high-security profiles affect devices and session features?
+- How are future human identities and their Environment groups represented?
+- What bounded permission lets the Hub request lifecycle operations?
