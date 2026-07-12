@@ -1502,3 +1502,39 @@ def render_isolation_readiness(report: IsolationReadinessReport) -> str:
         )
     lines.extend(("Next stage:", f"- {report.next_stage}"))
     return "\n".join(lines)
+
+
+def render_isolation_doctor(report: IsolationReadinessReport) -> str:
+    """Explain Stage 0 readiness without exposing the full technical report."""
+    blocked = tuple(check for check in report.checks if check.classification == "blocked")
+    uncertain = tuple(
+        check for check in report.checks
+        if check.classification in {"requires-host-confirmation", "unavailable"}
+    )
+    lines = ["APX safety check", "Target: first disposable isolated Environment", ""]
+    if blocked:
+        lines.extend((
+            "Result: STOP — the real test must not start.",
+            "One or more safety requirements failed. Nothing was changed.",
+            "",
+            "What blocks the test:",
+        ))
+        lines.extend(f"- {check.name}: {check.evidence}" for check in blocked)
+    elif uncertain:
+        lines.extend((
+            "Result: WAIT — the computer looks compatible, but the evidence is not yet approved for changes.",
+            "Nothing was changed.",
+            f"Checks awaiting trusted confirmation: {len(uncertain)}.",
+        ))
+    else:
+        lines.extend((
+            "Result: READY FOR DESIGN REVIEW — the safety checks passed.",
+            "This does not authorize creating the Environment. Nothing was changed.",
+        ))
+    lines.extend((
+        "",
+        "Safe next step:",
+        "Prepare and verify the exact disposable base, storage limits, rollback boundary, and approval preview.",
+        "The existing apx-trial account will not be reused, changed, or deleted.",
+    ))
+    return "\n".join(lines)

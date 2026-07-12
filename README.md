@@ -114,6 +114,12 @@ This repository contains architecture documentation and a read-only inspection a
 
 `apx host check` performs a read-only readiness inspection for the proposed first experimental Environment, `trial`. It reports identity, storage, graphical-session, and account-policy evidence independently, marks sandbox-visible evidence as requiring authoritative host confirmation, and emits a deterministic non-executing manual plan. It does not create or modify host resources.
 
+`apx host doctor` gives a short plain-language safety result for the newer
+headless isolation experiment. It says stop, wait, or ready for review; it does
+not execute the experiment. It uses the fresh `apx-isolation-trial` identity
+and explicitly refuses to reuse, change, or delete the older manually created
+`apx-trial` candidate.
+
 `apx host validate` performs the read-only Milestone 3A practical inspection. It summarizes the three fixed APX accounts, removal-blocker evidence, Brave installation and per-user data state, and factual session-switching prerequisites. It does not remove or change host resources and does not claim deletion safety.
 
 `apx environment removal-plan <name>` produces a read-only, non-executing plan with explicit blockers, unknown evidence, data-loss scope, privilege boundaries, irreversibility, and post-removal validation. The Hub returns a protected result and no removal plan.

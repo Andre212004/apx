@@ -51,7 +51,10 @@ def _positive(authoritative: bool) -> str:
 
 
 def _conflict(authoritative: bool) -> str:
-    return "blocked" if authoritative else "requires-host-confirmation"
+    # A visible conflict is sufficient reason to stop, even when the observer
+    # cannot prove that positive evidence is authoritative. A false positive
+    # only delays work; treating a real conflict as readiness could damage data.
+    return "blocked"
 
 
 def _check(

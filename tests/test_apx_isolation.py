@@ -147,6 +147,21 @@ class IsolationReadinessTests(unittest.TestCase):
         self.assertIn("Mode: read-only Stage 0 observation", first)
         self.assertIn("do not create a container", first)
 
+    def test_plain_doctor_waits_for_untrusted_positive_evidence(self) -> None:
+        rendered = apx_isolation.render_isolation_doctor(
+            self.report(authoritative_host=False)
+        )
+        self.assertIn("Result: WAIT", rendered)
+        self.assertIn("Nothing was changed", rendered)
+        self.assertIn("apx-trial account will not be reused", rendered)
+
+    def test_plain_doctor_stops_on_a_failed_requirement(self) -> None:
+        rendered = apx_isolation.render_isolation_doctor(
+            self.report(which_func=lambda name: None)
+        )
+        self.assertIn("Result: STOP", rendered)
+        self.assertIn("system container runtime", rendered)
+
 
 class IsolationPlanTests(unittest.TestCase):
     def test_plan_is_fixed_deterministic_and_blocked(self) -> None:

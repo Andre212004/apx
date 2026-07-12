@@ -53,6 +53,7 @@ from apx_isolation import (
     observe_isolation_readiness,
     observe_snapshot_trust_readiness,
     render_isolation_experiment_plan,
+    render_isolation_doctor,
     render_isolation_readiness,
     render_snapshot_acquisition_plan,
     render_snapshot_trust_readiness,
@@ -193,6 +194,9 @@ def create_parser() -> argparse.ArgumentParser:
     host = commands.add_parser("host", help="inspect host readiness")
     host_commands = host.add_subparsers(dest="host_command", required=True)
     host_commands.add_parser("check", help="check readiness for the trial experiment")
+    host_commands.add_parser(
+        "doctor", help="explain trial readiness and consequences in plain language"
+    )
     host_commands.add_parser("validate", help="inspect practical host state for milestone 3A")
     host_commands.add_parser(
         "brave-isolation", help="plan a read-only Brave isolation experiment"
@@ -1068,7 +1072,7 @@ def run(
                     file=stdout,
                 )
                 return 0
-            if args.host_command == "isolation-readiness":
+            if args.host_command in {"doctor", "isolation-readiness"}:
                 experiment_registration = observe_registration(
                     EXPERIMENT_LOGICAL_NAME,
                     registration_directory,
@@ -1089,7 +1093,12 @@ def run(
                     lstat_func=lstat_func,
                     authoritative_host=host_authoritative,
                 )
-                print(render_isolation_readiness(isolation_report), file=stdout)
+                renderer = (
+                    render_isolation_doctor
+                    if args.host_command == "doctor"
+                    else render_isolation_readiness
+                )
+                print(renderer(isolation_report), file=stdout)
                 return 0
             if args.host_command in {"validate", "brave-isolation"}:
                 current_sessions = observe_sessions(candidates, command_runner)

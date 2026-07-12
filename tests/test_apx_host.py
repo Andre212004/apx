@@ -96,6 +96,14 @@ class HostReadinessTests(unittest.TestCase):
         self.assertEqual(self.state(report, "apx-trial account absent"), "blocked")
         self.assertEqual(report.overall, "blocked")
 
+    def test_visible_conflict_blocks_even_without_authoritative_positive_evidence(self) -> None:
+        report = self.report(
+            accounts=self.accounts + [Account("apx-trial", 1003, "/home/apx-trial")],
+            authoritative_host=False,
+        )
+        self.assertEqual(self.state(report, "apx-trial account absent"), "blocked")
+        self.assertEqual(report.overall, "blocked")
+
     def test_target_home_conflict(self) -> None:
         def exists(path: str | os.PathLike[str]) -> os.stat_result:
             return metadata()
@@ -194,7 +202,6 @@ class HostReadinessTests(unittest.TestCase):
         rendered = apx_host.render_host_readiness(self.report())
         self.assertIn("Overall readiness: ready-for-manual-experiment", rendered)
         self.assertIn("Manual experiment plan (not executed):", rendered)
-
 
 if __name__ == "__main__":
     unittest.main()

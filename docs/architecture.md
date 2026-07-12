@@ -191,6 +191,13 @@ The current `apx host check` command is a read-only, experiment-specific inspect
 
 Every readiness check is classified independently as `ready`, `blocked`, `requires-host-confirmation`, `unavailable`, or `not-applicable`. Confirmed conflicts make overall readiness `blocked`. Unavailable authoritative evidence or positive observations made only through a restricted execution context make overall readiness `requires-host-confirmation`. Only complete authoritative matching evidence produces `ready-for-manual-experiment`. Manual creation remains a separately approved future action; the lack of an APX apply mode is not itself a readiness failure.
 
+Visible conflicts fail closed even when positive evidence from the same
+observer still requires authoritative host confirmation. This may delay an
+experiment after a false-positive collision, but it prevents APX from treating
+an existing account, home, registration, or tool conflict as permission to
+continue. `apx host doctor` applies this principle to the newer fixed headless
+isolation experiment and renders a short consequence-led result.
+
 `/home` may be a distinct mount or a directory within another mount. Readiness depends on the containing filesystem being an authoritatively confirmed writable Btrfs context and on `/home` being a safe non-symlink directory, not on `/home` having a dedicated mount.
 
 ### Linux User

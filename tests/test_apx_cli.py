@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import apx_cli
 import apx_environment
+import apx_isolation
 
 
 class Account:
@@ -70,6 +71,10 @@ class ParserTests(unittest.TestCase):
     def test_host_check_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(["host", "check"])
         self.assertEqual((args.command, args.host_command), ("host", "check"))
+
+    def test_host_doctor_parser(self) -> None:
+        args = apx_cli.create_parser().parse_args(["host", "doctor"])
+        self.assertEqual((args.command, args.host_command), ("host", "doctor"))
 
     def test_host_validate_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(["host", "validate"])
@@ -171,6 +176,28 @@ class ParserTests(unittest.TestCase):
             )
         self.assertEqual(result, 0)
         self.assertIn("Overall readiness: requires-host-confirmation", stdout.getvalue())
+
+    def test_host_doctor_uses_plain_language_report(self) -> None:
+        stdout = StringIO()
+        report = apx_isolation.IsolationReadinessReport(
+            experiment="system-container-v1",
+            checks=(
+                apx_isolation.IsolationReadinessCheck(
+                    "Mandatory tools", "system container runtime", "blocked", "not found"
+                ),
+            ),
+            overall="blocked",
+            next_stage="stop",
+        )
+        with patch("apx_cli.observe_registration", return_value=SimpleNamespace(state="absent")), \
+             patch("apx_cli.observe_incomplete_operation", return_value=SimpleNamespace(absent="confirmed")), \
+             patch("apx_cli.observe_isolation_readiness", return_value=report):
+            result = apx_cli.run(
+                ["host", "doctor"], accounts_provider=lambda: (), stdout=stdout
+            )
+        self.assertEqual(result, 0)
+        self.assertIn("Result: STOP", stdout.getvalue())
+        self.assertIn("Nothing was changed", stdout.getvalue())
 
     def test_environment_list_parser(self) -> None:
         args = apx_cli.create_parser().parse_args(["environment", "list"])

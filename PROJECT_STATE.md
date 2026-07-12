@@ -338,6 +338,14 @@ Repository contracts and fake evidence are tested first; one headless disposable
 Environment, two-Environment attack tests, graphical features, and destructive
 recovery each require later separate readiness evidence and explicit approval.
 
+The read-only CLI now provides `apx host doctor`, a plain-language front door
+to the fixed `isolation-trial` Stage 0 checks. It reports stop, wait, or ready
+for review without executing any plan. Positive evidence observed without an
+authoritative host channel remains unconfirmed, while any visible identity,
+path, registration, or mandatory-tool conflict blocks progress immediately.
+The command explicitly excludes the existing manually created `apx-trial`
+candidate from reuse, modification, or deletion.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or
