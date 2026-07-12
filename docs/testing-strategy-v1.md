@@ -224,6 +224,10 @@ The acquisition boundary fixture rejects alternate origins, insecure schemes,
 redirects, URL credentials and suffixes, traversal, unsafe or duplicate names,
 unreviewed repositories and architectures, ordering changes, byte-limit
 violations, incomplete files, symbolic links, and transfer identity mismatch.
+The disposable acquisition-staging fixture tests exclusive reservation,
+plan-binding changes, restrictive modes, no-overwrite publication, bounded
+streaming, exact hashes and sizes, preserved partial failures, symbolic-link
+and non-regular-entry refusal, and unsafe parent or filename rejection.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are

@@ -426,6 +426,16 @@ wrong ordering, duplicate files, incomplete transfers, symbolic links, and
 hash/size/identity disagreement fail closed. It validates supplied manifests
 and post-transfer evidence only; it performs no network or filesystem access.
 
+`src/apx_staging.py` now implements a repository-only acquisition staging
+fixture. It reserves one new operation directory in a caller-provided
+disposable parent, binds it to the plan digest, uses restrictive modes and
+no-follow opens, enforces file and aggregate bounds while streaming, verifies
+exact size and SHA-256, and publishes without replacement only after durable
+validation. Partial or mismatched bytes remain explicitly partial and are
+never adopted. Existing state, symlinks, non-regular entries, changed modes or
+plan binding, duplicate names, and unsafe filenames fail closed. It never
+selects or writes a production host path and is not the authoritative store.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

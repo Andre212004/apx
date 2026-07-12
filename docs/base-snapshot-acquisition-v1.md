@@ -47,6 +47,14 @@ URI, size, digest, regular-file, symlink, and completion evidence. Redirects or
 any identity disagreement are rejected. The module has no network client and
 does not open, create, or delete files.
 
+`src/apx_staging.py` provides the disposable Level 2 filesystem fixture for
+the staging rules. It exclusively reserves a new operation directory under a
+caller-provided mode-0700 parent, binds it to the approved plan digest, streams
+within fixed bounds, verifies exact length and SHA-256, fsyncs, and publishes
+without overwriting. Interrupted or mismatched files retain a `.partial`
+identity and cannot become accepted input. This fixture never chooses
+`/var/lib/apx` and is not production executor storage.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the
