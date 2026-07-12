@@ -335,6 +335,19 @@ strong confirmation; unconfirmed state exposes only retry and read-only detail.
 The complete visible flow is proposed in `docs/hub-experience-v1.md`; no
 graphical application or functional lifecycle button exists.
 
+The intended daily Hub interaction is now clarified: the owner uses a normal
+Hyprland desktop with one APX taskbar control. Left-click expands about five
+Environment choices directly upward; left-clicking one requests handoff.
+Right-clicking a choice exposes its allowed management actions. Right-clicking
+the APX control exposes create, archived Environments, and full management. The
+full selected light management direction remains a secondary screen.
+
+`prototypes/hub-demo` implements this interaction with in-memory demonstration
+data, including create/delete confirmations and the full management screen. It
+has browser-executed interaction tests and visual QA evidence, but no import of
+APX host code, executor connection, Hyprland integration, persistence, or real
+lifecycle effect.
+
 Stage 0 has now been exercised on the real host without mutation. It confirmed
 the fixed experimental identity is unused, `/home` is writable Btrfs with
 capacity available, cgroup v2 and user namespaces are available, subordinate

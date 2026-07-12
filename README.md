@@ -189,6 +189,8 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_environment.py
 │   └── apx_registration.py
 ├── tests/
+├── prototypes/
+│   └── hub-demo/
 ├── .gitignore
 ├── apx
 └── README.md
@@ -229,3 +231,6 @@ The staged path from safe repository tests to later user-visible experiments is
 in [docs/testing-strategy-v1.md](docs/testing-strategy-v1.md).
 The future Hub screens and the currently implemented pure button/card rules are
 described in [docs/hub-experience-v1.md](docs/hub-experience-v1.md).
+The dependency-free interactive visual demo is in
+[prototypes/hub-demo](prototypes/hub-demo/README.md). It uses only temporary
+in-memory data and cannot alter APX or the host.

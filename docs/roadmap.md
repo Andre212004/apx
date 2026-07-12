@@ -160,8 +160,8 @@ Possible scope:
 
 ## Phase 6: Hub Experience
 
-Status: pure interface-state model and product flow implemented; graphical app
-not started.
+Status: pure interface-state model, product flow, and browser-based visual demo
+implemented; real Hyprland/graphical app not started.
 
 Possible scope:
 
@@ -180,6 +180,12 @@ plain-language state, warnings, fixed request kinds, and fail-closed button
 availability without observing or changing the host. `hub-experience-v1.md`
 defines creation, open, recovery-point, archive, restore, delete, progress,
 failure, accessibility, and future graphical-prototype flows.
+
+`prototypes/hub-demo` validates the selected light management screen plus the
+clarified daily taskbar interaction: left-click APX expands five Environment
+choices, right-click APX opens create/archive/full management, and right-click
+an Environment opens state-bounded actions. It is demo-only and has no executor
+or host connection.
 
 ## Phase 7: Local Assistants
 

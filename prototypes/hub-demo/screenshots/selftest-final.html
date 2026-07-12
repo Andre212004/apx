@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-PT"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>APX Hub — Demonstração</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body data-selftest="passed" data-console-errors="0">
+    <main class="desktop" aria-label="Demonstração do desktop APX">
+      <div class="demo-badge"><span aria-hidden="true">●</span> Demonstração</div>
+
+      <section class="file-window" aria-label="Janela de exemplo">
+        <header class="window-bar">
+          <div class="window-title"><img src="assets/icons/files.svg" alt=""> Pasta pessoal</div>
+          <div class="window-controls" aria-hidden="true"><img src="assets/icons/minimize.svg" alt=""><img src="assets/icons/maximize.svg" alt=""><img src="assets/icons/close.svg" alt=""></div>
+        </header>
+        <div class="file-body">
+          <nav class="file-nav" aria-label="Locais">
+            <button class="selected"><img src="assets/icons/home.svg" alt="">Pasta pessoal</button>
+            <button><img src="assets/icons/files.svg" alt="">Documentos</button>
+            <button><img src="assets/icons/files.svg" alt="">Imagens</button>
+            <button><img src="assets/icons/files.svg" alt="">Transferências</button>
+          </nav>
+          <div class="folders" aria-label="Pastas">
+            <button><img src="assets/icons/files.svg" alt=""><span>Documentos</span></button>
+            <button><img src="assets/icons/files.svg" alt=""><span>Imagens</span></button>
+            <button><img src="assets/icons/files.svg" alt=""><span>Música</span></button>
+            <button><img src="assets/icons/files.svg" alt=""><span>Projetos</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="environment-switcher" class="environment-switcher" aria-label="Escolher Environment" hidden="">
+        <p class="switcher-label">Escolher Environment</p>
+        <div id="environment-list" class="environment-list"><button class="environment-choice" data-environment="hub"><img src="assets/icons/apx.svg" alt=""><strong>Hub</strong><i class="state-dot " aria-label="Pronto"></i></button><button class="environment-choice" data-environment="university"><img src="assets/icons/university.svg" alt=""><strong>Universidade</strong><i class="state-dot " aria-label="Pronto"></i></button><button class="environment-choice" data-environment="games"><img src="assets/icons/games.svg" alt=""><strong>Jogos</strong><i class="state-dot " aria-label="Pronto"></i></button><button class="environment-choice" data-environment="development"><img src="assets/icons/development.svg" alt=""><strong>Desenvolvimento</strong><i class="state-dot warning" aria-label="Precisa de verificação"></i></button><button class="environment-choice" data-environment="private"><img src="assets/icons/private.svg" alt=""><strong>Privado</strong><i class="state-dot " aria-label="Pronto"></i></button></div>
+        <span class="switcher-arrow" aria-hidden="true"></span>
+      </section>
+
+      <section id="context-menu" class="context-menu" role="menu" style="left: 518px; top: 171px;" hidden=""><button type="button" role="menuitem"><img src="assets/icons/university.svg" alt="">Abrir</button><button type="button" role="menuitem"><img src="assets/icons/refresh.svg" alt="">Criar ponto de recuperação</button><button type="button" role="menuitem"><img src="assets/icons/archive.svg" alt="">Arquivar</button><button type="button" role="menuitem"><img src="assets/icons/details.svg" alt="">Ver detalhes</button><button type="button" role="menuitem" class="danger"><img src="assets/icons/delete.svg" alt="">Apagar…</button></section>
+
+      <nav class="taskbar" aria-label="Barra de tarefas">
+        <div class="taskbar-start">
+          <button class="task-icon" aria-label="Aplicações"><img src="assets/icons/home.svg" alt=""></button>
+          <button class="task-icon is-running" aria-label="Ficheiros"><img src="assets/icons/files.svg" alt=""></button>
+          <button class="task-icon" aria-label="Terminal"><img src="assets/icons/terminal.svg" alt=""></button>
+          <button class="task-icon" aria-label="Brave"><img src="assets/icons/brave.png" alt=""></button>
+          <button class="task-icon" aria-label="Definições"><img src="assets/icons/settings.svg" alt=""></button>
+        </div>
+        <div class="taskbar-center">
+          <button id="apx-button" class="task-icon apx-button" aria-label="APX — escolher Environment" aria-expanded="false" aria-controls="environment-switcher">
+            <img src="assets/icons/apx.svg" alt="">
+            <span class="active-dot" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="system-tray" aria-label="Estado do sistema">
+          <img src="assets/icons/network.svg" alt="Rede ligada"><img src="assets/icons/audio.svg" alt="Som ativo"><img src="assets/icons/battery.svg" alt="Bateria a 80%">
+          <time id="clock" datetime="10:42"><strong>10:42</strong><small>12/07/2026</small></time>
+        </div>
+      </nav>
+    </main>
+
+    <dialog id="transition-dialog" class="dialog transition-dialog">
+      <img class="spinner" src="assets/icons/refresh.svg" alt="">
+      <h2>A preparar <span id="transition-name">Universidade</span></h2>
+      <p>Demonstração apenas. Nenhum Environment real será iniciado.</p>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog confirm-dialog">
+      <form method="dialog">
+        <p class="eyebrow">Demonstração segura</p>
+        <h2 id="confirm-title">Apagar Environment?</h2>
+        <p id="confirm-copy">Esta ação afetaria apenas dados de demonstração.</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="button secondary">Cancelar</button>
+          <button id="confirm-action" value="confirm" class="button danger">Apagar demonstração</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="create-dialog" class="dialog create-dialog">
+      <form method="dialog" id="create-form">
+        <p class="eyebrow">Novo Environment</p>
+        <h2>Criar a partir de um modelo aprovado</h2>
+        <div class="template-options" role="radiogroup" aria-label="Escolher modelo">
+          <label><input type="radio" name="template" value="Universidade" checked=""><span><img src="assets/icons/university.svg" alt=""><strong>Universidade</strong><small>Estudo, documentos e aulas</small></span></label>
+          <label><input type="radio" name="template" value="Jogos"><span><img src="assets/icons/games.svg" alt=""><strong>Jogos</strong><small>Jogos e controladores revistos</small></span></label>
+          <label><input type="radio" name="template" value="Desenvolvimento"><span><img src="assets/icons/development.svg" alt=""><strong>Desenvolvimento</strong><small>Código, testes e ferramentas</small></span></label>
+        </div>
+        <label class="name-field">Nome do Environment<input id="environment-name" maxlength="27" pattern="[a-zA-ZÀ-ÿ0-9 -]+" required="" value="Novo espaço"></label>
+        <p class="safe-note">Isto é uma demonstração. O botão adiciona apenas um cartão temporário.</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="button secondary">Cancelar</button>
+          <button id="create-submit" value="default" class="button primary">Criar demonstração</button>
+        </div>
+      </form>
+    </dialog>
+
+    <section id="management-view" class="management-view" aria-label="Gestão completa do APX" hidden="">
+      <aside class="management-sidebar">
+        <div class="brand"><img src="assets/icons/apx.svg" alt=""><div><strong>APX</strong><span>Hub pessoal</span></div></div>
+        <nav aria-label="Navegação do Hub">
+          <button class="active"><img src="assets/icons/apx.svg" alt="">Environments</button>
+          <button><img src="assets/icons/details.svg" alt="">Modelos aprovados</button>
+          <button id="archived-nav"><img src="assets/icons/archive.svg" alt="">Arquivados</button>
+          <button><img src="assets/icons/settings.svg" alt="">Preferências</button>
+        </nav>
+        <p class="protected"><img src="assets/icons/private.svg" alt=""> Nenhuma alteração real</p>
+      </aside>
+      <div class="management-main">
+        <header>
+          <div><p class="eyebrow">Dados de demonstração</p><h1>Os teus Environments</h1><p>Escolhe um espaço para abrir ou gere as tuas cópias.</p></div>
+          <div class="management-header-actions"><button id="close-management" class="button secondary">Voltar ao desktop</button><button id="management-create" class="button primary">Criar Environment</button></div>
+        </header>
+        <div class="status-strip"><span aria-hidden="true">●</span><strong>Tudo pronto</strong><small>Esta interface não está ligada ao sistema real.</small></div>
+        <section aria-labelledby="environment-heading"><div class="section-heading"><h2 id="environment-heading">Environments</h2><span id="environment-count">5 espaços</span></div><div id="management-list" class="management-list"><article class="management-row"><img src="assets/icons/apx.svg" alt=""><div class="row-title"><strong>Hub</strong><span>Centro APX</span></div><div class="row-state"><strong>Tudo pronto</strong><small>Isolado e protegido — demonstração</small></div><div class="row-actions"><button class="details">Detalhes</button><button class="primary">Abrir</button></div></article><article class="management-row"><img src="assets/icons/university.svg" alt=""><div class="row-title"><strong>Universidade</strong><span>Estudo e aulas</span></div><div class="row-state"><strong>Tudo pronto</strong><small>Isolado e protegido — demonstração</small></div><div class="row-actions"><button class="details">Detalhes</button><button class="primary">Abrir</button></div></article><article class="management-row"><img src="assets/icons/games.svg" alt=""><div class="row-title"><strong>Jogos</strong><span>Jogos e lazer</span></div><div class="row-state"><strong>Tudo pronto</strong><small>Isolado e protegido — demonstração</small></div><div class="row-actions"><button class="details">Detalhes</button><button class="primary">Abrir</button></div></article><article class="management-row"><img src="assets/icons/development.svg" alt=""><div class="row-title"><strong>Desenvolvimento</strong><span>Código e testes</span></div><div class="row-state"><strong>Verificar antes de abrir</strong><small>Apenas verificações disponíveis</small></div><div class="row-actions"><button class="details">Detalhes</button><button class="warning">Verificar</button></div></article><article class="management-row"><img src="assets/icons/private.svg" alt=""><div class="row-title"><strong>Privado</strong><span>Alta segurança</span></div><div class="row-state"><strong>Tudo pronto</strong><small>Isolado e protegido — demonstração</small></div><div class="row-actions"><button class="details">Detalhes</button><button class="primary">Abrir</button></div></article></div></section>
+        <section aria-labelledby="model-heading"><div class="section-heading"><h2 id="model-heading">Modelos aprovados</h2><button class="text-button">Ver todos</button></div><div class="model-row"><article><img src="assets/icons/university.svg" alt=""><div><strong>Universidade</strong><span>Modelo aprovado</span></div></article><article><img src="assets/icons/games.svg" alt=""><div><strong>Jogos</strong><span>Modelo aprovado</span></div></article><article><img src="assets/icons/development.svg" alt=""><div><strong>Desenvolvimento</strong><span>Modelo aprovado</span></div></article></div></section>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden=""></div>
+    <script src="app.js"></script><pre id="selftest-results">{"left-click-opens-five":true,"right-click-apx-menu":true,"right-click-environment-menu":true,"management-view-opens":true}</pre>
+  
+
+</body></html>

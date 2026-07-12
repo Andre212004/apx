@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #202731; font: 14px sans-serif; color: white; }
+      main { display: grid; grid-template-columns: 1fr 1fr; width: 1600px; height: 900px; }
+      figure { position: relative; margin: 0; overflow: hidden; border-right: 2px solid #202731; background: #edf2f3; }
+      figcaption { position: absolute; z-index: 3; top: 10px; left: 10px; padding: 6px 9px; border-radius: 5px; background: rgb(14 24 36 / 82%); }
+      img { position: absolute; max-width: none; }
+      .target { width: 1786px; height: 1267px; left: -495px; top: -390px; }
+      .implementation { width: 1728px; height: 1229px; left: -465px; top: -365px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <figure><figcaption>Visual target — switcher focus</figcaption><img class="target" src="reference/taskbar-target.png" alt="Target switcher"></figure>
+      <figure><figcaption>Implementation — switcher focus</figcaption><img class="implementation" src="screenshots/taskbar-open-final.png" alt="Implementation switcher"></figure>
+    </main>
+  </body>
+</html>

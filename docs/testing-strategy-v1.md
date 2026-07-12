@@ -213,3 +213,8 @@ not ready.
 The project must not describe future user testing as available until the exact
 experiment preview, rollback boundary, and independently verified cleanup are
 implemented and reviewed.
+
+The Hub browser prototype is also a Level 1 fixture: Brave executes its
+left-click, right-click, contextual-action, and management-view smoke tests
+against in-memory data. This visual proof does not advance host readiness or
+authorize Level 3.

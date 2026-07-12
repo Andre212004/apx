@@ -20,6 +20,14 @@ The first useful Hub must allow the owner to:
 - recover an interrupted operation;
 - understand why an action is blocked.
 
+The intended daily entry point is not the full management screen. A normal
+Hyprland desktop has one APX control in its personalized taskbar. Left-clicking
+that control expands approximately five Environment choices directly upward
+from the icon. Left-clicking a choice requests the safe handoff. Right-clicking
+a choice opens its contextual management actions. Right-clicking the main APX
+control opens creation, archived Environments, and the complete management
+screen described below.
+
 The interface never decides that an operation is safe. It displays actions only
 from confirmed APX state and sends one fixed request type to the protected
 executor. Unknown state disables changes.
@@ -33,6 +41,31 @@ request kinds.
 
 It performs no file access, host observation, authentication, container launch,
 or mutation. It is intentionally independent of the future graphical toolkit.
+
+`prototypes/hub-demo` now implements the daily taskbar interaction and the
+selected full-management visual direction as a dependency-free browser demo.
+It uses only in-memory fixture data and cannot call the APX executor.
+
+## Daily Taskbar Control
+
+The APX taskbar icon has two distinct inputs:
+
+- **Left click:** toggle a compact vertical Environment switcher attached to the
+  icon. Each choice shows only icon, friendly name, and confirmed/warning state.
+- **Right click:** open the APX management menu with Create new, View archived,
+  and Open full management.
+
+Each Environment choice also supports two inputs:
+
+- **Left click:** request handoff when the state is confirmed safe; warning or
+  unknown state opens verification instead.
+- **Right click:** show only actions allowed for that Environment state, such as
+  recovery point, archive, details, or delete with strong confirmation.
+
+The switcher is not a conventional application menu and does not contain
+packages, Linux accounts, host settings, recent documents, or arbitrary
+commands. It is a fast chooser for the owner's small active set. Larger and
+archived collections remain in full management.
 
 ## Home Screen
 
