@@ -28,7 +28,12 @@ class IsolationReadinessTests(unittest.TestCase):
     def runner(self, arguments, timeout):
         self.commands.append(tuple(arguments))
         if tuple(arguments) == ("btrfs", "quota", "status", "/home"):
-            return apx_cli.CommandResult(0, "Quotas on /home:\n  Enabled: yes\n", "")
+            return apx_cli.CommandResult(
+                0,
+                "Quotas on /home:\n  Enabled: yes\n  Mode: qgroup (full accounting)\n"
+                "  Inconsistent: no\n  Override limits: no\n",
+                "",
+            )
         if tuple(arguments) == ("lspci", "-Dnnk"):
             return apx_cli.CommandResult(
                 0,
@@ -150,9 +155,32 @@ class IsolationReadinessTests(unittest.TestCase):
 
         report = self.report(command_runner=disabled, authoritative_host=False)
         self.assertEqual(
-            self.state(report, "Btrfs quota accounting enabled"), "blocked"
+            self.state(report, "Btrfs quota accounting healthy"), "blocked"
         )
         self.assertEqual(report.overall, "blocked")
+
+    def test_inconsistent_simple_or_override_quota_mode_blocks(self) -> None:
+        for changed_line in (
+            "Mode: squota (simple accounting)",
+            "Inconsistent: yes",
+            "Override limits: yes",
+        ):
+            def unhealthy(arguments, timeout, changed_line=changed_line):
+                if tuple(arguments) == ("btrfs", "quota", "status", "/home"):
+                    lines = [
+                        "Enabled: yes",
+                        "Mode: qgroup (full accounting)",
+                        "Inconsistent: no",
+                        "Override limits: no",
+                    ]
+                    key = changed_line.split(":", 1)[0]
+                    lines = [changed_line if line.startswith(key + ":") else line for line in lines]
+                    return apx_cli.CommandResult(0, "\n".join(lines), "")
+                return self.runner(arguments, timeout)
+
+            with self.subTest(changed_line=changed_line):
+                report = self.report(command_runner=unhealthy)
+                self.assertEqual(report.overall, "blocked")
 
     def test_render_is_deterministic_and_contains_no_plan_to_apply(self) -> None:
         report = self.report()

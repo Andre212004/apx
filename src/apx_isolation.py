@@ -1094,21 +1094,35 @@ def _quota_enabled_observation(
         return _check("Storage limits", "Btrfs quota accounting enabled", "unavailable", f"observation {failure or 'unavailable'}")
     if returncode != 0:
         return _check("Storage limits", "Btrfs quota accounting enabled", "unavailable", f"observation failed with exit code {returncode}")
-    enabled = any(
-        line.strip().lower() == "enabled: yes" for line in output.splitlines()
+    fields = {
+        key.strip().lower(): value.strip().lower()
+        for line in output.splitlines()
+        if ":" in line
+        for key, value in (line.split(":", 1),)
+    }
+    expected = {
+        "enabled": "yes",
+        "mode": "qgroup (full accounting)",
+        "inconsistent": "no",
+        "override limits": "no",
+    }
+    mismatches = tuple(
+        f"{name}={fields.get(name, 'unavailable')}"
+        for name, required in expected.items()
+        if fields.get(name) != required
     )
-    if not enabled:
+    if mismatches:
         return _check(
             "Storage limits",
-            "Btrfs quota accounting enabled",
+            "Btrfs quota accounting healthy",
             "blocked",
-            "quota status reports that accounting is not enabled",
+            "quota requirements not met: " + ", ".join(mismatches),
         )
     return _check(
         "Storage limits",
-        "Btrfs quota accounting enabled",
+        "Btrfs quota accounting healthy",
         _positive(authoritative_host),
-        "traditional Btrfs quota accounting reports enabled",
+        "traditional full accounting is enabled, consistent, and enforcing limits",
     )
 
 

@@ -358,13 +358,24 @@ tampered evidence. This does not create or persist a real host seal, download a
 base, or provide executor attestation.
 
 The fixed Stage 0 isolation observer now checks Btrfs quota accounting with the
-read-only `btrfs quota status /home` operation. A visible disabled result is a
-hard blocker in every observer context; it cannot be downgraded to an
-unconfirmed positive. The authorized read-only host inspection on 2026-07-12
-reported quota accounting disabled on the Btrfs filesystem containing `/home`.
-No quota state was changed. Enabling, rescanning, configuring, testing, or
-disabling quotas remains a separately approved host mutation and recovery
-design task.
+read-only `btrfs quota status /home` operation. It requires traditional full
+accounting, consistent state, and normal limit enforcement. The user separately
+authorized and performed quota enablement and a complete rescan on 2026-07-12
+for `/dev/nvme0n1p2`, which contains `/`, `/home`, `/var`, and `/.snapshots`.
+The reported state is enabled, full qgroup accounting, not inconsistent, no
+limit override, eight automatic level-0 qgroups, and no configured limits. APX
+did not perform this host mutation. Custom hierarchy, limit assignment, bounded
+enforcement testing, and quota recovery remain unimplemented.
+
+Production Environment storage is confirmed to be elastic rather than
+preallocated: an Environment using 10 GiB consumes approximately its actual
+charged extents, while another may grow to 40 GiB without reserving that space
+in advance. Safety still requires independently enforced per-Environment and
+APX-pool ceilings plus a non-APX host reserve. Automatic growth is allowed only
+while all capacity and quota-health gates remain satisfied. The Stage 2 trial's
+8 GiB root and 2 GiB home limits are deliberately small experimental safety
+bounds, not product defaults. Exact production reserve and fairness policy
+remain to be measured and selected.
 
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,

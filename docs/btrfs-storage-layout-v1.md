@@ -184,11 +184,13 @@ reclaim claims. Active Environments may require an orderly stop depending on
 host capacity, but APX never presents an inconsistent qgroup as enforced.
 
 The Stage 0 observer implements the first read-only part of this gate with
-`btrfs quota status /home`. Disabled accounting is always a hard blocker. The
-2026-07-12 authorized read-only observation found accounting disabled on the
-current host. The observer does not enable quotas, start a rescan, create a
-qgroup, assign a limit, or claim full quota health; those require a separately
-reviewed bootstrap and recovery experiment.
+`btrfs quota status /home`. It requires enabled traditional full accounting,
+`Inconsistent: no`, and `Override limits: no`; any missing or different value
+blocks the experiment. The user authorized and performed enablement and a full
+rescan on 2026-07-12 for the shared Btrfs filesystem. The resulting eight
+automatic level-0 qgroups have no limits. APX did not perform that mutation and
+does not yet create a hierarchy, assign a limit, run a bounded enforcement
+fixture, or claim the complete quota-health gate.
 
 ## Snapshot Protocol
 
@@ -265,6 +267,16 @@ The Stage 2 experiment retains its proposed 8 GiB root and 2 GiB home budgets.
 These are experimental values, not product defaults. Before each allocation,
 APX evaluates logical quota headroom, physical unallocated/free space, metadata
 pressure, active staging, retained artifacts, and a non-APX host reserve.
+
+Production allocation is elastic and thin: space is charged as root, home, and
+retained snapshot extents are actually created, not reserved upfront from a
+fixed partition per Environment. An Environment may therefore use 10 GiB while
+another uses 40 GiB. Growth proceeds automatically while its enforced domain
+ceiling, the APX pool ceiling, physical-capacity gates, and the host reserve all
+remain healthy. Reaching a ceiling blocks further growth or requests an
+explicit policy change; APX never silently consumes the host reserve. Exact
+production ceilings, reserve floor, and fairness rules remain open measurement
+decisions rather than guessed constants.
 
 Quota limits prevent one charged domain from growing without bound but do not
 guarantee physical space or protect against all metadata exhaustion. Capacity
