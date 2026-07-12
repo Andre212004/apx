@@ -198,6 +198,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_hub.py
 │   ├── apx_installation.py
 │   ├── apx_policy.py
+│   ├── apx_stage2_gate.py
 │   ├── apx_trust_evidence.py
 │   ├── apx_environment.py
 │   └── apx_registration.py

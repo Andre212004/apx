@@ -217,6 +217,9 @@ host and metadata reserves, unhealthy quota states, and malformed evidence.
 The pure installation fixture verifies that backup and recovery precede host
 testing, KDE remains available through parallel graphical validation, cutover
 does not imply cleanup, and complete evidence yields only cleanup review.
+The Stage 2 final-gate fixture independently fails every boolean gate, rejects
+cross-plan and malformed digests, and proves that complete evidence still
+requires a separate execution approval.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are

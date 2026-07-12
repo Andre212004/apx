@@ -407,6 +407,16 @@ isolation, and destructive recovery are ordered evidence requirements. Even
 complete evidence permits only a package-by-package cleanup review; it never
 authorizes KDE removal. No installer or cleanup implementation exists.
 
+`src/apx_stage2_gate.py` now implements the pure final conjunction gate for
+the first bounded host experiment. It requires exact dossier and acquisition-
+plan identity, verified snapshot and authoritative trust evidence, ready
+capacity evidence, absent intended identities, verified parents and
+subordinate IDs, verified quota hierarchy, captured host invariants, bounded
+network approval, authenticated/unexpired/unused human approval, authoritative
+journaling, and separate cleanup scope. No single positive can override a
+missing gate. Complete evidence yields only eligibility for a separate Stage 2
+execution approval and never includes graphical use, KDE removal, or cleanup.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

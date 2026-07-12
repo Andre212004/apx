@@ -139,6 +139,14 @@ creation approval cannot authorize cleanup.
 
 No blocker is converted into an implementation assumption by this dossier.
 
+`src/apx_stage2_gate.py` implements the pure final conjunction of these gates.
+It binds the dossier, acquisition plan, snapshot assessment, trust seal,
+capacity evidence, absence and identity evidence, quota hierarchy, host
+invariants, network approval, human approval freshness/replay state,
+authoritative journal, and separate cleanup scope. Complete evidence produces
+only `ready-for-separate-stage2-execution-approval`; the module performs no
+effect and cannot authorize graphics, KDE removal, or cleanup.
+
 The fixed `apx host snapshot-readiness` observer collected and the plan froze
 the human-authorized host keyring/tool evidence. The prototype deliberately
 cannot self-assert privileged authority, so executor attestation remains a
