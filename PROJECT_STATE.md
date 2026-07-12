@@ -346,6 +346,17 @@ path, registration, or mandatory-tool conflict blocks progress immediately.
 The command explicitly excludes the existing manually created `apx-trial`
 candidate from reuse, modification, or deletion.
 
+The repository now implements a pure trust-evidence seal in
+`src/apx_trust_evidence.py`. It binds one bounded set of readiness checks to
+the exact snapshot-acquisition plan, observation time, observer class, and any
+preceding seal. Raw diagnostic output is not retained; each observation is
+represented by a SHA-256 digest. Only complete evidence from the future
+authoritative executor can become `verified`; restricted observations remain
+pending and any failed requirement remains blocked. Strict canonical parsing
+rejects unknown, duplicate, missing, wrongly typed, reordered-identity, or
+tampered evidence. This does not create or persist a real host seal, download a
+base, or provide executor attestation.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

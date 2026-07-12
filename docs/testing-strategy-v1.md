@@ -209,7 +209,9 @@ Level 1 is established and growing. Level 2 has started with a repository-only
 executor journal fixture. It tests ordered journal transitions, interrupted and
 uncertain effects, corruption, stale writers, atomic replacement, restrictive
 file modes, and symbolic-link refusal in disposable temporary directories. It
-does not perform lifecycle effects or use an authoritative host path. Level 3
+also tests canonical trust-evidence sealing, tamper detection, observer-class
+boundaries, raw-diagnostic minimization, and strict parsing. It does not perform
+lifecycle effects or use an authoritative host path. Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
 not ready.

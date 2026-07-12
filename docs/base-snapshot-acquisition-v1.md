@@ -179,6 +179,15 @@ sizes, trust provenance, tool versions, approval reference, operation identity,
 and diagnostics. The artifact contains no credentials, environment dump,
 hostnames, arbitrary commands, timestamp identity, or executable content.
 
+Before acquisition, `src/apx_trust_evidence.py` can seal a supplied readiness
+report to one exact acquisition-plan digest. The bounded canonical seal records
+check identities and classifications but stores only a SHA-256 digest of each
+raw observation. It also binds canonical UTC observation time, observer class,
+and an optional preceding seal. Restricted-observer evidence can never become
+verified; it remains pending until repeated through the future authoritative
+executor. Any blocked check blocks the seal in every observer context. This is
+a pure contract and parser, not a host evidence store or executor attestation.
+
 ## Resource and Failure Bounds
 
 The plan states maximum database bytes, individual package bytes, aggregate
