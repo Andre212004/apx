@@ -377,6 +377,17 @@ while all capacity and quota-health gates remain satisfied. The Stage 2 trial's
 bounds, not product defaults. Exact production reserve and fairness policy
 remain to be measured and selected.
 
+`src/apx_capacity.py` now implements the pure elastic-growth and Stage 2
+capacity gates. Growth is not preallocated: a request is allowed only within
+the independently supplied Environment headroom, APX-pool headroom, physical
+free space after the host reserve, and healthy quota evidence. The disposable
+Stage 2 experiment fixes a conservative 64 GiB host reserve, 16 GiB combined
+operation headroom, and 2 GiB metadata margin. These are experimental safety
+values, not production defaults. The current real host has sufficient reported
+free space and healthy top-level quota mode, but the bounded enforcement
+fixture and authoritative metadata-capacity evidence have not run, so the
+capacity gate remains blocked.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

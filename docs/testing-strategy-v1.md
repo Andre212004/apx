@@ -211,7 +211,10 @@ uncertain effects, corruption, stale writers, atomic replacement, restrictive
 file modes, and symbolic-link refusal in disposable temporary directories. It
 also tests canonical trust-evidence sealing, tamper detection, observer-class
 boundaries, raw-diagnostic minimization, and strict parsing. It does not perform
-lifecycle effects or use an authoritative host path. Level 3
+lifecycle effects or use an authoritative host path. Pure capacity fixtures
+also exercise dynamic growth, independent Environment/pool/physical ceilings,
+host and metadata reserves, unhealthy quota states, and malformed evidence.
+Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
 not ready.

@@ -278,6 +278,13 @@ explicit policy change; APX never silently consumes the host reserve. Exact
 production ceilings, reserve floor, and fairness rules remain open measurement
 decisions rather than guessed constants.
 
+The Stage 2 capacity fixture uses fixed conservative experiment values: 64 GiB
+must remain outside the operation, 16 GiB covers the 8 GiB root, 2 GiB home,
+4 GiB acquisition bound, and 2 GiB working margin, and at least 2 GiB of
+metadata headroom must be authoritatively evidenced. `src/apx_capacity.py`
+implements these independent gates and the pure elastic-growth decision. It
+does not observe storage, create qgroups, reserve bytes, or apply limits.
+
 Quota limits prevent one charged domain from growing without bound but do not
 guarantee physical space or protect against all metadata exhaustion. Capacity
 and quota are separate gates.
