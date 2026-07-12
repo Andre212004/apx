@@ -126,7 +126,8 @@ backend enforcement still require design experiments.
 
 ## Phase 4: Minimal Mutating Prototype
 
-Status: pure executor and isolation contracts started; no mutating executor.
+Status: pure executor, journal, and isolation contracts started; no mutating
+executor.
 
 Goals:
 
@@ -140,8 +141,10 @@ Goals:
 The repository now models the fixed executor operation catalogue, deterministic
 plans, strict bounded request parsing, consequence-bound approvals, expiry,
 active-session binding, generation freshness, nonce state, and authoritative-
-state requirement. `testing-strategy-v1.md` defines the staged route from these
-safe repository tests to a later explicitly approved host experiment.
+state requirement. It also models the durable journal sequence, strict journal
+parsing, conservative recovery classification, and atomic disposable-fixture
+writes. `testing-strategy-v1.md` defines the staged route from these safe
+repository tests to a later explicitly approved host experiment.
 
 ## Phase 5: Environment Lifecycle
 

@@ -318,7 +318,20 @@ paths, malformed identities, and wrong types. Assessment binds the exact fixed
 plan, consequences, Environment generation, active Hub session, approval
 strength, five-minute maximum lifetime, one-use nonce state, and authoritative
 current-state confirmation. It performs no authentication, nonce reservation,
-journaling, host observation, or mutation.
+host observation, or mutation.
+
+The repository now implements the executor journal state machine in
+`src/apx_executor_journal.py`. Before an effect may be reported as complete,
+the journal must identify that exact next effect; completion requires fresh
+final evidence. Every transition binds the preceding record, and strict
+parsing rejects corruption, extensions, reordering, and malformed state.
+Recovery permits automatic rollback only for clearly APX-owned, empty,
+unpublished, and unused resources. Published, used, modified, foreign,
+identity-uncertain, and effect-outcome-uncertain resources are preserved for
+review. A repository-only fixture store exercises atomic replacement, stale-
+writer rejection, restrictive file modes, and refusal to follow symbolic
+links. This is durable test-fixture behaviour, not the future authoritative
+host journal, authentication, replay reservation, or a mutating executor.
 
 The staged route to user testing is documented in `docs/testing-strategy-v1.md`.
 Repository contracts and fake evidence are tested first; one headless disposable

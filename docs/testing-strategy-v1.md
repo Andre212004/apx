@@ -205,8 +205,12 @@ personal data or secrets.
 
 ## Current Readiness
 
-Level 1 is established and growing. Level 2 is the next safe implementation
-target. Level 3 already has architecture and review documents, but its real
+Level 1 is established and growing. Level 2 has started with a repository-only
+executor journal fixture. It tests ordered journal transitions, interrupted and
+uncertain effects, corruption, stale writers, atomic replacement, restrictive
+file modes, and symbolic-link refusal in disposable temporary directories. It
+does not perform lifecycle effects or use an authoritative host path. Level 3
+already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
 not ready.
 

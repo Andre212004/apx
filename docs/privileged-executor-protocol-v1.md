@@ -8,6 +8,13 @@ request parser, approval binding, expiry, active-session, generation, and replay
 precondition contract in `src/apx_executor_contract.py`. It performs no
 authentication or host operation; those remain future trusted inputs.
 
+`src/apx_executor_journal.py` now implements the non-privileged journal state
+machine and a disposable fixture store. It enforces prepare-before-effect,
+ordered completion, final verification, chained records, conservative recovery,
+atomic fixture writes, and stale-writer and symbolic-link rejection. It does
+not select an authoritative host location, authenticate callers, reserve real
+nonces, or perform any host effect.
+
 ## Plain-Language Summary
 
 Some APX actions eventually need permission to change important parts of the
