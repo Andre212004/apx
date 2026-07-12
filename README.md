@@ -180,6 +180,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── isolation-architecture.md
 │   ├── lifecycle-threat-model-review-v1.md
 │   ├── privileged-executor-protocol-v1.md
+│   ├── quota-enforcement-fixture-v1.md
 │   ├── roadmap.md
 │   ├── session-management.md
 │   ├── stage2-approval-dossier.md

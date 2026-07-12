@@ -192,6 +192,14 @@ automatic level-0 qgroups have no limits. APX did not perform that mutation and
 does not yet create a hierarchy, assign a limit, run a bounded enforcement
 fixture, or claim the complete quota-health gate.
 
+A separately authorized manual leaf fixture subsequently applied a 64 MiB
+referenced limit to fresh qgroup `0/263`. Btrfs stopped an attempted 80 MiB
+write at the limit, returned `Disk quota exceeded`, and remained consistent.
+The preserved evidence and cleanup boundary are in
+`quota-enforcement-fixture-v1.md`. This closes only the single-leaf enforcement
+question; hierarchical charging and the other health conditions above remain
+open.
+
 ## Snapshot Protocol
 
 V1 snapshot sets require the Environment to be fully stopped and all root/home

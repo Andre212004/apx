@@ -388,6 +388,15 @@ free space and healthy top-level quota mode, but the bounded enforcement
 fixture and authoritative metadata-capacity evidence have not run, so the
 capacity gate remains blocked.
 
+The user then manually executed the separately authorized leaf quota fixture
+documented in `docs/quota-enforcement-fixture-v1.md`. Qgroup `0/263` enforced a
+64 MiB referenced limit: an attempted 80 MiB write stopped at 67,076,096 bytes
+with `Disk quota exceeded` and a non-zero result. Quota accounting remained
+full, consistent, and without limit override. The subvolume and file are
+preserved pending separately approved cleanup. This proves one leaf limit, not
+the intended hierarchy, snapshots, concurrency, restart recovery, or executor
+attestation; the complete capacity gate therefore remains blocked.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

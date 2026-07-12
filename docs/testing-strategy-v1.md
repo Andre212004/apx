@@ -219,6 +219,11 @@ already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
 not ready.
 
+One separately authorized real-host quota leaf fixture has passed and remains
+preserved for approved cleanup. It is evidence for limit enforcement on one
+subvolume, not permission to treat hierarchical APX quota topology or Stage 3
+Environment creation as ready.
+
 The project must not describe future user testing as available until the exact
 experiment preview, rollback boundary, and independently verified cleanup are
 implemented and reviewed.
