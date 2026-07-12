@@ -160,7 +160,8 @@ Possible scope:
 
 ## Phase 6: Hub Experience
 
-Status: not started.
+Status: pure interface-state model and product flow implemented; graphical app
+not started.
 
 Possible scope:
 
@@ -173,6 +174,12 @@ Possible scope:
 
 The Hub remains reproducible and destroyable. Its role and constrained
 permissions do not make it an architectural exception.
+
+`src/apx_hub.py` now produces deterministic Environment/template cards,
+plain-language state, warnings, fixed request kinds, and fail-closed button
+availability without observing or changing the host. `hub-experience-v1.md`
+defines creation, open, recovery-point, archive, restore, delete, progress,
+failure, accessibility, and future graphical-prototype flows.
 
 ## Phase 7: Local Assistants
 

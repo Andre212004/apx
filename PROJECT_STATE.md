@@ -325,6 +325,16 @@ Repository contracts and fake evidence are tested first; one headless disposable
 Environment, two-Environment attack tests, graphical features, and destructive
 recovery each require later separate readiness evidence and explicit approval.
 
+The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
+It renders deterministic Environment and template cards, plain-language state,
+warnings, and fixed request kinds from supplied evidence without reading or
+changing the host. It enables normal actions only while one verified Hub is
+active and the overall system is ready. Active, incomplete, unconfirmed,
+duplicate, incompatible, or multi-active state fails closed. Delete requires
+strong confirmation; unconfirmed state exposes only retry and read-only detail.
+The complete visible flow is proposed in `docs/hub-experience-v1.md`; no
+graphical application or functional lifecycle button exists.
+
 Stage 0 has now been exercised on the real host without mutation. It confirmed
 the fixed experimental identity is unused, `/home` is writable Btrfs with
 capacity available, cgroup v2 and user namespaces are available, subordinate

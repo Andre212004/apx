@@ -169,6 +169,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── environment-lifecycle-and-storage-v1.md
 │   ├── environment-local-administration-v1.md
 │   ├── human-identity-and-session-handoff-v1.md
+│   ├── hub-experience-v1.md
 │   ├── isolation-architecture.md
 │   ├── lifecycle-threat-model-review-v1.md
 │   ├── privileged-executor-protocol-v1.md
@@ -183,6 +184,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_consistency.py
 │   ├── apx_executor_contract.py
 │   ├── apx_host.py
+│   ├── apx_hub.py
 │   ├── apx_policy.py
 │   ├── apx_environment.py
 │   └── apx_registration.py
@@ -225,3 +227,5 @@ Environment without administering the host are in
 [docs/environment-local-administration-v1.md](docs/environment-local-administration-v1.md).
 The staged path from safe repository tests to later user-visible experiments is
 in [docs/testing-strategy-v1.md](docs/testing-strategy-v1.md).
+The future Hub screens and the currently implemented pure button/card rules are
+described in [docs/hub-experience-v1.md](docs/hub-experience-v1.md).
