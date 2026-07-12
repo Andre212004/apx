@@ -1080,6 +1080,38 @@ def classify_isolation_readiness(
     return "ready-for-stage-2-design-review"
 
 
+def _quota_enabled_observation(
+    *,
+    command_runner: Callable[[Sequence[str], float], object],
+    authoritative_host: bool,
+) -> IsolationReadinessCheck:
+    arguments = ("btrfs", "quota", "status", "/home")
+    result = command_runner(arguments, COMMAND_TIMEOUT)
+    failure = getattr(result, "failure", None)
+    returncode = getattr(result, "returncode", None)
+    output = str(getattr(result, "stdout", "")).strip()
+    if failure or returncode is None:
+        return _check("Storage limits", "Btrfs quota accounting enabled", "unavailable", f"observation {failure or 'unavailable'}")
+    if returncode != 0:
+        return _check("Storage limits", "Btrfs quota accounting enabled", "unavailable", f"observation failed with exit code {returncode}")
+    enabled = any(
+        line.strip().lower() == "enabled: yes" for line in output.splitlines()
+    )
+    if not enabled:
+        return _check(
+            "Storage limits",
+            "Btrfs quota accounting enabled",
+            "blocked",
+            "quota status reports that accounting is not enabled",
+        )
+    return _check(
+        "Storage limits",
+        "Btrfs quota accounting enabled",
+        _positive(authoritative_host),
+        "traditional Btrfs quota accounting reports enabled",
+    )
+
+
 def observe_snapshot_trust_readiness(
     *,
     command_runner: Callable[[Sequence[str], float], object],
@@ -1143,6 +1175,7 @@ def observe_snapshot_trust_readiness(
                 authoritative_host=authoritative_host,
             )
         )
+
     overall = classify_isolation_readiness(checks)
     return SnapshotTrustReadinessReport(
         checks=tuple(checks),
@@ -1450,6 +1483,13 @@ def observe_isolation_readiness(
                 authoritative_host=authoritative_host,
             )
         )
+
+    checks.append(
+        _quota_enabled_observation(
+            command_runner=command_runner,
+            authoritative_host=authoritative_host,
+        )
+    )
 
     checks.append(
         _collision_observation(

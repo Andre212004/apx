@@ -27,6 +27,8 @@ class IsolationReadinessTests(unittest.TestCase):
 
     def runner(self, arguments, timeout):
         self.commands.append(tuple(arguments))
+        if tuple(arguments) == ("btrfs", "quota", "status", "/home"):
+            return apx_cli.CommandResult(0, "Quotas on /home:\n  Enabled: yes\n", "")
         if tuple(arguments) == ("lspci", "-Dnnk"):
             return apx_cli.CommandResult(
                 0,
@@ -133,11 +135,24 @@ class IsolationReadinessTests(unittest.TestCase):
                 ("findmnt", "--json", "--output", "TARGET,FSTYPE,OPTIONS", "--target", "/sys/fs/cgroup"),
                 ("sysctl", "-n", "user.max_user_namespaces"),
                 ("findmnt", "--json", "--output", "TARGET,SOURCE,FSTYPE,OPTIONS,AVAIL", "--target", "/home"),
+                ("btrfs", "quota", "status", "/home"),
                 ("machinectl", "list", "--no-legend", "--no-pager"),
                 ("machinectl", "list-images", "--no-legend", "--no-pager"),
                 ("lspci", "-Dnnk"),
             ],
         )
+
+    def test_disabled_quota_blocks_stage_zero(self) -> None:
+        def disabled(arguments, timeout):
+            if tuple(arguments) == ("btrfs", "quota", "status", "/home"):
+                return apx_cli.CommandResult(0, "Quotas on /home:\n  Enabled: no\n", "")
+            return self.runner(arguments, timeout)
+
+        report = self.report(command_runner=disabled, authoritative_host=False)
+        self.assertEqual(
+            self.state(report, "Btrfs quota accounting enabled"), "blocked"
+        )
+        self.assertEqual(report.overall, "blocked")
 
     def test_render_is_deterministic_and_contains_no_plan_to_apply(self) -> None:
         report = self.report()

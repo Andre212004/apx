@@ -183,6 +183,13 @@ snapshot, archive staging, and any destructive operation that relies on size or
 reclaim claims. Active Environments may require an orderly stop depending on
 host capacity, but APX never presents an inconsistent qgroup as enforced.
 
+The Stage 0 observer implements the first read-only part of this gate with
+`btrfs quota status /home`. Disabled accounting is always a hard blocker. The
+2026-07-12 authorized read-only observation found accounting disabled on the
+current host. The observer does not enable quotas, start a rescan, create a
+qgroup, assign a limit, or claim full quota health; those require a separately
+reviewed bootstrap and recovery experiment.
+
 ## Snapshot Protocol
 
 V1 snapshot sets require the Environment to be fully stopped and all root/home

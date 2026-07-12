@@ -42,6 +42,8 @@ The first experiment does not:
 - promise VM-equivalent containment;
 - authorize an `apx apply` or privileged helper;
 - reuse or modify the manually created `apx-trial` candidate.
+- continue when Btrfs quota accounting for the experimental home filesystem is
+  visibly disabled; enabling it is a separate host bootstrap decision.
 
 ## Approval Boundaries
 

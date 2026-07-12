@@ -357,6 +357,15 @@ rejects unknown, duplicate, missing, wrongly typed, reordered-identity, or
 tampered evidence. This does not create or persist a real host seal, download a
 base, or provide executor attestation.
 
+The fixed Stage 0 isolation observer now checks Btrfs quota accounting with the
+read-only `btrfs quota status /home` operation. A visible disabled result is a
+hard blocker in every observer context; it cannot be downgraded to an
+unconfirmed positive. The authorized read-only host inspection on 2026-07-12
+reported quota accounting disabled on the Btrfs filesystem containing `/home`.
+No quota state was changed. Enabling, rescanning, configuring, testing, or
+disabling quotas remains a separately approved host mutation and recovery
+design task.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

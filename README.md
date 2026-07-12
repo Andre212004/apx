@@ -131,7 +131,8 @@ provisional system-container experiment. It checks the fixed experimental
 identity, required and optional tooling, kernel/systemd context, cgroup and user
 namespace evidence, machine collisions, and `/home` storage capacity. It never
 creates an image or container and treats restricted-context positives as
-requiring authoritative host confirmation.
+requiring authoritative host confirmation. Disabled Btrfs quota accounting is
+reported as a hard blocker rather than a positive that merely needs review.
 
 `apx host isolation-plan` renders the fixed, non-executing first headless
 system-container plan. It contains no commands or caller-selected paths and
