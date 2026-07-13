@@ -312,6 +312,10 @@ V7 passed PID 1, four-namespace, systemd-runtime, 138-package, hidden-host-home,
 clean-stop, cleanup, and source-preservation checks. Its target invocation
 marker was structurally invalid for a target unit. V8 closes readiness through
 the user-sessions service invocation and absence of the runtime login block.
+V8 confirmed the user-session condition is genuinely not reached within the
+observation window. V9 permits only fixed read-only systemctl queries for the
+manager state, two named units, failed units, and pending jobs so the blocking
+condition can be diagnosed without changing container state.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

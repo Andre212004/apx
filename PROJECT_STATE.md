@@ -837,6 +837,17 @@ changes. V8 preview digest:
 `d0fa74a7695412a7cbc7560e70f879a3248562417754a1ac3895dd263c40e2f9`.
 The executor refuses v8 until separate authorization.
 
+V8 was separately authorized and repeated all positive isolation/lifecycle
+evidence, but user-session readiness remained false after 30 seconds. It then
+stopped cleanly with code 0, removed the copy, left zero residue, and preserved
+the source. Report digest:
+`e3a93175545bdeeeb56f1421eaee6bea98963f3c0bac33761c77a58185058b3d`.
+V9 adds only fixed read-only `systemctl` queries inside the container for
+overall state, multi-user/user-session state, failed units, and pending jobs.
+It cannot change a unit. V9 preview digest:
+`1f3bbd7c8b9701dd523c8185379093e82a8b9966e177dec229c296acc39aafa6`.
+The executor refuses v9 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

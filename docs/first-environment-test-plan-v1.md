@@ -92,6 +92,19 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v8 run repeated every v7 success but did not observe the
+user-sessions readiness condition within 30 seconds. It stopped cleanly with
+code 0, removed the copy, left zero residue, and preserved the source. Report
+digest:
+`e3a93175545bdeeeb56f1421eaee6bea98963f3c0bac33761c77a58185058b3d`.
+V9 keeps all prior read-only observations and adds only fixed `systemctl`
+queries inside the already isolated namespaces: overall system state, active
+state for `multi-user.target` and `systemd-user-sessions.service`, failed units,
+and pending jobs. These queries cannot start, stop, enable, or alter a unit.
+V9 preview digest:
+`1f3bbd7c8b9701dd523c8185379093e82a8b9966e177dec229c296acc39aafa6`.
+It is not authorized to execute.
+
 The authorized v7 run produced the first positive isolated-boot proof. The
 observer identified systemd as namespace PID 1, distinct PID/mount/user/network
 namespaces, the internal systemd runtime, exactly 138 package records, and an

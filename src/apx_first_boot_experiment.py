@@ -17,7 +17,7 @@ from apx_first_boot_preview import FINAL_REPORT_DIGEST, MACHINE, OBSERVATION_SEC
 from apx_offline_base_build import ROOT, ROOTFS
 
 
-AUTHORIZED_PREVIEW = "0f59742d68e041b7bc2147dce7a2a901dd575ed0c99929875f1ac844dbcc883b"
+AUTHORIZED_PREVIEW = "d0fa74a7695412a7cbc7560e70f879a3248562417754a1ac3895dd263c40e2f9"
 FINAL_REPORT = ROOT / "final-report.json"
 OUTPUT_LIMIT = 4 * 1024**2
 
@@ -268,13 +268,13 @@ def execute_first_boot() -> FirstBootReport:
     draft["runtime_copy_removed"] = runtime_removed
     digest = hashlib.sha256(json.dumps(draft, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     report = FirstBootReport(**draft, report_digest=digest)
-    descriptor = os.open(ROOT / "first-boot-report-v7.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    descriptor = os.open(ROOT / "first-boot-report-v8.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, (json.dumps(asdict(report), sort_keys=True, indent=2) + "\n").encode())
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-    output_path = ROOT / "first-boot-output-v7.log"
+    output_path = ROOT / "first-boot-output-v8.log"
     descriptor = os.open(output_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, output)

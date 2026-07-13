@@ -16,7 +16,7 @@ TIMEOUT_SECONDS = 120
 MEMORY_MAX = "512M"
 TASKS_MAX = "256"
 CPU_QUOTA = "50%"
-RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v8/rootfs")
+RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v9/rootfs")
 RUNTIME_MAX_BYTES = 1024**3
 OBSERVATION_SECONDS = 30
 
@@ -68,6 +68,7 @@ def build_preview() -> FirstBootPreview:
             "shift ownership only in the temporary copy for private user isolation",
             "write one fixed no-core-dump policy only inside the temporary copy",
             "read container process, namespace, runtime marker, and package-count evidence through /proc for at most 30 seconds",
+            "run only fixed read-only systemctl state, failed-unit, and pending-job queries inside the container namespaces",
             "create transient mount, namespace, and cgroup runtime state",
             "write only to the disposable runtime copy and bounded process output",
         ),
@@ -85,6 +86,7 @@ def build_preview() -> FirstBootPreview:
             "PID, mount, user, and network namespaces differ from the observer",
             "the internal Arch identity and 138-package database are visible",
             "the user-sessions service is active and the runtime login block is absent",
+            "systemd reports running or degraded with every failed or pending unit recorded",
             "the host Development home and host package database are not visible",
             "shutdown leaves no matching process, mount, cgroup, namespace, or registration",
             "the verified source root and final report digest remain unchanged",
