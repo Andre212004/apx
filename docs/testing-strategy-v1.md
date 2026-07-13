@@ -288,6 +288,10 @@ The first real attempt exercised fail-safe behavior: an option-format error
 stopped before systemd, and post-checks found zero processes and mounts with the
 source unchanged. The corrected comma-separated capability form has a new
 preview digest and the executor refuses it until that digest is authorized.
+The corrected attempt then proved a host compatibility limit: `/tmp` does not
+support the requested ID-mapped mount. It also failed closed with no residue.
+The next preview preserves private-user isolation through a new bounded runtime
+copy and explicitly refuses to weaken the boundary or mutate the source root.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

@@ -79,6 +79,19 @@ produces preview digest
 `53c30a3c55c1a6b5b196d9f73694b3b6851e7cab84fdcd6f4bcace24bdb91944`.
 It is deliberately blocked from execution until separately authorized.
 
+The separately authorized corrected attempt passed option parsing but stopped
+before systemd because the host's `/tmp` filesystem cannot provide ID-mapped
+mounts. It again left zero matching processes and mounts and preserved the
+source. Report digest:
+`0de4390b36caeb65f35fcc527ce92420615e263457b90bd09b2637295295bda7`.
+Removing private-user isolation is rejected. The v3 preview instead creates an
+exact temporary runtime copy under `/tmp/apx-first-console-runtime-v3`, caps it
+at 1 GiB, shifts ownership only in that copy, boots with the original limits,
+and requires deletion of the copy after verified shutdown. The source remains
+unchanged. V3 preview digest:
+`6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
+It is not authorized to execute.
+
 ## Phase C: bounded console boot
 
 Start only `/usr/lib/systemd/systemd` with a fixed timeout, private process and

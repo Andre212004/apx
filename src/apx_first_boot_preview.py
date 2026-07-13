@@ -16,6 +16,8 @@ TIMEOUT_SECONDS = 120
 MEMORY_MAX = "512M"
 TASKS_MAX = "256"
 CPU_QUOTA = "50%"
+RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v3/rootfs")
+RUNTIME_MAX_BYTES = 1024**3
 
 
 @dataclass(frozen=True)
@@ -34,11 +36,11 @@ class FirstBootPreview:
 def fixed_command() -> tuple[str, ...]:
     return (
         "/usr/bin/timeout", "--signal=TERM", "--kill-after=15s", f"{TIMEOUT_SECONDS}s",
-        "/usr/bin/systemd-nspawn", "--directory=" + str(ROOTFS),
+        "/usr/bin/systemd-nspawn", "--directory=" + str(RUNTIME_ROOT),
         "--machine=" + MACHINE, "--hostname=" + MACHINE, "--boot",
         "--settings=no", "--register=no", "--volatile=overlay",
         "--private-network", "--private-users=pick",
-        "--private-users-ownership=map", "--console=pipe",
+        "--private-users-ownership=chown", "--console=pipe",
         "--resolv-conf=off", "--timezone=off", "--link-journal=no",
         "--notify-ready=yes", "--kill-signal=SIGRTMIN+3",
         "--no-new-privileges=yes", "--rlimit=CORE=0",
@@ -60,6 +62,8 @@ def build_preview() -> FirstBootPreview:
         "final_report_digest": FINAL_REPORT_DIGEST, "command": command,
         "allowed_effects": (
             "start one temporary systemd-nspawn process tree for at most 120 seconds",
+            "create one exact temporary runtime copy below /tmp, capped at 1 GiB",
+            "shift ownership only in the temporary copy for private user isolation",
             "create transient mount, namespace, cgroup, and volatile overlay runtime state",
             "write only to the disposable in-memory overlay and bounded process output",
         ),
@@ -69,6 +73,7 @@ def build_preview() -> FirstBootPreview:
             "share host home, GPU, audio, removable devices, or credentials",
             "create a persistent machine registration, service, user, or Btrfs resource",
             "download, install, or clean up previous experiment areas",
+            "retain the temporary runtime copy after verified shutdown",
         ),
         "pass_conditions": (
             "container systemd reports ready before the timeout",

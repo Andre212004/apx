@@ -766,6 +766,18 @@ corrected preview digest
 `53c30a3c55c1a6b5b196d9f73694b3b6851e7cab84fdcd6f4bcace24bdb91944`.
 The executor intentionally refuses this corrected plan until separate approval.
 
+The corrected plan was separately authorized and passed parsing, but the host's
+`/tmp` filesystem cannot supply ID-mapped mounts. The attempt again stopped
+before systemd with zero process/mount residue and an unchanged source. Its
+report digest is
+`0de4390b36caeb65f35fcc527ce92420615e263457b90bd09b2637295295bda7`.
+Private-user isolation will not be removed. The new v3 preview creates a bounded
+exact runtime copy below `/tmp/apx-first-console-runtime-v3`, permits ownership
+shifting only in that disposable copy, retains all prior runtime limits, and
+requires complete copy cleanup. Its digest is
+`6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
+The executor refuses v3 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;
