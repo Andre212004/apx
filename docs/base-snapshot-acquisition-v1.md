@@ -109,6 +109,10 @@ current Arch master-trust and revocation policy, and a separate `gpgv` pass.
 Both passes agreed on every signer; the receipt records 15 trusted primary
 identities and digest
 `468116fb5277d91a099d0d4adbc5ca6579a5962965b062c0b6a1f09db9e4ea84`.
+Bounded `.PKGINFO` reads then matched name, version, and architecture inside all
+138 archives to the signed manifest without full extraction. They declare
+552,949,311 installed bytes and produce metadata digest
+`0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
 
 ## Trust Inputs
 

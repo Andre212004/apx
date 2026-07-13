@@ -50,5 +50,9 @@ Files remain under operation
 receipt is under `/tmp/apx-signature-verification-20260711-v1/`. The next stage
 may inspect bounded package metadata such as `.PKGINFO` without executing
 package content. It must bind name, version, architecture and dependencies to
-the verified receipt before any disposable base extraction. Extraction and
-Stage 2 remain blocked.
+the verified receipt before any disposable base extraction. The bounded
+`.PKGINFO` inspection subsequently matched all 138 inside-package identities to
+their signed repository identities, recorded 552,949,311 declared installed
+bytes, and produced metadata digest
+`0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
+Extraction and Stage 2 remain blocked.

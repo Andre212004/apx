@@ -706,9 +706,12 @@ revocation inputs, followed by an independent `gpgv` pass that agreed on every
 signer. The signature receipt digest is
 `468116fb5277d91a099d0d4adbc5ca6579a5962965b062c0b6a1f09db9e4ea84`.
 This completes acquisition and authenticity verification, not the base
-snapshot: bounded package metadata inspection and a separately reviewed
-disposable extraction/build stage remain required. No installation or host
-mutation is authorized by this evidence.
+snapshot. A bounded metadata-only pass has also matched the internal name,
+version, and architecture of all 138 packages to the signed manifest. It
+records 552,949,311 declared installed bytes and metadata digest
+`0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
+A separately reviewed disposable extraction/build stage remains required. No
+installation or host mutation is authorized by this evidence.
 
 - two Environments independently installing the same application;
 - deletion without residual application or user data;

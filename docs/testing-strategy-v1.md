@@ -260,6 +260,10 @@ Offline signature-verification fixtures reject cryptographic failure, missing
 valid results, insufficient current master certification, and disagreement
 between GnuPG and `gpgv`. The real run verified all 138 package/signature pairs
 twice and both paths agreed on 15 trusted primary signing identities.
+Package-metadata fixtures reject missing or duplicate identities, malformed or
+oversized values, invalid sizes, and inside/outside identity disagreement. The
+real bounded metadata-only run matched all 138 package archives without full
+extraction, execution, installation, or network access.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account
