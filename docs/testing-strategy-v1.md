@@ -308,6 +308,10 @@ V6 proved early clean stop and complete cleanup but exposed an overly strict
 observer assumption about systemd's mutable process title. V7 identifies
 systemd by its executable and independently requires namespace PID 1 from the
 kernel's read-only `NSpid` status.
+V7 passed PID 1, four-namespace, systemd-runtime, 138-package, hidden-host-home,
+clean-stop, cleanup, and source-preservation checks. Its target invocation
+marker was structurally invalid for a target unit. V8 closes readiness through
+the user-sessions service invocation and absence of the runtime login block.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

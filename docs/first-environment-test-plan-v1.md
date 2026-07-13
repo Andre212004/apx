@@ -92,6 +92,21 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v7 run produced the first positive isolated-boot proof. The
+observer identified systemd as namespace PID 1, distinct PID/mount/user/network
+namespaces, the internal systemd runtime, exactly 138 package records, and an
+absent host Development home. It then requested a clean stop; code 0, zero
+process/mount residue, removed copy, and unchanged source all passed. Report
+digest:
+`310e12efec05eec8dcf7d52bc0192bf9289037c62d6b2ba83400e8c309be233e`.
+The old multi-user marker was invalid because target units do not publish the
+invocation file assumed by the observer. V8 instead requires the active
+`systemd-user-sessions.service` invocation marker and absence of `/run/nologin`,
+the concrete readiness boundary for user sessions in this root. All other
+behavior is unchanged. V8 preview digest:
+`d0fa74a7695412a7cbc7560e70f879a3248562417754a1ac3895dd263c40e2f9`.
+It is not authorized to execute.
+
 The authorized v6 run observed for 30 seconds, requested a clean stop, returned
 code 0, removed the copy, left zero process/mount residue, and preserved the
 source. The observer recorded no PID 1 because it required systemd's mutable

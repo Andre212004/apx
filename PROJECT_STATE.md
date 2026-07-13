@@ -824,6 +824,19 @@ preview digest:
 `0f59742d68e041b7bc2147dce7a2a901dd575ed0c99929875f1ac844dbcc883b`.
 The executor refuses v7 until separate authorization.
 
+V7 was separately authorized and produced the first positive isolated boot:
+systemd was namespace PID 1, PID/mount/user/network namespaces differed, the
+internal systemd runtime and 138 package records were visible, and the host
+Development home was absent. Clean stop returned code 0, removed the copy, left
+zero residue, and preserved the source. Report digest:
+`310e12efec05eec8dcf7d52bc0192bf9289037c62d6b2ba83400e8c309be233e`.
+The only false result came from expecting an invocation marker for a target
+unit, which systemd does not publish. V8 uses the concrete user-session service
+marker plus absence of `/run/nologin`; no isolation or execution behavior
+changes. V8 preview digest:
+`d0fa74a7695412a7cbc7560e70f879a3248562417754a1ac3895dd263c40e2f9`.
+The executor refuses v8 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

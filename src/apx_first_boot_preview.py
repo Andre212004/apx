@@ -16,7 +16,7 @@ TIMEOUT_SECONDS = 120
 MEMORY_MAX = "512M"
 TASKS_MAX = "256"
 CPU_QUOTA = "50%"
-RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v7/rootfs")
+RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v8/rootfs")
 RUNTIME_MAX_BYTES = 1024**3
 OBSERVATION_SECONDS = 30
 
@@ -84,6 +84,7 @@ def build_preview() -> FirstBootPreview:
             "container executable is systemd and its namespace PID is exactly 1",
             "PID, mount, user, and network namespaces differ from the observer",
             "the internal Arch identity and 138-package database are visible",
+            "the user-sessions service is active and the runtime login block is absent",
             "the host Development home and host package database are not visible",
             "shutdown leaves no matching process, mount, cgroup, namespace, or registration",
             "the verified source root and final report digest remain unchanged",
