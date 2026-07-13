@@ -36,6 +36,103 @@ class StagedFile:
     mode: int
 
 
+class StreamingStagingWriter:
+    """One exclusive partial file that becomes visible only after validation."""
+
+    def __init__(
+        self,
+        *,
+        parent_fd: int,
+        operation_fd: int,
+        files_fd: int,
+        file_fd: int,
+        filename: str,
+        partial: str,
+        maximum_bytes: int,
+        aggregate_remaining: int,
+    ) -> None:
+        self._parent_fd = parent_fd
+        self._operation_fd = operation_fd
+        self._files_fd = files_fd
+        self._file_fd = file_fd
+        self.filename = filename
+        self.partial = partial
+        self.maximum_bytes = maximum_bytes
+        self.aggregate_remaining = aggregate_remaining
+        self._digest = hashlib.sha256()
+        self._written = 0
+        self._closed = False
+
+    @property
+    def bytes_written(self) -> int:
+        return self._written
+
+    def write(self, chunk: bytes) -> None:
+        if self._closed:
+            raise StagingError("streaming staging writer is closed")
+        if not isinstance(chunk, bytes):
+            raise StagingError("download chunk has wrong type")
+        new_total = self._written + len(chunk)
+        if new_total > self.maximum_bytes or new_total > self.aggregate_remaining:
+            raise StagingError("download exceeded approved staging bound")
+        view = memoryview(chunk)
+        while view:
+            consumed = os.write(self._file_fd, view)
+            if consumed <= 0:
+                raise StagingError("staging write made no progress")
+            view = view[consumed:]
+        self._digest.update(chunk)
+        self._written = new_total
+
+    def finalize(self, *, expected_bytes: int, expected_sha256: str) -> StagedFile:
+        if self._closed:
+            raise StagingError("streaming staging writer is closed")
+        if type(expected_bytes) is not int or expected_bytes < 0:
+            raise StagingError("invalid final byte count")
+        if not isinstance(expected_sha256, str) or not _SHA256.fullmatch(expected_sha256):
+            raise StagingError("invalid final digest")
+        os.fsync(self._file_fd)
+        metadata = os.fstat(self._file_fd)
+        digest = self._digest.hexdigest()
+        if self._written != expected_bytes or digest != expected_sha256:
+            raise StagingError("streamed bytes do not match final evidence")
+        os.close(self._file_fd)
+        self._file_fd = -1
+        try:
+            os.link(
+                self.partial,
+                self.filename,
+                src_dir_fd=self._files_fd,
+                dst_dir_fd=self._files_fd,
+                follow_symlinks=False,
+            )
+        except FileExistsError as error:
+            raise StagingError("staged filename already exists") from error
+        os.unlink(self.partial, dir_fd=self._files_fd)
+        os.fsync(self._files_fd)
+        result = StagedFile(
+            self.filename,
+            self._written,
+            digest,
+            metadata.st_dev,
+            metadata.st_ino,
+            stat.S_IMODE(metadata.st_mode),
+        )
+        self.close()
+        return result
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        if self._file_fd >= 0:
+            os.close(self._file_fd)
+            self._file_fd = -1
+        os.close(self._files_fd)
+        os.close(self._operation_fd)
+        os.close(self._parent_fd)
+        self._closed = True
+
+
 class FixtureAcquisitionStaging:
     """Safe disposable-directory fixture; not the authoritative host store."""
 
@@ -140,6 +237,46 @@ class FixtureAcquisitionStaging:
             total += metadata.st_size
             count += 1
         return count, total
+
+    def begin_stream(
+        self, *, filename: str, maximum_bytes: int
+    ) -> StreamingStagingWriter:
+        if not isinstance(filename, str) or not _FILENAME.fullmatch(filename):
+            raise StagingError("unsafe staging filename")
+        if type(maximum_bytes) is not int or not 0 < maximum_bytes <= MAX_AGGREGATE_BYTES:
+            raise StagingError("invalid streaming maximum")
+        parent_fd, operation_fd, files_fd = self._open_operation()
+        file_fd: int | None = None
+        try:
+            count, current = self._current_usage(files_fd)
+            if count >= MAX_FILES or current >= MAX_AGGREGATE_BYTES:
+                raise StagingError("staging aggregate bound exceeded")
+            partial = filename + ".partial"
+            file_fd = os.open(
+                partial,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                0o600,
+                dir_fd=files_fd,
+            )
+            return StreamingStagingWriter(
+                parent_fd=parent_fd,
+                operation_fd=operation_fd,
+                files_fd=files_fd,
+                file_fd=file_fd,
+                filename=filename,
+                partial=partial,
+                maximum_bytes=maximum_bytes,
+                aggregate_remaining=MAX_AGGREGATE_BYTES - current,
+            )
+        except FileExistsError as error:
+            raise StagingError("staged filename already exists") from error
+        except Exception:
+            if file_fd is not None:
+                os.close(file_fd)
+            os.close(files_fd)
+            os.close(operation_fd)
+            os.close(parent_fd)
+            raise
 
     def stage_bytes(
         self,

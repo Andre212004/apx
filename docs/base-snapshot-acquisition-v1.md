@@ -71,6 +71,14 @@ It rejects any URI authority or suffix change and sanitizes transport errors.
 Unit tests inject an opener; this does not constitute network approval or a
 real download.
 
+`src/apx_transfer.py` composes the bounded downloader with the disposable
+streaming staging writer. Bytes move directly into one exclusive `.partial`
+regular file, remain bounded without whole-file memory buffering, and receive
+their final non-overwriting name only when independently computed size and
+SHA-256 evidence agree across both boundaries. Failure preserves the partial
+for recovery classification and refuses an implicit retry. This composition
+still uses only fake responses and caller-provided disposable directories.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

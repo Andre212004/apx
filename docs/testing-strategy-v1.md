@@ -236,6 +236,10 @@ The direct HTTPS opener fixture verifies proxy suppression, redirect refusal,
 TLS minimum and certificate/hostname requirements, fixed non-secret request
 headers, strict archive authority, timeout bounds, response-URI identity, and
 sanitized HTTP/network failures.
+The transfer/staging integration fixture streams unknown database bytes in
+small chunks, proves no final publication before matching evidence, preserves
+partial bytes on simulated network failure, and refuses retry over an existing
+partial operation.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

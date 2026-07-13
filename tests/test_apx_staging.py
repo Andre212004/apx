@@ -156,6 +156,47 @@ class StagingTests(unittest.TestCase):
                 with self.assertRaises(staging.StagingError):
                     self.stage(filename="x" + str(len(str(changes))) + ".pkg", **changes)
 
+    def test_streaming_writer_publishes_only_after_final_evidence(self):
+        self.reserve()
+        writer = self.store.begin_stream(filename="stream.pkg", maximum_bytes=1024)
+        writer.write(CONTENT[:4])
+        target = self.root / OPERATION / "files" / "stream.pkg"
+        self.assertFalse(target.exists())
+        writer.write(CONTENT[4:])
+        result = writer.finalize(expected_bytes=len(CONTENT), expected_sha256=CONTENT_HASH)
+        self.assertEqual(result.bytes_written, len(CONTENT))
+        self.assertEqual(target.read_bytes(), CONTENT)
+
+    def test_interrupted_stream_remains_partial_and_closed(self):
+        self.reserve()
+        writer = self.store.begin_stream(filename="stream.pkg", maximum_bytes=1024)
+        writer.write(CONTENT)
+        writer.close()
+        files = self.root / OPERATION / "files"
+        self.assertTrue((files / "stream.pkg.partial").is_file())
+        self.assertFalse((files / "stream.pkg").exists())
+        with self.assertRaises(staging.StagingError):
+            writer.write(b"x")
+
+    def test_streaming_bounds_and_final_mismatch_preserve_partial(self):
+        self.reserve()
+        writer = self.store.begin_stream(filename="stream.pkg", maximum_bytes=4)
+        with self.assertRaises(staging.StagingError):
+            writer.write(CONTENT)
+        writer.close()
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            root.chmod(0o700)
+            store = staging.FixtureAcquisitionStaging(root, OPERATION, PLAN)
+            store.reserve()
+            writer = store.begin_stream(filename="stream.pkg", maximum_bytes=1024)
+            writer.write(CONTENT)
+            with self.assertRaises(staging.StagingError):
+                writer.finalize(expected_bytes=len(CONTENT), expected_sha256="c" * 64)
+            writer.close()
+            self.assertTrue((root / OPERATION / "files" / "stream.pkg.partial").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

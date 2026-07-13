@@ -468,6 +468,14 @@ credentials, ports, query strings, fragments, changed final URI, invalid
 timeouts, and sanitized connection/status failures. Tests inject responses;
 no real acquisition has been performed.
 
+The repository now composes bounded download and protected staging through
+`src/apx_transfer.py`. `StreamingStagingWriter` writes chunks directly to one
+exclusive partial regular file, enforces per-file and aggregate bounds during
+the stream, and publishes without overwrite only after transfer and staging
+size/hash evidence agree. Network or validation failure preserves the partial
+identity and blocks blind retry. Integration tests use fake responses and
+disposable directories; no real network transfer or production path has run.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or
