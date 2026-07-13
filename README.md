@@ -182,6 +182,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── installation-migration-v1.md
 │   ├── isolation-architecture.md
 │   ├── lifecycle-threat-model-review-v1.md
+│   ├── package-resolution-experiment-v1.md
 │   ├── privileged-executor-protocol-v1.md
 │   ├── quota-enforcement-fixture-v1.md
 │   ├── roadmap.md
@@ -211,7 +212,8 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_transfer.py
 │   ├── apx_environment.py
 │   ├── apx_registration.py
-│   └── apx_repository_db.py
+│   ├── apx_repository_db.py
+│   └── apx_resolution.py
 ├── tests/
 ├── prototypes/
 │   └── hub-demo/

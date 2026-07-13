@@ -93,6 +93,13 @@ count/size, rejects traversal and unexpected members, and validates the package
 identity, architecture, sizes, SHA-256, encoded signature, uniqueness, and
 dependency fields needed to check resolver output independently.
 
+The first real offline closed resolution is recorded in
+`package-resolution-experiment-v1.md`. `src/apx_resolution.py` runs two
+print-only passes against an empty root and only copied staged databases, then
+cross-checks every result with repository metadata. It selected 138 unique
+packages totaling 128,264,129 bytes. Package and detached-signature acquisition
+remains separately approval-blocked.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

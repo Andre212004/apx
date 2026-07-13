@@ -493,6 +493,16 @@ sizes, SHA-256, base64 signature, and dependency fields. The two real staged
 databases passed: 296 `core` and 14,842 `extra` package records. This validates
 metadata structure only; it does not yet accept a resolved package closure.
 
+`src/apx_resolution.py` now implements fixed offline resolution against only
+the staged databases and an empty root/local package database. It runs pacman
+print-only twice, requires identical output, cross-checks every selected field,
+enforces seeds, uniqueness, 512-package and 4-GiB bounds, canonicalizes results,
+and writes exclusive mode-0600 evidence. The real run selected 138 unique
+packages totaling 128,264,129 bytes with manifest digest
+`574f5d31e7c4ee46b1982fe2baf285d014ba0d712e91aea6d00413ba8fe5e3f9`.
+No network, download, install, or extraction occurred. Exact evidence is in
+`docs/package-resolution-experiment-v1.md`.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or
