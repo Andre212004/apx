@@ -140,6 +140,10 @@ G0 uses only the AMD render node and a headless Hyprland output; G1 adds a
 mediated nested window while KDE remains available; G2 alone may request an
 exclusive physical session. NVIDIA, raw input, audio, host Wayland/PipeWire/
 D-Bus/portal sockets, and host home remain denied until their named stage.
+The separately authorized graphical acquisition published exactly 194 packages
+and 194 signatures totaling 264,707,836 bytes. Independent reopen matched every
+package hash/size and found zero missing, unexpected, or partial files. Signer
+trust and the independent cryptographic pass remain required.
 
 ## Level 6: Attack and Recovery Campaign
 

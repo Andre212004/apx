@@ -878,6 +878,14 @@ final panel; the expanding APX taskbar control remains a dedicated component
 with a desktop-independent lifecycle contract. Package acquisition and every
 graphical/device/session effect require later approvals.
 
+The graphical role packages were then separately authorized and acquired from
+the dated Archive: exactly 194 packages plus 194 signatures totaling
+264,707,836 bytes. Independent reopen matched all package sizes and hashes and
+found zero missing, unexpected, or partial files. No package was installed,
+extracted, or executed and no GPU/system effect occurred. Detached-signature
+trust verification and the independent second cryptographic pass remain the
+next gate before any role build.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

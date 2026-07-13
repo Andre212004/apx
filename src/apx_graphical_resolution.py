@@ -47,6 +47,53 @@ class GraphicalResolutionManifest:
     manifest_digest: str
 
 
+def parse_graphical_manifest(text: str) -> GraphicalResolutionManifest:
+    if not isinstance(text, str) or len(text.encode()) > MAX_OUTPUT:
+        raise GraphicalResolutionError("graphical manifest is invalid or oversized")
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise GraphicalResolutionError("graphical manifest JSON is invalid") from error
+    expected = set(GraphicalResolutionManifest.__dataclass_fields__)
+    if not isinstance(payload, dict) or set(payload) != expected:
+        raise GraphicalResolutionError("graphical manifest fields do not match schema")
+    package_fields = set(ResolvedPackage.__dataclass_fields__)
+    def packages(name: str) -> tuple[ResolvedPackage, ...]:
+        raw = payload[name]
+        if not isinstance(raw, list) or any(not isinstance(item, dict) or set(item) != package_fields for item in raw):
+            raise GraphicalResolutionError("graphical package fields do not match schema")
+        return tuple(ResolvedPackage(**item) for item in raw)
+    try:
+        manifest = GraphicalResolutionManifest(
+            payload["schema_version"], payload["base_manifest_digest"],
+            tuple(tuple(item) for item in payload["database_digests"]),
+            tuple(payload["graphical_seeds"]), packages("all_packages"),
+            packages("role_packages"), payload["all_package_bytes"],
+            payload["role_package_bytes"], payload["all_installed_bytes"],
+            payload["role_installed_bytes"], payload["manifest_digest"],
+        )
+    except (TypeError, ValueError) as error:
+        raise GraphicalResolutionError("graphical manifest values are malformed") from error
+    unsigned = asdict(manifest); unsigned.pop("manifest_digest")
+    digest = hashlib.sha256(json.dumps(unsigned, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    base = parse_resolution_manifest(BASE_MANIFEST.read_text(encoding="utf-8"))
+    role_names = {item.name for item in manifest.role_packages}
+    all_names = {item.name for item in manifest.all_packages}
+    if (
+        manifest.schema_version != 1 or manifest.base_manifest_digest != base.manifest_digest
+        or manifest.database_digests != tuple(sorted(DATABASE_DIGESTS.items()))
+        or manifest.graphical_seeds != GRAPHICAL_SEEDS
+        or manifest.manifest_digest != digest
+        or len(manifest.role_packages) != 194 or len(manifest.all_packages) != 332
+        or len(role_names) != 194 or len(all_names) != 332
+        or not role_names <= all_names or not set(GRAPHICAL_SEEDS) <= role_names
+        or manifest.role_package_bytes != sum(item.compressed_size for item in manifest.role_packages)
+        or manifest.all_package_bytes != sum(item.compressed_size for item in manifest.all_packages)
+    ):
+        raise GraphicalResolutionError("graphical manifest invariants do not match")
+    return manifest
+
+
 def fixed_command(root: Path, config: Path) -> tuple[str, ...]:
     return (
         "/usr/bin/pacman", "-Sp", "--print-format", "%r|%n|%v|%a|%f|%s|%l",
