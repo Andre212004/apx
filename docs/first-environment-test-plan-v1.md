@@ -92,6 +92,20 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v4 run retained a container PID 1 for the full 120-second bound,
+then timeout requested termination. It removed the runtime copy, left zero
+processes and mounts, and preserved the source. However, the console exposed no
+systemd readiness evidence, while reporting that the private-user boundary
+could not apply `RLIMIT_CORE`. Therefore the run is not counted as a successful
+boot. Report digest:
+`6bd0d43a800b416201613932f93b8e2fe49c3f37dd834338cc5667c619a3c1f0`.
+V5 requests explicit systemd console/status logging and replaces the
+incompatible core limit with `Storage=none` and `ProcessSizeMax=0` in a fixed
+coredump policy written only to the disposable copy. All prior boundaries and
+cleanup requirements remain. V5 preview digest:
+`93aa2e816680a6f570ea584352063ab4841e5a1eca11cfc4ca0df466c9840c0e`.
+It is not authorized to execute.
+
 The authorized v3 attempt created and byte-verified its bounded runtime copy,
 but nspawn rejected combining ownership shifting with its implicit read-only
 volatile overlay. It started no systemd, left zero processes and mounts,

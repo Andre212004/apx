@@ -13,16 +13,21 @@ class FirstBootExperimentTests(unittest.TestCase):
         self.assertNotEqual(experiment.AUTHORIZED_PREVIEW, experiment.build_preview().preview_digest)
         self.assertEqual(experiment.FINAL_REPORT_DIGEST, "741fe1c332c334f9f0667b295ae98e7de686c752c3f415e169e0e48912535b68")
 
-    def test_third_attempt_preserves_previous_evidence(self):
+    def test_fourth_attempt_preserves_previous_evidence(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")
-        self.assertIn('"first-boot-report-v3.json"', source)
-        self.assertIn('"first-boot-output-v3.log"', source)
+        self.assertIn('"first-boot-report-v4.json"', source)
+        self.assertIn('"first-boot-output-v4.log"', source)
 
     def test_runtime_copy_is_exact_bounded_and_removed(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")
         self.assertIn('"/usr/bin/cp", "-a", "--reflink=auto"', source)
         self.assertIn("runtime_allocated > RUNTIME_MAX_BYTES", source)
         self.assertIn("shutil.rmtree(runtime_parent)", source)
+
+    def test_core_dump_policy_is_only_written_inside_runtime_copy(self):
+        source = Path(experiment.__file__).read_text(encoding="utf-8")
+        self.assertIn('RUNTIME_ROOT / "etc/systemd/coredump.conf.d"', source)
+        self.assertIn('b"[Coredump]\\nStorage=none\\nProcessSizeMax=0\\n"', source)
 
     def test_output_and_outer_timeout_are_bounded(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")

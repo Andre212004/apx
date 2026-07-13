@@ -16,7 +16,7 @@ from apx_first_boot_preview import FINAL_REPORT_DIGEST, MACHINE, RUNTIME_MAX_BYT
 from apx_offline_base_build import ROOT, ROOTFS
 
 
-AUTHORIZED_PREVIEW = "6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6"
+AUTHORIZED_PREVIEW = "0db2db8bdf726e4855244bb3201fb0290f2b5d15da1c6eaf7ee97494307c79c3"
 FINAL_REPORT = ROOT / "final-report.json"
 OUTPUT_LIMIT = 4 * 1024**2
 
@@ -124,6 +124,15 @@ def execute_first_boot() -> FirstBootReport:
     if runtime_digest != source_digest or runtime_logical > RUNTIME_MAX_BYTES or runtime_allocated > RUNTIME_MAX_BYTES:
         shutil.rmtree(runtime_parent)
         raise FirstBootExperimentError("runtime copy identity or size is outside authorization")
+    coredump_directory = RUNTIME_ROOT / "etc/systemd/coredump.conf.d"
+    coredump_directory.mkdir(parents=True, mode=0o755, exist_ok=True)
+    coredump_policy = coredump_directory / "apx-first-console.conf"
+    descriptor = os.open(coredump_policy, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+    try:
+        os.write(descriptor, b"[Coredump]\nStorage=none\nProcessSizeMax=0\n")
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
     result = subprocess.run(
         preview.command, shell=False, stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=150,
@@ -160,13 +169,13 @@ def execute_first_boot() -> FirstBootReport:
     draft["runtime_copy_removed"] = runtime_removed
     digest = hashlib.sha256(json.dumps(draft, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     report = FirstBootReport(**draft, report_digest=digest)
-    descriptor = os.open(ROOT / "first-boot-report-v3.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    descriptor = os.open(ROOT / "first-boot-report-v4.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, (json.dumps(asdict(report), sort_keys=True, indent=2) + "\n").encode())
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-    output_path = ROOT / "first-boot-output-v3.log"
+    output_path = ROOT / "first-boot-output-v4.log"
     descriptor = os.open(output_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, output)

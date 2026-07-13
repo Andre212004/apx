@@ -296,6 +296,10 @@ The authorized v3 run proved copy identity and complete cleanup but exposed an
 nspawn incompatibility between ownership shifting and its read-only overlay.
 V4 treats the already-disposable copy as the writable layer, preserving every
 other isolation and cleanup gate while removing only the redundant overlay.
+V4 ran to its timeout and proved cleanup/source preservation, but produced no
+positive systemd readiness evidence and exposed an incompatible core rlimit.
+V5 requires explicit console status and disables core storage through one fixed
+policy inside the runtime copy instead of weakening private-user isolation.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

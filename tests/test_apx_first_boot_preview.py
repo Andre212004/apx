@@ -27,6 +27,9 @@ class FirstBootPreviewTests(unittest.TestCase):
         for value in required:
             self.assertIn(value, command)
         self.assertNotIn("--volatile=overlay", command)
+        self.assertNotIn("--rlimit=CORE=0", command)
+        for value in ("--log-target=console", "--log-level=info", "--show-status=yes"):
+            self.assertIn(value, command)
 
     def test_command_exposes_no_host_path_network_or_port(self):
         command = preview.fixed_command()

@@ -789,6 +789,18 @@ unchanged. V4 preview digest:
 `0db2db8bdf726e4855244bb3201fb0290f2b5d15da1c6eaf7ee97494307c79c3`.
 The executor refuses v4 until separate authorization.
 
+V4 was separately authorized and retained a container PID 1 until the bounded
+120-second timeout, after which it left zero process/mount residue, removed the
+runtime copy, and preserved the source. It is not a passed boot because no
+systemd readiness marker appeared and the private-user boundary rejected the
+core rlimit. Report digest:
+`6bd0d43a800b416201613932f93b8e2fe49c3f37dd834338cc5667c619a3c1f0`.
+V5 enables explicit systemd console/status output and disables core-file
+storage through a fixed policy only in the disposable copy. Every other limit
+and cleanup rule remains. V5 preview digest:
+`93aa2e816680a6f570ea584352063ab4841e5a1eca11cfc4ca0df466c9840c0e`.
+The executor refuses v5 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;
