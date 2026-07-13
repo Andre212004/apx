@@ -242,10 +242,11 @@ already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
 not ready.
 
-One separately authorized real-host quota leaf fixture has passed and remains
-preserved for approved cleanup. It is evidence for limit enforcement on one
-subvolume, not permission to treat hierarchical APX quota topology or Stage 3
-Environment creation as ready.
+One separately authorized real-host quota leaf fixture and its complete cleanup
+have passed. The path disappeared first while subvolume `263` and qgroup
+`0/263` remained pending; only their later verified absence and healthy quota
+state completed the test. This is evidence for one leaf, not permission to
+treat hierarchical APX quota topology or Stage 3 Environment creation as ready.
 
 The project must not describe future user testing as available until the exact
 experiment preview, rollback boundary, and independently verified cleanup are

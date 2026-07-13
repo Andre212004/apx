@@ -1,8 +1,7 @@
 # Btrfs Quota Enforcement Fixture v1
 
-Status: manually executed leaf-limit fixture passed on 2026-07-12; logical
-deletion completed and Btrfs metadata cleanup remains pending. No APX
-Environment was created.
+Status: manually executed leaf-limit and complete-cleanup fixture passed on
+2026-07-12. No APX Environment was created.
 
 ## Scope
 
@@ -42,7 +41,10 @@ subvolume ID `263` as `DELETED` and qgroup `0/263` as `<under deletion>` with
 16,384 referenced and exclusive bytes. Quotas remain enabled, full,
 consistent, and without limit override; no kernel error was observed.
 
-This is not complete cleanup under `cleanup-completion-v1.md`. The remaining
-identity stays pending and must not be manually broadened into unrelated
-deletion authority. Completion requires both the deleted-subvolume record and
-qgroup to disappear, followed by fresh quota and free-space observation.
+The user then performed a normal restart. Fresh observation reported no deleted
+subvolume, no qgroup `0/263`, eight automatic level-0 qgroups, and quota state
+enabled, full, consistent, and without limit override. The fixture path also
+remained absent. Cleanup therefore meets `cleanup-completion-v1.md`: logical
+and physical identities are absent and no quota residue remains. The reported
+free-space observation stayed healthy; exact reclaimed bytes are not inferred
+from logical file size.

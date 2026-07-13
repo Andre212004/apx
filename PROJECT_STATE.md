@@ -392,10 +392,12 @@ The user then manually executed the separately authorized leaf quota fixture
 documented in `docs/quota-enforcement-fixture-v1.md`. Qgroup `0/263` enforced a
 64 MiB referenced limit: an attempted 80 MiB write stopped at 67,076,096 bytes
 with `Disk quota exceeded` and a non-zero result. Quota accounting remained
-full, consistent, and without limit override. The subvolume and file are
-preserved pending separately approved cleanup. This proves one leaf limit, not
-the intended hierarchy, snapshots, concurrency, restart recovery, or executor
-attestation; the complete capacity gate therefore remains blocked.
+full, consistent, and without limit override. The user separately approved and
+completed cleanup. After a normal restart, subvolume ID `263` and qgroup
+`0/263` disappeared, the automatic level-0 count returned from nine to eight,
+and quotas remained healthy. This proves one leaf limit and eventual complete
+cleanup, not the intended hierarchy, snapshots, concurrency, executor
+recovery, or attestation; the complete capacity gate therefore remains blocked.
 
 The repository now implements the pure parallel-installation contract in
 `src/apx_installation.py` and documents it in
