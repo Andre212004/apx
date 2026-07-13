@@ -813,6 +813,17 @@ Its preview digest is
 `7585522ccf01168db8efa4b6d6382d23f475bbc4b64d0f68580e127e189617ad`.
 The executor refuses v6 until separate authorization.
 
+V6 was separately authorized, observed for 30 seconds, returned code 0 after a
+clean-stop request, removed the copy, left zero residue, and preserved the
+source. Its observer missed PID 1 because it incorrectly required systemd's
+mutable process title to retain an initial argument. Report digest:
+`8d9cd684d9f670ba8ce08ac0bb751e490cbe73cae7d07610d18738c6f0816df1`.
+V7 identifies the systemd executable and separately requires namespace PID 1
+from the kernel's read-only `NSpid` field. No runtime boundary changes. V7
+preview digest:
+`0f59742d68e041b7bc2147dce7a2a901dd575ed0c99929875f1ac844dbcc883b`.
+The executor refuses v7 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

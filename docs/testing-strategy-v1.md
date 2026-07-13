@@ -304,6 +304,10 @@ V5 proved the same cleanup but confirmed that console output is not a usable
 readiness channel here. V6 therefore requires bounded read-only `/proc`
 observation of PID 1, four namespace identities, systemd runtime state, the
 internal package count, and absence of the host Development home.
+V6 proved early clean stop and complete cleanup but exposed an overly strict
+observer assumption about systemd's mutable process title. V7 identifies
+systemd by its executable and independently requires namespace PID 1 from the
+kernel's read-only `NSpid` status.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

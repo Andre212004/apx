@@ -92,6 +92,17 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v6 run observed for 30 seconds, requested a clean stop, returned
+code 0, removed the copy, left zero process/mount residue, and preserved the
+source. The observer recorded no PID 1 because it required systemd's mutable
+process title to retain the original `--unit` argument. Report digest:
+`8d9cd684d9f670ba8ce08ac0bb751e490cbe73cae7d07610d18738c6f0816df1`.
+V7 changes only process identification: the executable must end in `/systemd`
+and Linux's read-only `NSpid` status must report namespace PID 1. All boot,
+observation, isolation, timeout, and cleanup rules remain. V7 preview digest:
+`0f59742d68e041b7bc2147dce7a2a901dd575ed0c99929875f1ac844dbcc883b`.
+It is not authorized to execute.
+
 The authorized v5 run again retained container PID 1 until the 120-second
 timeout, removed its runtime copy, left zero processes and mounts, and preserved
 the source. Explicit console flags still produced no systemd readiness marker,
