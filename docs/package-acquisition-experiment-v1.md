@@ -55,4 +55,14 @@ the verified receipt before any disposable base extraction. The bounded
 their signed repository identities, recorded 552,949,311 declared installed
 bytes, and produced metadata digest
 `0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
-Extraction and Stage 2 remain blocked.
+A separately authorized disposable extraction then opened exactly these 138
+verified packages under `/tmp/apx-base-extraction-20260711-v1/rootfs`. It
+produced 23,144 regular files, 1,191 directories and 7,519 symbolic links, with
+zero device, socket or pipe entries. Logical content is 552,949,311 bytes and
+allocated storage is 606,330,880 bytes, both below the authorized 1 GiB. An
+independent second walk reproduced every count. The tree digest is
+`0f4e517a27ec474f63a3de74cec5df4f1a3adaee9a235a9c7e3c736a4e1622c1`
+and receipt digest is
+`e415c0040a56ef51a8f94a8cf6814ca4ddc3651a8beb2ba9511feee1c493ae7e`.
+No content was executed and nothing was installed into the host. Stage 2
+admission and execution remain blocked.

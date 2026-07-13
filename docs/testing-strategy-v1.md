@@ -264,6 +264,11 @@ Package-metadata fixtures reject missing or duplicate identities, malformed or
 oversized values, invalid sizes, and inside/outside identity disagreement. The
 real bounded metadata-only run matched all 138 package archives without full
 extraction, execution, installation, or network access.
+Disposable-extraction fixtures reject absolute and parent-traversing archive
+paths, invalid path encoding, oversized listings, non-`/tmp` targets, changed
+receipts, excessive declared or observed storage, and special filesystem
+entries. The real extraction stayed below 1 GiB; an independent tree walk
+reproduced its file-type counts and byte totals with zero special entries.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

@@ -113,6 +113,12 @@ Bounded `.PKGINFO` reads then matched name, version, and architecture inside all
 138 archives to the signed manifest without full extraction. They declare
 552,949,311 installed bytes and produce metadata digest
 `0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
+A separately authorized `/tmp` extraction opened all 138 verified packages and
+used 606,330,880 allocated bytes, below its 1 GiB ceiling. Independent walking
+confirmed 23,144 regular files, 1,191 directories, 7,519 symbolic links, zero
+special files, and tree digest
+`0f4e517a27ec474f63a3de74cec5df4f1a3adaee9a235a9c7e3c736a4e1622c1`.
+This is a disposable candidate filesystem, not an admitted APX base release.
 
 ## Trust Inputs
 

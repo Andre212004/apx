@@ -710,8 +710,18 @@ snapshot. A bounded metadata-only pass has also matched the internal name,
 version, and architecture of all 138 packages to the signed manifest. It
 records 552,949,311 declared installed bytes and metadata digest
 `0722db2c4a04f46d8617b7607e534dfd8429de6482bfbdaf57e3e69162a4f294`.
-A separately reviewed disposable extraction/build stage remains required. No
-installation or host mutation is authorized by this evidence.
+At that point a separately reviewed disposable extraction/build stage remained
+required. No installation or host mutation was authorized by that evidence.
+
+A separately authorized disposable extraction has now opened the complete
+verified package set only under `/tmp`. The candidate contains 23,144 regular
+files, 1,191 directories, 7,519 symbolic links and zero special files. It uses
+606,330,880 allocated bytes under its 1 GiB ceiling. An independent tree walk
+reproduced these results. Its tree digest is
+`0f4e517a27ec474f63a3de74cec5df4f1a3adaee9a235a9c7e3c736a4e1622c1`.
+This proves bounded assembly of a candidate filesystem; it does not admit a
+base release, create an Environment, execute candidate content, or authorize a
+host change. Candidate sanitization and structural validation are next.
 
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
