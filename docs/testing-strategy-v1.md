@@ -240,6 +240,10 @@ The transfer/staging integration fixture streams unknown database bytes in
 small chunks, proves no final publication before matching evidence, preserves
 partial bytes on simulated network failure, and refuses retry over an existing
 partial operation.
+One separately authorized real network fixture acquired only the dated Arch
+`core.db` and `extra.db`, stayed within its per-file and aggregate bounds,
+published exactly two regular files, and reproduced both hashes on independent
+reopen. Package acquisition, extraction, and installation were not exercised.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

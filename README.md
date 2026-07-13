@@ -173,6 +173,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── btrfs-storage-layout-v1.md
 │   ├── brave-user-local-experiment.md
 │   ├── cleanup-completion-v1.md
+│   ├── database-acquisition-experiment-v1.md
 │   ├── development-principles.md
 │   ├── environment-lifecycle-and-storage-v1.md
 │   ├── environment-local-administration-v1.md
@@ -196,6 +197,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_cleanup.py
 │   ├── apx_consistency.py
 │   ├── apx_downloader.py
+│   ├── apx_database_acquisition.py
 │   ├── apx_executor_contract.py
 │   ├── apx_executor_journal.py
 │   ├── apx_host.py

@@ -79,6 +79,14 @@ SHA-256 evidence agree across both boundaries. Failure preserves the partial
 for recovery classification and refuses an implicit retry. This composition
 still uses only fake responses and caller-provided disposable directories.
 
+The separately authorized first real database-only acquisition is recorded in
+`database-acquisition-experiment-v1.md`. It used the fixed zero-argument
+`src/apx_database_acquisition.py` operation, stayed within 8,818,209 aggregate
+bytes, and independently reproduced both file hashes. This closes the real
+repository-database transfer boundary only; package resolution, package and
+signature downloads, complete manifest verification, base extraction, and
+Stage 2 remain blocked.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

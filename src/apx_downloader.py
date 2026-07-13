@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import re
-from typing import Callable, Mapping
+from typing import Callable
 from urllib.parse import unquote, urlsplit
 
 
@@ -68,8 +68,11 @@ def validate_download_request(request: DownloadRequest) -> None:
         raise DownloadError("invalid expected download digest")
 
 
-def _content_length(headers: Mapping[str, str]) -> int:
-    raw = headers.get("Content-Length")
+def _content_length(headers: object) -> int:
+    getter = getattr(headers, "get", None)
+    if not callable(getter):
+        raise DownloadError("response headers cannot be read safely")
+    raw = getter("Content-Length")
     if raw is None or not isinstance(raw, str) or not raw.isascii() or not raw.isdigit():
         raise DownloadError("response has no single valid Content-Length")
     value = int(raw)
@@ -105,7 +108,7 @@ def download_bounded(
             raise DownloadError("download response status is not 200")
         if final_uri != request.uri:
             raise DownloadError("download redirect or final URI mismatch")
-        if not isinstance(headers, Mapping):
+        if not callable(getattr(headers, "get", None)):
             raise DownloadError("download response headers are unavailable")
         length = _content_length(headers)
         if length > request.maximum_bytes:

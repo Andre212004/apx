@@ -474,7 +474,16 @@ exclusive partial regular file, enforces per-file and aggregate bounds during
 the stream, and publishes without overwrite only after transfer and staging
 size/hash evidence agree. Network or validation failure preserves the partial
 identity and blocks blind retry. Integration tests use fake responses and
-disposable directories; no real network transfer or production path has run.
+disposable directories; the composition does not select a production path.
+
+`src/apx_database_acquisition.py` now implements the zero-argument fixed first
+database acquisition: exactly dated `core.db` and `extra.db`, 64 MiB each and
+128 MiB aggregate, into one new fixed `/tmp` root. The user separately
+authorized and ran it on 2026-07-12. It transferred 8,818,209 bytes, published
+exactly two mode-0600 regular files, and independent reopen/hash verification
+matched both recorded SHA-256 values. Quotas stayed healthy; no installation,
+extraction, execution, other download, or cleanup occurred. Exact evidence and
+the preserved boundary are in `docs/database-acquisition-experiment-v1.md`.
 
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
