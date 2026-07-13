@@ -747,6 +747,15 @@ after bounded GPG finalization. Its final report digest is
 No content has been booted. The next gate is an exact read-only boot preview;
 actual systemd-nspawn execution requires separate approval.
 
+The exact non-executing Phase B preview is now implemented. It preserves the
+source through a volatile overlay, disables external networking and persistent
+registration, shares no host path, applies private user mapping and a closed
+device policy, and caps the test at 120 seconds, 512 MiB memory, 256 tasks, and
+50% CPU. Its digest is
+`676d22c1d3b9f8d5f9005d20583addeafdc0abdf42986b38b9c67cda29b8fd28`.
+No container was started. Phase C boot and transient cleanup still require an
+exact separate approval.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

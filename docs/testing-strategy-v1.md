@@ -280,6 +280,10 @@ new `/tmp` root, and enforces 138 local database entries and a 1 GiB ceiling.
 Finalization accepts only the bound build report and removes only verified GPG
 runtime sockets. The real build ended with 138 internal package records, zero
 Development-owner entries, and zero special runtime entries.
+The first-boot preview is deterministic and contains no execution capability.
+Fixtures require the two-minute timeout, memory/CPU/task ceilings, private
+network and user mapping, volatile source preservation, closed devices, no
+machine registration, and no host bind, home path, port, or external network.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

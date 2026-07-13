@@ -61,6 +61,14 @@ The candidate root is exposed read-only for the first boot observation. A
 temporary writable runtime layer holds generated machine identity and logs so
 the reviewed base remains unchanged.
 
+The deterministic Phase B preview is now implemented and passed repository
+tests. It fixes a 120-second timeout, 512 MiB memory ceiling, 256-task ceiling,
+50% CPU quota, private network with no external route, closed device policy,
+private user mapping, no host binds, no machine registration, no journal link,
+and a volatile overlay over the unchanged source root. Preview digest:
+`676d22c1d3b9f8d5f9005d20583addeafdc0abdf42986b38b9c67cda29b8fd28`.
+Generating this preview did not execute `systemd-nspawn`.
+
 ## Phase C: bounded console boot
 
 Start only `/usr/lib/systemd/systemd` with a fixed timeout, private process and
@@ -99,7 +107,8 @@ the real lifecycle executor.
 
 ## Authorization boundary
 
-This document authorizes nothing. The next request must identify the exact new
-`/tmp` destination, command boundary, offline package set, storage ceiling,
-process behavior, timeout, and cleanup separation. No Btrfs, user, service,
-login-manager, desktop, package, or system configuration change is included.
+This document does not authorize Phase C. The next request must bind the exact
+preview digest and permit only the bounded console boot, observation, clean
+stop, and removal of transient runtime state. No Btrfs, persistent user,
+service, login-manager, desktop, package, or system configuration change is
+included.
