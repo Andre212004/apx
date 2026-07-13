@@ -182,6 +182,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── btrfs-storage-layout-v1.md
 │   ├── brave-user-local-experiment.md
 │   ├── bootstrap-development-package-v1.md
+│   ├── bootstrap-development-package-build-2026-07-13.md
 │   ├── cleanup-completion-v1.md
 │   ├── clean-install-foundation-v1.md
 │   ├── clean-install-dossier-schema-v1.md
@@ -242,6 +243,10 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_registration.py
 │   ├── apx_repository_db.py
 │   └── apx_resolution.py
+├── packaging/
+│   └── apx-contracts-development/
+│       ├── PKGBUILD
+│       └── README.md
 ├── tests/
 ├── prototypes/
 │   └── hub-demo/
@@ -281,6 +286,9 @@ artefacts are in
 The deliberately unsigned, non-functional first package rehearsal is specified
 in
 [docs/bootstrap-development-package-v1.md](docs/bootstrap-development-package-v1.md).
+The first frozen-source build, detected path variance, corrected byte-identical
+same-environment result, and remaining independent-builder gate are recorded in
+[docs/bootstrap-development-package-build-2026-07-13.md](docs/bootstrap-development-package-build-2026-07-13.md).
 The offline production-key roles, custody, recovery, and mandatory rehearsal
 are defined in
 [docs/release-key-custody-and-ceremony-v1.md](docs/release-key-custody-and-ceremony-v1.md).

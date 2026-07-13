@@ -46,6 +46,7 @@ def evidence(**changes):
         "c" * 64,
         1024,
         "d" * 64,
+        "0" * 64,
         "e" * 64,
         "f" * 64,
         "unsigned-development-only",
@@ -116,6 +117,7 @@ class ContractsPackageTests(unittest.TestCase):
             evidence(classification="trusted"),
             evidence(package_size=0),
             evidence(pkginfo_sha256="bad"),
+            evidence(buildinfo_sha256="bad"),
         ):
             with self.assertRaises(package.ContractsPackageError):
                 package.validate_build_evidence(changed)
@@ -126,10 +128,15 @@ class ContractsPackageTests(unittest.TestCase):
         self.assertEqual(result.issues, ())
 
     def test_any_output_or_definition_difference_breaks_match(self) -> None:
-        changed_output = evidence(package_sha256="1" * 64, mtree_sha256="2" * 64)
+        changed_output = evidence(
+            package_sha256="1" * 64,
+            buildinfo_sha256="4" * 64,
+            mtree_sha256="2" * 64,
+        )
         result = package.compare_rebuilds(definition(), evidence(), changed_output)
         self.assertEqual(result.classification, "mismatch")
         self.assertIn("rebuild-package_sha256-mismatch", result.issues)
+        self.assertIn("rebuild-buildinfo_sha256-mismatch", result.issues)
         self.assertIn("rebuild-mtree_sha256-mismatch", result.issues)
         wrong_definition = evidence(definition_digest="3" * 64)
         result = package.compare_rebuilds(definition(), evidence(), wrong_definition)

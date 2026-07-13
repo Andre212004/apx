@@ -58,6 +58,12 @@ validators and four contract documents, exposes no APX command or service, and
 can never become trusted merely by building successfully. Apache-2.0 is now the
 project licence; actual package bytes wait for a clean frozen source revision.
 
+Source revision `c6f61ff7259fa71039c087023018731c6f3a774d` is now frozen and
+the pinned Arch recipe produced two byte-identical unsigned packages after the
+build path was normalized. The first differing-path attempt remains useful
+negative evidence. This closes same-Development-environment determinism only;
+two fresh frozen builders are still required.
+
 The offline root/release-signer custody and ceremony boundary is documented,
 including separated backups, proven restoration, independent verification,
 rotation, revocation, and compromise handling. It deliberately does not choose

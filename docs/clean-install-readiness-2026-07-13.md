@@ -23,8 +23,11 @@ pure contracts advanced; no host or disk effect is authorized.
   and any non-identical rebuild;
 - Apache-2.0 project licence recorded;
 - closed unsigned `apx-contracts-development` definition with exactly eight
-  read-only files, fixed mappings/dependency/licence, no executable integration, and
-  exact two-build evidence;
+  read-only files, fixed mappings/dependency/licence, no executable integration,
+  and exact two-build evidence;
+- clean source commit and pinned Arch recipe; same-Development-environment
+  canonical-path builds now match byte for byte, while independent-builder
+  proof remains absent;
 - accepted offline root/release-signer custody, backup/restore, signing,
   rotation, revocation, compromise, and mandatory physical rehearsal boundary;
 - closed disposable x86_64 UEFI VM envelope, evidence/checkpoint policy,
@@ -58,8 +61,9 @@ pure contracts advanced; no host or disk effect is authorized.
 
 ## Next Required Repository Work
 
-1. Freeze a clean source revision and build the defined read-only development
-   package twice in isolated builders; do not call it trusted.
+1. Rebuild the pinned read-only development package in two separately created,
+   frozen, network-disabled builders with the same canonical internal path and
+   compare all package metadata; do not call it trusted.
 2. Implement the bounded raw archive reader that checks every header and byte
    against the closed member manifest without extracting or executing it.
 3. Select the exact cryptographic/tool profile, perform the documented physical

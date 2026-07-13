@@ -87,6 +87,7 @@ class PackageBuildEvidence:
     package_sha256: str
     package_size: int
     pkginfo_sha256: str
+    buildinfo_sha256: str
     mtree_sha256: str
     member_manifest_sha256: str
     classification: str
@@ -205,6 +206,7 @@ def validate_build_evidence(evidence: PackageBuildEvidence) -> None:
         evidence.definition_digest,
         evidence.package_sha256,
         evidence.pkginfo_sha256,
+        evidence.buildinfo_sha256,
         evidence.mtree_sha256,
         evidence.member_manifest_sha256,
     ):
@@ -231,6 +233,7 @@ def compare_rebuilds(
         "package_sha256",
         "package_size",
         "pkginfo_sha256",
+        "buildinfo_sha256",
         "mtree_sha256",
         "member_manifest_sha256",
     ):

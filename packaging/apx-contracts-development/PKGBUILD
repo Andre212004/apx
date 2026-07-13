@@ -1,0 +1,40 @@
+# Maintainer: APX contributors
+
+pkgname=apx-contracts-development
+pkgver=0.1.0.dev1
+pkgrel=1
+pkgdesc="Non-mutating APX clean-install and release contracts"
+arch=('any')
+url='https://github.com/Andre212004/apx'
+license=('Apache-2.0')
+depends=('python')
+options=('!strip' '!debug' '!lto' '!buildflags')
+
+_source_revision='c6f61ff7259fa71039c087023018731c6f3a774d'
+_source_root="apx-${_source_revision}"
+source=("${_source_root}.tar")
+sha256sums=('996440d4a0706babc5e714c8598cbfdff088a068c448698e03ad0c8628610f5e')
+
+package() {
+  local source_root="${srcdir}/${_source_root}"
+  local library_root="${pkgdir}/usr/lib/apx"
+  local documentation_root="${pkgdir}/usr/share/doc/${pkgname}"
+  local license_root="${pkgdir}/usr/share/licenses/${pkgname}"
+
+  install -Dm644 "${source_root}/src/apx_release_candidate.py" \
+    "${library_root}/apx_release_candidate.py"
+  install -Dm644 "${source_root}/src/apx_release_artifact.py" \
+    "${library_root}/apx_release_artifact.py"
+  install -Dm644 "${source_root}/src/apx_clean_install_dossier.py" \
+    "${library_root}/apx_clean_install_dossier.py"
+
+  install -Dm644 "${source_root}/docs/release-candidate-schema-v1.md" \
+    "${documentation_root}/release-candidate-schema-v1.md"
+  install -Dm644 "${source_root}/docs/release-artifact-manifest-v1.md" \
+    "${documentation_root}/release-artifact-manifest-v1.md"
+  install -Dm644 "${source_root}/docs/clean-install-dossier-schema-v1.md" \
+    "${documentation_root}/clean-install-dossier-schema-v1.md"
+  install -Dm644 "${source_root}/docs/bootstrap-development-package-v1.md" \
+    "${documentation_root}/bootstrap-development-package-v1.md"
+  install -Dm644 "${source_root}/LICENSE" "${license_root}/LICENSE"
+}

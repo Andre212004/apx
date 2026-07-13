@@ -409,8 +409,18 @@ three non-mutating validators, four package-owned contract documents, and the
 repository licence declaration, with fixed source-to-target mappings, `python`
 as its sole runtime dependency, no command/service/hook/installer, and exact
 two-build evidence. It is deliberately not the production bootstrap package.
-The project licence is now Apache-2.0. No package bytes were built because the
-new source is not a clean frozen revision.
+The project licence is now Apache-2.0. Commit
+`c6f61ff7259fa71039c087023018731c6f3a774d` freezes the source used by the
+first package rehearsal. `packaging/apx-contracts-development/PKGBUILD` binds
+its Git-archive digest and exact eight payload files. An initial two-directory
+build correctly failed reproducibility because Arch records absolute build
+paths in `.BUILDINFO`. Two later clean builds at one canonical path produced
+byte-identical 21,601-byte unsigned packages with SHA-256
+`3895d89e34a95b38bc5559a49b87cd338725b3889a42122932fd2a0fe3fff76a`.
+The retained sanitized evidence is in
+`docs/bootstrap-development-package-build-2026-07-13.md`. This is same-
+Development-environment evidence only; two separately created frozen builders
+remain required, and the package was not installed, trusted, or published.
 
 The production trust operational boundary and mandatory physical rehearsal are
 now defined in `docs/release-key-custody-and-ceremony-v1.md`. Root and release

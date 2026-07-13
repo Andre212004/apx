@@ -57,9 +57,11 @@ build, mutable dependency resolution, or current-time timestamp blocks the
 rehearsal.
 
 Two builds count as an exact match only when definition identity, final package
-SHA-256 and size, canonical `.PKGINFO`, `.MTREE`, and internal member-manifest
-digests all agree. A successful comparison proves deterministic bytes for this
-small package; it does not establish production trust.
+SHA-256 and size, canonical `.PKGINFO`, `.BUILDINFO`, `.MTREE`, and internal
+member-manifest digests all agree. The isolated builders must expose the same
+canonical build path and frozen installed-package/tool inventory because Arch
+records both in `.BUILDINFO`. A successful comparison proves deterministic
+bytes for this small package; it does not establish production trust.
 
 ## Deliberate Blockers
 
