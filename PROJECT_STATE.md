@@ -778,6 +778,17 @@ requires complete copy cleanup. Its digest is
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 The executor refuses v3 until separate authorization.
 
+V3 was separately authorized. It created and content-verified the bounded copy,
+then stopped before systemd because nspawn forbids ownership shifting together
+with its implicit read-only overlay. It left zero process/mount residue, removed
+the copy, and preserved the source. Report digest:
+`d13733fdf7ebf09a88b9072127a350f670997f40976cc517206a6afaedf428ae`.
+The v4 preview removes only that redundant overlay: the disposable runtime copy
+itself receives all writes and must still be removed. Every other boundary is
+unchanged. V4 preview digest:
+`0db2db8bdf726e4855244bb3201fb0290f2b5d15da1c6eaf7ee97494307c79c3`.
+The executor refuses v4 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

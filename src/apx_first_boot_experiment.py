@@ -7,14 +7,16 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
+import stat
 import subprocess
 import time
 
-from apx_first_boot_preview import FINAL_REPORT_DIGEST, MACHINE, build_preview, fixed_command
+from apx_first_boot_preview import FINAL_REPORT_DIGEST, MACHINE, RUNTIME_MAX_BYTES, RUNTIME_ROOT, build_preview, fixed_command
 from apx_offline_base_build import ROOT, ROOTFS
 
 
-AUTHORIZED_PREVIEW = "53c30a3c55c1a6b5b196d9f73694b3b6851e7cab84fdcd6f4bcace24bdb91944"
+AUTHORIZED_PREVIEW = "6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6"
 FINAL_REPORT = ROOT / "final-report.json"
 OUTPUT_LIMIT = 4 * 1024**2
 
@@ -38,6 +40,8 @@ class FirstBootReport:
     matching_mounts_after: int
     output_sha256: str
     output_bytes: int
+    runtime_copy_digest: str
+    runtime_copy_removed: bool
     report_digest: str
 
 
@@ -62,9 +66,34 @@ def _runtime_residue() -> tuple[int, int]:
             processes += 1
     mounts = 0
     for line in Path("/proc/self/mountinfo").read_text(encoding="utf-8").splitlines():
-        if str(ROOTFS) in line or MACHINE in line:
+        if str(ROOTFS) in line or str(RUNTIME_ROOT) in line or MACHINE in line:
             mounts += 1
     return processes, mounts
+
+
+def _tree_content_digest(root: Path) -> tuple[str, int, int]:
+    digest = hashlib.sha256(); logical = allocated = 0; seen = set()
+    for directory, names, files in os.walk(root, followlinks=False):
+        names.sort(); files.sort()
+        for name in names + files:
+            path = Path(directory) / name
+            info = path.lstat(); relative = path.relative_to(root).as_posix()
+            if stat.S_ISDIR(info.st_mode):
+                kind = b"d"; extra = b""
+            elif stat.S_ISLNK(info.st_mode):
+                kind = b"l"; extra = os.readlink(path).encode("utf-8")
+            elif stat.S_ISREG(info.st_mode):
+                kind = b"f"; extra = b""
+                identity = (info.st_dev, info.st_ino)
+                if identity not in seen:
+                    seen.add(identity); logical += info.st_size; allocated += info.st_blocks * 512
+                with path.open("rb") as stream:
+                    for block in iter(lambda: stream.read(1024 * 1024), b""):
+                        digest.update(block)
+            else:
+                raise FirstBootExperimentError("source or runtime copy contains a special entry")
+            digest.update(kind + b"\0" + relative.encode() + b"\0" + extra + b"\n")
+    return digest.hexdigest(), logical, allocated
 
 
 def execute_first_boot() -> FirstBootReport:
@@ -76,6 +105,25 @@ def execute_first_boot() -> FirstBootReport:
     before = _final_report_bytes()
     if _runtime_residue() != (0, 0):
         raise FirstBootExperimentError("matching runtime state exists before boot")
+    source_digest, _, _ = _tree_content_digest(ROOTFS)
+    runtime_parent = RUNTIME_ROOT.parent
+    try:
+        os.mkdir(runtime_parent, 0o700)
+    except FileExistsError as error:
+        raise FirstBootExperimentError("runtime copy destination exists; refusing adoption") from error
+    RUNTIME_ROOT.mkdir(mode=0o755)
+    copy = subprocess.run(
+        ("/usr/bin/cp", "-a", "--reflink=auto", "--", str(ROOTFS) + "/.", str(RUNTIME_ROOT)),
+        shell=False, stdin=subprocess.DEVNULL, capture_output=True, timeout=120,
+        env={"LC_ALL": "C", "PATH": "/usr/bin"}, check=False,
+    )
+    if copy.returncode != 0:
+        shutil.rmtree(runtime_parent)
+        raise FirstBootExperimentError("exact runtime copy failed")
+    runtime_digest, runtime_logical, runtime_allocated = _tree_content_digest(RUNTIME_ROOT)
+    if runtime_digest != source_digest or runtime_logical > RUNTIME_MAX_BYTES or runtime_allocated > RUNTIME_MAX_BYTES:
+        shutil.rmtree(runtime_parent)
+        raise FirstBootExperimentError("runtime copy identity or size is outside authorization")
     result = subprocess.run(
         preview.command, shell=False, stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=150,
@@ -90,6 +138,7 @@ def execute_first_boot() -> FirstBootReport:
         time.sleep(0.25)
         residue = _runtime_residue()
     after = _final_report_bytes()
+    after_source_digest, _, _ = _tree_content_digest(ROOTFS)
     text = output.decode("utf-8", "replace")
     systemd_started = any(marker in text for marker in ("systemd 261", "Welcome to Arch Linux", "systemd[1]"))
     multi_user = any(marker in text for marker in ("Reached target Multi-User System", "Reached target multi-user.target"))
@@ -99,26 +148,32 @@ def execute_first_boot() -> FirstBootReport:
         "machine": MACHINE, "process_exit_code": result.returncode,
         "timed_out_as_planned": result.returncode == 124,
         "systemd_started": systemd_started, "multi_user_reached": multi_user,
-        "clean_shutdown_observed": clean, "source_report_unchanged": before == after,
+        "clean_shutdown_observed": clean, "source_report_unchanged": before == after and source_digest == after_source_digest,
         "matching_processes_after": residue[0], "matching_mounts_after": residue[1],
         "output_sha256": hashlib.sha256(output).hexdigest(), "output_bytes": len(output),
+        "runtime_copy_digest": runtime_digest, "runtime_copy_removed": False,
     }
     digest = hashlib.sha256(json.dumps(draft, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if residue == (0, 0):
+        shutil.rmtree(runtime_parent)
+    runtime_removed = not runtime_parent.exists()
+    draft["runtime_copy_removed"] = runtime_removed
+    digest = hashlib.sha256(json.dumps(draft, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     report = FirstBootReport(**draft, report_digest=digest)
-    descriptor = os.open(ROOT / "first-boot-report-v2.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    descriptor = os.open(ROOT / "first-boot-report-v3.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, (json.dumps(asdict(report), sort_keys=True, indent=2) + "\n").encode())
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-    output_path = ROOT / "first-boot-output-v2.log"
+    output_path = ROOT / "first-boot-output-v3.log"
     descriptor = os.open(output_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, output)
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-    if residue != (0, 0) or before != after:
+    if residue != (0, 0) or before != after or source_digest != after_source_digest or not runtime_removed:
         raise FirstBootExperimentError("boot ended with runtime residue or source change")
     return report
 

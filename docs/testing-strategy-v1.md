@@ -292,6 +292,10 @@ The corrected attempt then proved a host compatibility limit: `/tmp` does not
 support the requested ID-mapped mount. It also failed closed with no residue.
 The next preview preserves private-user isolation through a new bounded runtime
 copy and explicitly refuses to weaken the boundary or mutate the source root.
+The authorized v3 run proved copy identity and complete cleanup but exposed an
+nspawn incompatibility between ownership shifting and its read-only overlay.
+V4 treats the already-disposable copy as the writable layer, preserving every
+other isolation and cleanup gate while removing only the redundant overlay.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

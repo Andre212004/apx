@@ -18,7 +18,7 @@ class FirstBootPreviewTests(unittest.TestCase):
     def test_command_has_closed_runtime_limits(self):
         command = preview.fixed_command()
         required = (
-            "--private-network", "--volatile=overlay", "--settings=no",
+            "--private-network", "--settings=no",
             "--register=no", "--private-users=pick",
             "--private-users-ownership=chown", "--property=MemoryMax=512M",
             "--property=TasksMax=256", "--property=CPUQuota=50%",
@@ -26,6 +26,7 @@ class FirstBootPreviewTests(unittest.TestCase):
         )
         for value in required:
             self.assertIn(value, command)
+        self.assertNotIn("--volatile=overlay", command)
 
     def test_command_exposes_no_host_path_network_or_port(self):
         command = preview.fixed_command()

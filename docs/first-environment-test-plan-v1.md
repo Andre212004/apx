@@ -92,6 +92,18 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v3 attempt created and byte-verified its bounded runtime copy,
+but nspawn rejected combining ownership shifting with its implicit read-only
+volatile overlay. It started no systemd, left zero processes and mounts,
+removed the runtime copy, and preserved the source. Report digest:
+`d13733fdf7ebf09a88b9072127a350f670997f40976cc517206a6afaedf428ae`.
+V4 removes only the redundant overlay: the exact runtime copy is itself the
+writable disposable layer and remains mandatory to delete. Private users,
+network/device/resource limits, timeout, source immutability, and all other
+prohibitions remain. V4 preview digest:
+`0db2db8bdf726e4855244bb3201fb0290f2b5d15da1c6eaf7ee97494307c79c3`.
+It is not authorized to execute.
+
 ## Phase C: bounded console boot
 
 Start only `/usr/lib/systemd/systemd` with a fixed timeout, private process and

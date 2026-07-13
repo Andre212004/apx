@@ -16,7 +16,7 @@ TIMEOUT_SECONDS = 120
 MEMORY_MAX = "512M"
 TASKS_MAX = "256"
 CPU_QUOTA = "50%"
-RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v3/rootfs")
+RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v4/rootfs")
 RUNTIME_MAX_BYTES = 1024**3
 
 
@@ -38,7 +38,7 @@ def fixed_command() -> tuple[str, ...]:
         "/usr/bin/timeout", "--signal=TERM", "--kill-after=15s", f"{TIMEOUT_SECONDS}s",
         "/usr/bin/systemd-nspawn", "--directory=" + str(RUNTIME_ROOT),
         "--machine=" + MACHINE, "--hostname=" + MACHINE, "--boot",
-        "--settings=no", "--register=no", "--volatile=overlay",
+        "--settings=no", "--register=no",
         "--private-network", "--private-users=pick",
         "--private-users-ownership=chown", "--console=pipe",
         "--resolv-conf=off", "--timezone=off", "--link-journal=no",
@@ -64,8 +64,8 @@ def build_preview() -> FirstBootPreview:
             "start one temporary systemd-nspawn process tree for at most 120 seconds",
             "create one exact temporary runtime copy below /tmp, capped at 1 GiB",
             "shift ownership only in the temporary copy for private user isolation",
-            "create transient mount, namespace, cgroup, and volatile overlay runtime state",
-            "write only to the disposable in-memory overlay and bounded process output",
+            "create transient mount, namespace, and cgroup runtime state",
+            "write only to the disposable runtime copy and bounded process output",
         ),
         "forbidden_effects": (
             "change the verified source root or any host package/configuration",
