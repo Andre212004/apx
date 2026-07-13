@@ -1,6 +1,7 @@
 # First APX Environment Test Plan v1
 
-Status: implementation-ready proposal; no host-changing phase is authorized.
+Status: Phase A disposable offline-root build passed on 2026-07-12; boot phases
+remain proposals and are not authorized.
 
 ## Plain-language objective
 
@@ -40,6 +41,16 @@ database identities, package file hashes, and absence of machine-local secrets.
 
 This phase needs a separate exact approval because it invokes package
 installation logic, even though its intended destination is disposable.
+
+The separately authorized Phase A run created only
+`/tmp/apx-first-console-build-v1`. Network isolation wrapped keyring setup and
+pacman installation. Pacman recorded all 138 verified packages in the new
+root's own database. The result uses 614,490,112 allocated bytes, has no files
+owned by the Development Environment identity, and has no remaining runtime
+sockets or special files. Its unique generated machine identity is recorded by
+hash rather than exposed. Final report digest:
+`741fe1c332c334f9f0667b295ae98e7de686c752c3f415e169e0e48912535b68`.
+No candidate content was booted and no host package was installed.
 
 ## Phase B: read-only boot preview
 

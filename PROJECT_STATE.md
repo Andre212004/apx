@@ -735,6 +735,18 @@ perform one bounded networkless console boot, then verify complete stop and
 cleanup. This remains a proposal and authorizes no package execution, boot, or
 host mutation. A graphical Hyprland role follows a successful console gate.
 
+The separately authorized first-console Phase A build has now created a correct
+offline root only at `/tmp/apx-first-console-build-v1`. This is not a second
+host Arch installation: it is the private filesystem intended for one future
+Environment. Pacman installed the exact 138 verified local packages into that
+root with networking disabled and recorded all 138 in its own local database.
+The root uses 614,490,112 allocated bytes, has zero files owned by the
+Development Environment identity, and retained zero special runtime entries
+after bounded GPG finalization. Its final report digest is
+`741fe1c332c334f9f0667b295ae98e7de686c752c3f415e169e0e48912535b68`.
+No content has been booted. The next gate is an exact read-only boot preview;
+actual systemd-nspawn execution requires separate approval.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

@@ -273,6 +273,13 @@ Candidate-admission checks bind the extraction receipt to the live disposable
 tree, require the minimal runtime, reject machine-local identity, report actual
 ownership, and require a populated local pacman database. The real candidate
 truthfully returned `not-admitted`; no boot or repair was attempted.
+The authorized offline-root builder refuses non-administrator execution and an
+existing destination, revalidates every fixed package hash, disables networking
+around keyring and pacman operations, directs every mutable pacman path into the
+new `/tmp` root, and enforces 138 local database entries and a 1 GiB ceiling.
+Finalization accepts only the bound build report and removes only verified GPG
+runtime sockets. The real build ended with 138 internal package records, zero
+Development-owner entries, and zero special runtime entries.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account
