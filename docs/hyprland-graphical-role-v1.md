@@ -67,6 +67,13 @@ signature exists; `EXPKEYSIG`, expired signatures, revocation, unknown keys,
 bad signatures, and insufficient master trust remain fatal. The refused v1
 evidence was preserved and the successful run used a new v2 root.
 
+Bounded `.PKGINFO` inspection then matched the internal name, version, and
+architecture of all 194 packages to the signed manifest. The packages declare
+1,022,339,199 installed bytes, exactly matching resolution evidence. Metadata
+digest:
+`89ed0ab7623a93972bb403af33bbda4ee1ebb2717d285455fa4a240adea455df`.
+No other archive member was extracted and no package content was executed.
+
 Waybar is deliberately not a role seed. The final expanding APX control needs a
 dedicated panel and cannot become a generic-bar script. A temporary bar is
 permitted only as a visual fixture.
@@ -133,6 +140,6 @@ depend on Hyprland. KDE and GNOME adapters follow the same contract.
 
 ## Authorization boundary
 
-No download, installation, graphical process, GPU/input/audio grant, host
+No installation, graphical process, GPU/input/audio grant, host
 session handoff, SDDM change, Btrfs operation, or prior-evidence cleanup is
 authorized by this plan.

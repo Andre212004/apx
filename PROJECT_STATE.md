@@ -897,6 +897,14 @@ and insufficient Arch master trust. No install, extraction, execution, GPU, or
 system effect occurred. Bounded metadata inspection and a separately approved
 disposable graphical-role build are next.
 
+Bounded `.PKGINFO` inspection has now matched the internal identity of all 194
+graphical packages to the signed manifest and reproduced 1,022,339,199 declared
+installed bytes. Metadata digest:
+`89ed0ab7623a93972bb403af33bbda4ee1ebb2717d285455fa4a240adea455df`.
+No other package content was extracted or executed. A separately approved
+offline build into a disposable copy is now the next gate; GPU and graphical
+execution remain later and separate.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

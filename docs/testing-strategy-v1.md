@@ -148,6 +148,9 @@ Graphical signature verification then passed all 194 packages twice with 25
 trusted primary identities. A regression fixture distinguishes an unrelated
 expired historical subkey warning from `EXPKEYSIG`: only the former may coexist
 with a valid current signer; expired signing keys remain blocked.
+Bounded graphical metadata inspection matched all 194 inside-package identities
+to the signed manifest and reproduced 1,022,339,199 declared installed bytes.
+No other package member was extracted or executed.
 
 ## Level 6: Attack and Recovery Campaign
 
