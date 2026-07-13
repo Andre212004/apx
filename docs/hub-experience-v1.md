@@ -3,6 +3,11 @@
 Status: product flow and pure interface-state model implemented; no graphical
 Hub application or working lifecycle buttons exist yet.
 
+The graphical experience is now explicitly downstream of the headless `apx`
+CLI. Every card and button must use the same typed request, preview, approval,
+journal, result, and recovery contract as the corresponding CLI operation. The
+CLI remains independently usable if the graphical Hub is absent or broken.
+
 ## Plain-Language Summary
 
 The Hub is the APX home screen. It shows the owner's Environments as clear
@@ -77,8 +82,10 @@ The default screen is titled “Os teus Environments”. It contains:
 4. restore and APX-status actions;
 5. warnings requiring attention.
 
-It does not contain a terminal, file browser, package manager, web browser,
-Linux user list, service manager, or general host settings.
+This future graphical screen does not embed a terminal, file browser, package
+manager, web browser, Linux user list, service manager, or general host
+settings. That restriction does not remove the separate, bounded `apx` CLI
+from the initial headless Hub.
 
 ## Environment Card
 
@@ -286,6 +293,9 @@ The Hub does not inspect workload content to create recommendations.
 
 The final toolkit remains open. The pure view model avoids tying security and
 lifecycle rules to GTK, Qt, a web view, a compositor, or a specific desktop.
+
+Toolkit selection and a real graphical Hub begin only after the clean-bootstrap
+C0–C6 gates and H0 pass. The browser demo does not change that order.
 
 Selection criteria include:
 

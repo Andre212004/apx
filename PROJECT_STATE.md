@@ -38,6 +38,13 @@ The intended flow is:
 Boot -> Hub -> selected Environment -> Hub
 ```
 
+The delivery order is now CLI-first. The first functional clean installation
+may present a headless Hub through the `apx` CLI and headless Environments
+through physical console/session transitions. This is an implementation and
+validation stage, not a change to the final one-human-identity product. A
+graphical Hub and graphical buttons are later clients of the same bounded
+protocol, not prerequisites for Environment lifecycle.
+
 The machine enters the Hub directly through a future secure login or unlock
 flow. From there the owner creates, configures, launches, archives, restores,
 and deletes Environments. A future multi-person model may group Environments by
@@ -97,6 +104,12 @@ to a small, typed, independently validating executor. The Hub must remain
 destroyable and reproducible from its definition; its default role does not
 justify bypassing Environment lifecycle or isolation rules.
 
+The first Hub may be headless. Its `apx` CLI is a management surface, not a
+general development shell. The Hub still excludes Git repositories, Codex,
+compilers, editors, development browsers, build outputs, and experimental
+scripts. A later graphical Hub must map its buttons to the same typed protocol
+and cannot gain broader authority.
+
 The live Hub is not the parent filesystem or template for other Environments.
 The Hub and workload Environments are separate products derived from the same
 versioned APX base plus different role profiles. Hub-only management UI,
@@ -134,6 +147,11 @@ tooling and is not evidence that this future integration has been designed.
 - no implicit cross-Environment data access;
 - no Environment package-manager path to the host package database;
 - no lifecycle exception that makes the Hub irreplaceable.
+- the APX CLI is the first management interface and remains available beneath
+  later graphical controls;
+- a headless Hub is a valid initial Hub profile;
+- graphical interface work follows successful headless lifecycle, isolation,
+  storage, package-locality, and recovery validation.
 
 ## Decisions Still Required
 
@@ -149,6 +167,9 @@ The following are product requirements but not yet technical decisions:
   archives, and restoration;
 - desktop/compositor packaging and launch model;
 - secure automatic entry to the Hub without exposing internal accounts;
+- exact clean-bootstrap artifact, trust root, minimal host manifest, and typed
+  installation protocol;
+- exact non-graphical Hub and Environment session transport;
 - session handoff and failure recovery;
 - Hub-to-executor authorization protocol;
 - template format, provenance, updates, and reproducibility;
@@ -272,6 +293,166 @@ The owner-facing local-administrator confirmation must not copy a host password
 or reusable approval into the Environment. Its exact mechanism, backend
 enforcement, hostile-root denial tests, and package-manager experiments remain
 unimplemented and required.
+
+## Accepted Headless Bootstrap and CLI-First Direction
+
+The preferred first functional APX installation is now a fresh minimal Arch
+host with no KDE, Hyprland, SDDM, display manager, or graphical session. The
+ordered development path is recorded in
+`docs/headless-bootstrap-and-cli-first-v1.md`: verified bootstrap, headless Hub
+CLI, headless Development, Environment-local installation and separation,
+lifecycle/storage/recovery, first Hyprland Environment, graphical controls, and
+only then an optional graphical Hub.
+
+This is a development-method and clean-install decision, not authorization to
+erase or reinstall the current machine. A future real installation requires a
+separate target-bound dossier with verified repository history, restore-tested
+personal backup, boot-tested recovery media, disk plan, minimal package
+manifest, pinned APX artifact, exact effects, rollback, and explicit approval.
+
+A Git clone is development source acquisition, not a privileged APX installer.
+The steady-state source checkout, Git, Codex, compilers, tests, and build outputs
+belong in the Development Environment. The Hub contains only the bounded APX
+management client and role-appropriate state. Before any Environment exists, a
+temporary host bootstrap staging area is an explicit bounded exception; it is
+removed or archived after Development and the installed APX artifact are
+independently verified.
+
+Codex remains temporary Development tooling and never becomes a Hub, host,
+executor, recovery, or product dependency. It may be removed from Development
+only after source/history, remote or separately reachable copy, reproducible
+build/test instructions, and Codex-independent CLI/graphical operation are
+verified. Removing or destroying Development must not alter Hub or host state.
+
+The logical Development-to-Hub promotion boundary is now proposed in
+`docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
+builder may produce only an untrusted immutable candidate. A closed host-owned
+import copies one exact candidate into quarantine without executing it;
+independent verification and a separately approved catalogue admission create
+an immutable release identity. The executor then creates and verifies a new Hub
+generation instead of allowing Development to mount, edit, enter, or
+package-manage the live Hub. The old Hub remains a bounded rollback candidate
+until separately approved retirement.
+
+The first-Hub bootstrap uses the same logical verification and admission stages
+from a temporary bounded pre-Environment staging area. Once the Hub creates
+Development, normal Git/Codex/build work moves there. Candidate schema, artifact
+format, physical import transport, trust roots, independent build method,
+initial Hub manifest, safe preference schema, executor operations, and rollback
+retention remain open and unimplemented.
+
+The first graphical clean-host gate is H0. It starts from a verified state with
+no graphical session or display manager, proves the independent recovery VT,
+then grants only the selected AMD display and mediated built-in keyboard/
+touchpad to one disposable Hyprland Environment. G2 remains the separate
+secondary gate for migrating a live KDE/SDDM machine. G2 evidence is preserved,
+but it no longer blocks the headless C0–C6 ladder or H0 design.
+
+## Accepted First Clean-Install Foundation
+
+`docs/clean-install-foundation-v1.md` fixes the first experimental C0–C6 target:
+x86_64 UEFI, one explicitly identified disk, GPT, a 1 GiB EFI System Partition,
+LUKS2 plus Btrfs, systemd-boot, text-only Arch, and `systemd-nspawn` with
+mandatory private users and no graphical/device grants. This accepts nspawn
+only for the headless implementation; H0 and future high-security profiles may
+select a different or hybrid backend.
+
+The initial source package-name manifest is `base`, `linux`,
+`linux-firmware`, `btrfs-progs`, `cryptsetup`, `iwd`, `python`, and `gnupg`,
+plus exactly one applicable CPU microcode package and proven hardware-specific
+firmware. Exact versions, archives, hashes, signatures, databases, and signers
+must come from one dated Arch snapshot in the target-bound dossier. Git, Codex,
+build tools, desktops, display managers, browsers, and workload packages are
+excluded from the steady-state host.
+
+The first headless session is a broker-owned pseudoterminal, not a host shell or
+machine selector. The first owner authentication method is a host-owned
+password with fresh re-entry for strong confirmation, separate from the LUKS
+recovery passphrase. The first APX host artifact is a signed, versioned Arch
+`.pkg.tar.zst` with complete SHA-256 identity. Exact PAM/service code, real APX
+trust keys/custody, schemas, privileged implementation, disposable-install
+rehearsal, and target dossier remain unimplemented and required.
+
+The first pure installation/promotion contracts are now implemented without
+host effects. `src/apx_release_candidate.py` parses the exact headless-Hub
+candidate schema, computes canonical identity, classifies every parsed candidate
+as untrusted, and produces a reference-only quarantine import plan. It accepts
+no command, path, destination, URL, signature shortcut, policy override, or
+unknown field. `src/apx_clean_install_dossier.py` parses target and supply-chain
+evidence and returns only `blocked` or `ready-for-separate-approval`; even the
+latter still requires fresh strong disk approval and has no apply function.
+
+The schemas and fixed future CLI vocabulary are recorded in
+`docs/release-candidate-schema-v1.md`,
+`docs/clean-install-dossier-schema-v1.md`, and
+`docs/clean-install-cli-contract-v1.md`. The promotion and installation fixture
+state machines are now implemented in `src/apx_release_promotion.py` and
+`src/apx_clean_install_journal.py`. Promotion keeps import, verification,
+admission, and immutable catalogue publication separate; its store accepts only
+one exact allowed plan and compare-and-swap transition. The installation journal
+expands all ten stages into ordered fixed effects, requires a separate approval
+for each applicable current stage, and never automatically deletes uncertain
+state. Its store accepts only one exact ready dossier and one-step transitions.
+
+The release member and reproducibility contract is now closed in
+`docs/release-artifact-manifest-v1.md` and implemented as a pure validator in
+`src/apx_release_artifact.py`. It binds the candidate to a canonical ordered
+tree and compressed-artefact digest; rejects special files, privileged modes,
+path escapes, mutable identity/runtime state, personal homes, credentials, and
+Development state; and requires exact independently rebuilt outputs. It does
+not read or extract an archive and cannot admit a release.
+
+The first packaging rehearsal is closed as an unsigned definition only in
+`docs/bootstrap-development-package-v1.md` and
+`src/apx_contracts_package.py`. `apx-contracts-development` contains exactly
+three non-mutating validators, four package-owned contract documents, and the
+repository licence declaration, with fixed source-to-target mappings, `python`
+as its sole runtime dependency, no command/service/hook/installer, and exact
+two-build evidence. It is deliberately not the production bootstrap package.
+The project licence is now Apache-2.0. No package bytes were built because the
+new source is not a clean frozen revision.
+
+The production trust operational boundary and mandatory physical rehearsal are
+now defined in `docs/release-key-custody-and-ceremony-v1.md`. Root and release
+signer roles are separate and offline; private material may never enter the
+host, Hub, Development, Codex, Git, or a networked builder; two separated
+encrypted backups and a proven restore are required; compromise, rotation,
+revocation, signing, and sanitized evidence paths are explicit. This is a plan,
+not a completed ceremony. Exact cryptographic profile/tool versions and an
+explicitly approved offline disposable-machine rehearsal still block real-key
+generation.
+
+The disposable C0–C6 proof is now specified in
+`docs/disposable-clean-install-rehearsal-v1.md`: one unmistakably disposable
+x86_64 UEFI VM, one new 64 GiB virtual disk, no host shares or secrets, retained
+text recovery, exact external evidence, checkpoints only for fault injection,
+power loss before/after every destructive/publication boundary, and the full
+Hub/Development/package-locality/lifecycle/offline-recovery ladder. No VM was
+created. Hypervisor/ISO identities, functional bootstrap implementation,
+production trust, and a VM-bound dossier still block execution.
+
+Forty-eight focused tests cover canonical round trips, direct-object bypass,
+duplicate/unknown/missing fields, commands and paths, wrong types, limits,
+digests, fixed policies, every dossier gate, invalid dates/configuration,
+deterministic plans, security-relevant digest changes, stale writers, forged
+initial state, multi-step jumps, approval separation, every fake install effect,
+interruption recovery, archive member policy, link containment, candidate/tree
+binding, exact release rebuild comparison, closed package contents, and exact
+package rebuild evidence. The complete suite now runs 566 tests: 562 pass and
+four external-fixture checks are explicitly skipped because reboot removed
+their bound `/tmp` evidence. There are no test failures or errors. No physical
+candidate import, archive extraction, signature
+verification, trusted catalogue, installer effect, disk operation, executor
+effect, or Hub creation is implemented.
+
+The dated readiness audit is in
+`docs/clean-install-readiness-2026-07-13.md`. A destructive installation remains
+blocked by absent production trust keys/custody, bootstrap package, physical
+quarantine/archive-verification/catalogue/Hub-replacement machinery, privileged
+executor/broker/authentication, destructive effect adapters,
+disposable-machine C0–C6 rehearsal, and target-specific evidence. Installing
+minimal Arch now would not install functional APX and would leave the machine
+without the promised Hub.
 
 ## Implemented Today
 
@@ -399,15 +580,16 @@ and quotas remained healthy. This proves one leaf limit and eventual complete
 cleanup, not the intended hierarchy, snapshots, concurrency, executor
 recovery, or attestation; the complete capacity gate therefore remains blocked.
 
-The repository now implements the pure parallel-installation contract in
-`src/apx_installation.py` and documents it in
-`docs/installation-migration-v1.md`. Installation beside the current KDE
-session, APX cutover, and optional legacy cleanup are separate gates. Remote
-project history, restore-tested personal backup, boot-tested recovery media,
-headless and two-Environment isolation, graphical Hub/handoff, application
-isolation, and destructive recovery are ordered evidence requirements. Even
-complete evidence permits only a package-by-package cleanup review; it never
-authorizes KDE removal. No installer or cleanup implementation exists.
+The repository implements only the pure in-place migration assessment in
+`src/apx_installation.py`; `docs/installation-migration-v1.md` now separates it
+from the preferred clean headless path. Installation beside the current KDE
+session, G2 cutover, and optional legacy cleanup remain secondary gates. The
+new clean path requires remote project history, restore-tested backup,
+boot-tested recovery media, typed bootstrap, headless Hub/Development,
+two-Environment isolation, local package proof, lifecycle/storage/recovery,
+H0, then graphical controls. Even complete in-place evidence permits only a
+package-by-package cleanup review and never authorizes KDE removal. No clean or
+in-place installer or cleanup implementation exists.
 
 `src/apx_stage2_gate.py` now implements the pure final conjunction gate for
 the first bounded host experiment. It requires exact dossier and acquisition-
@@ -904,6 +1086,313 @@ installed bytes. Metadata digest:
 No other package content was extracted or executed. A separately approved
 offline build into a disposable copy is now the next gate; GPU and graphical
 execution remain later and separate.
+
+The separately authorized offline Hyprland role build has now copied the proven
+console root to `/tmp/apx-hyprland-build-v1` and installed only those 194
+verified packages into the copy with external networking disabled. Its internal
+database contains 332 packages and the result uses 1,739,587,584 allocated
+bytes under the 3 GiB ceiling. Full source content digests before and after
+matched; zero Development-owned entries and zero special runtime files remain.
+An independent read reproduced the report digest
+`9331a5cf181fa550cc163a179a340aa17cc1f01aa6b2167585e8b909b087ce0e`,
+package count, and Hyprland/UWSM/Foot presence. Nothing graphical was launched
+and no GPU, display, input, audio, host session, Btrfs, persistent service, real
+user, prior-area cleanup, or main-Arch package effect occurred. The next gate
+is a separately bounded G0 headless launch using only the intended AMD render
+device; it must preserve KDE and deny physical display and input access.
+
+A 2026-07-13 reconstruction after `/tmp` cleanup reproduced the exact dated
+database hashes, 138-package manifest, double signature evidence, and package
+metadata digest. Its offline base build kept the same package count and storage
+ceiling but legitimately differed by 40 logical bytes and generated a new
+Environment machine identity. The finalizer previously required the historical
+build-report digest and therefore blocked a valid reconstruction. The accepted
+reconstruction rule now verifies the canonical report digest plus the closed
+manifest, signature evidence, package counts, byte ceilings, ownership, and
+identity invariants. It does not treat per-run GnuPG/log/identity bytes as a
+reproducibility identity. A new final report remains bound to that exact rebuilt
+root and does not replace the historical evidence digest.
+
+The same reconstruction encountered repeated Wi-Fi interruption during the
+194-package graphical acquisition. The staging correctly preserved completed
+files and one `.partial` entry but intentionally refused implicit adoption. A
+fixed recovery path now revalidates the plan, directory and file metadata,
+expected names, package sizes, and package hashes, removes only recognized
+partial files, and fetches only missing requests. Preserved signatures receive
+no trust from resumption and must still pass the complete offline double
+verification. This is a transport recovery rule, not package admission.
+
+The recovered acquisition completed all 388 package/signature files with zero
+partials. All 194 graphical packages then repeated the two independent
+signature passes and exact metadata digest. The rebuilt graphical root contains
+332 packages, uses 1,739,587,584 allocated bytes, preserves its reconstructed
+base, and has zero Development-owned or special runtime entries. Its new
+root-bound report digest is
+`79aec029862f03c169afde83c97a1eb3fc67918b5826823f6c5b3e1f64831f56`;
+G0 v13 is now bound to that digest rather than the removed historical `/tmp`
+root.
+
+G0 v13 completed with report digest
+`abbb2428c5b288c9ffdc7cf624c607f908d2fab98e1e1a5da029af6334b03ef5`.
+It passed container PID 1, private namespaces, 332 packages, transient seatd,
+zero other DRM visibility, source preservation, zero process/mount residue,
+and runtime removal. Hyprland still did not open AMD or publish `HEADLESS-0`.
+The retained trace plus Aquamarine 0.12.1 source establish that the DRM backend
+enumerates and selects canonical `cardN` devices. `AQ_NO_KMS_REQUIREMENT`
+permits a card without outputs but does not turn the physical AMD render node
+into a separately selectable compositor card. Exposing `/dev/dri/card2` would
+add physical KMS authority and is forbidden in G0. This is an accepted negative
+hardware/backend result, not permission to broaden the grant. G1 nested without
+direct DRM is next; exclusive AMD KMS belongs only to a separately reviewed G2
+after KDE teardown is proven.
+
+A non-executing G1 v1 preview is now bound to the rebuilt 332-package root and
+the current KDE socket `/run/user/1002/wayland-0`. It keeps the container network
+private and the device policy closed, with no direct DRM, input, audio, D-Bus,
+PipeWire, portal, or host-home path. Its one added surface is a read-only bind of
+the exact Wayland socket to a fixed internal path. This is a provisional
+functional test, not an accepted isolation boundary: direct Wayland protocol
+exposure and host-session lifetime still require mediation. No G1 container or
+window has been launched. The exact non-executing preview digest is
+`42f2b4a128e95c6b9e12e0f9feb6f59147711e4a9920b7a62fa0dc2884f0dc03`.
+
+The G1 campaign then completed the nested graphical gate. V1 confirmed that the
+private-user mapping correctly prevented the internal UID from connecting to
+the KDE socket as host UID 1002. V2 used a temporary ACL for only the exact
+shifted UID and restored the original ACL byte-for-byte; it reached the Wayland
+backend but lacked a renderer. V3 added only AMD `/dev/dri/renderD129`, never a
+KMS `cardN`, and produced `WAYLAND-1`; v3/v4 exposed and safely recovered from
+an outer-wrapper teardown defect. V5 signaled inner Hyprland directly and
+passed: `WAYLAND-1` at 1280×720/60, a 4,319-byte internal screenshot, Hyprland
+exit code 0, 332 packages, private namespaces, one render node, hidden host
+Development home, exact ACL restoration, unchanged source, runtime removal,
+and zero process/mount residue. Report digest:
+`7e2328625de5fde3ba15b1f249f2108922fe14b1de475d88f4b42af32386bb82`.
+
+This is a functional and cleanup proof, not acceptance of direct KDE Wayland
+protocol exposure as final isolation. Production mediation remains required.
+For the current KDE/SDDM machine, the next physical compatibility gate is G2:
+prove KDE teardown, exclusive AMD KMS and mediated input ownership, bounded
+failure recovery, and return without residue. For the preferred fresh headless
+installation, H0 is the first physical gate and G2 is not a prerequisite.
+
+That G2 design and acceptance contract is now recorded in
+`docs/hyprland-g2-exclusive-session-design-v1.md`. It fixes a no-network,
+AMD-only, disposable boundary; separates the broker, executor, and Environment
+adapter; orders KDE stop, authoritative release proof, exact device grant,
+hidden launch, reveal, revocation, teardown, and verified return; and defines
+mandatory failure exercises. It explicitly forbids wildcard DRM/input grants
+and treating a blank display as proof of release.
+
+The companion `docs/hyprland-g2-broker-recovery-boundary-v1.md` now selects the
+candidate boundary for this experiment only: one host-owned text recovery VT,
+one separate Hyprland experiment VT, temporary exact SDDM quiescence, and a
+host-owned per-run mediator that provides revocable descriptor access only to
+the approved GPU and input identities. The recovery controller has a closed
+interface and no shell, while the executor owns deadlines, journal, revocation,
+and authoritative state. This does not adopt SDDM, `greetd`, a production
+broker, or a mediator implementation. No executable G2 preview is safe yet:
+the exact controller and SDDM mechanisms, installed-version adapter and host
+observations, stable device resolution, mediator compatibility, fixtures,
+physical recovery rehearsal, and fresh approval remain absent.
+
+The companion `docs/hyprland-g2-kde-release-proof-v1.md` now selects the
+authoritative outgoing-session release contract. KDE adapter acceptance is
+only permission to observe; release requires two complete, generation-bound
+passes across login session and seat, cgroups and descendants, user services
+and assistants, graphical IPC, AMD DRM/connector ownership, selected input and
+VT ownership, mounts, namespaces, helpers, and SDDM absence. Refusal, timeout,
+missing facts, identity change, or contradiction blocks the device grant and
+enters recovery. The installed KDE/Plasma request, exact SDDM runtime operation,
+host-version observation APIs, pure evaluator fixtures, read-only preview, and
+fresh approval remain required. This documentation authorizes no host effect.
+
+The first non-disruptive G2 host observation is recorded in
+`docs/hyprland-g2-read-only-observation-2026-07-13.md`. The installed stack is
+Plasma/KWin 6.7.2, SDDM 0.21.0, and systemd 261.1. The host login manager showed
+the active Development KDE session on `seat0`/`tty4` and a second live inactive
+Hub KDE session on `seat0`/`tty1` retained by `sddm-autologin`; the latter still
+had its own KWin, Xwayland, Plasma, portals, audio, secret, and lock processes.
+Consequently G2 must gracefully release and independently prove both graphical
+session generations absent, not only the foreground desktop. SDDM must also be
+quiesced against greeter respawn and Hub autologin before any KMS grant.
+
+The same observation proved that component versions, login/session/cgroup
+identity, SDDM lineage, Wayland socket identity, AMD PCI/card/connector ancestry,
+ordinary DRM pathname descriptors, and input ancestry are readable. It found
+current AMD users including Xwayland, Plasma Shell, Brave, and a KDE logout
+greeter. KWin was not represented as an ordinary `/dev/dri/*` pathname in that
+scan while logind still marked the AMD devices as seat-managed, so `fuser` and
+`/proc/*/fd` absence cannot be the sole DRM release proof. DRM master/logind
+reference/lease inspection, a version-bound two-session observer schema, exact
+Plasma logout behavior, SDDM quiescence, recovery VT, and device mediator remain
+blocked. No logout, service action, or device effect occurred.
+
+A follow-up read-only availability check found the DRM debugfs boundary is
+root-only and the login-manager seat API exposes active/session ownership but
+not the complete DRM master/lease tree. `modetest` exists but was deliberately
+not run because opening the primary DRM node is outside the non-disruptive
+availability gate. The selected release direction is a narrow executor-owned
+cross-check of all resolved primary/render descriptors, matching kernel DRM
+client state when available, and logind seat/session state. The executor exposes
+only a typed result. This is still unimplemented and untested; no new user,
+Hub, adapter, or Environment access to debugfs or DRM is proposed.
+
+The logical G2 observer/evaluator schema is now recorded in
+`docs/hyprland-g2-release-observer-schema-v1.md`. It discovers every graphical
+session from the physical seat instead of trusting fixed session numbers,
+classifies systemd user-manager records separately without ignoring their
+resources, freezes SDDM/greeter/autologin topology, and records process/cgroup,
+IPC, mount, namespace, recovery, selected input, and separate AMD primary,
+render, master, lease, login-manager, connector, and NVIDIA-exclusion fields.
+Its public outcome is only `released`, `blocked`, or `unknown`; only two complete
+clean observations in the same boot/generation after the bounded stability
+interval can report `released`. Any reboot invalidates the prior baseline and
+all transient identifiers. Unknown sources, topology disagreement, or changed
+identity fail closed. The schema is complete logical architecture, not an
+implementation. Source-adapter/evaluator implementation and fixtures, SDDM and
+Plasma operations, recovery controller, device mediator, bounded-evidence
+validation, a fresh post-reboot preview, and approval remain required.
+
+The logical source/privilege mapping is now recorded in
+`docs/hyprland-g2-observer-source-adapters-v1.md`. It separates an unprivileged
+collector, one exact outgoing-session KDE adapter, a narrow privileged read-only
+source, and the independently approved effect executor. Every schema area is
+mapped to package provenance, login1/systemd D-Bus, cgroup/proc, sysfs, Wayland
+object metadata, matching kernel DRM client state, input ownership,
+mount/namespace identity, or recovery-controller evidence. The privileged
+reader accepts only signed-plan identities, re-resolves them, never opens a DRM
+or input node, never runs `modetest`, and returns bounded typed facts rather
+than raw debugfs/proc output. No general root shell, sudo path, group/ACL change,
+world-readable debugfs, broad polkit rule, or runtime privilege widening is
+proposed.
+
+The DRM schema was corrected to admit only an exact baseline-bound host kernel
+console/fbdev client for the recovery VT while still requiring zero outgoing or
+unexpected primary/render clients, no lease, no outgoing logind device
+reference, matching connector identity, and NVIDIA exclusion. An unclassified
+kernel client remains `unknown`. First denial limits are 10 seconds and 4 MiB
+per observation, a two-second minimum stability interval, a 30-second pair
+deadline, and fixed count/string ceilings. The adapter design and limits are
+not implemented or validated; installed-version fixtures, a fresh post-reboot
+read-only preview, exact Plasma/SDDM effects, recovery controller, device
+mediator, and explicit effect approval remain required.
+
+The first separately authorized G0 attempt passed its system-container,
+namespace, exact-device, source-preservation, and teardown boundaries. It
+exposed only AMD `/dev/dri/renderD129`, with zero other DRM nodes, and left zero
+processes or mounts before removing the runtime copy. Hyprland briefly started
+but exited without publishing `HEADLESS-0`, opening the render device, or
+creating a screenshot, so G0 has not passed. Report digest:
+`40d8a76dbe8c7f1e602b90868b68a6b31f101cc7a08a3065ef3240fda0d995a3`.
+The first runner did not retain its bounded output, preventing a proven cause.
+A non-executing v2 correction uses an ordinary UID 1000 only inside the runtime
+copy and preserves up to 1 MiB of diagnostic output in a separate evidence
+directory. It retains every prior isolation and cleanup boundary and requires
+fresh authorization before another GPU-visible execution.
+
+G0 v2 was separately authorized and again passed container PID 1, private
+namespaces, 332 internal packages, exact AMD-only visibility, unchanged source,
+zero residue, and runtime-copy removal. Running as ordinary internal UID 1000
+did not resolve rendering: retained diagnostics show Aquamarine failed at
+`CBackend::create()` before Hyprland opened the render node or published
+`HEADLESS-0`. Report digest:
+`c2d19362a2cdab0787938da8caf634a1aeb08c8e8f729637d776bf7984233f72`.
+Current official documentation confirms the render-only environment flags.
+A prepared, non-executed v3 keeps the identical device boundary, creates the
+missing internal cache path, and enables bounded Hyprland/Aquamarine tracing.
+
+G0 v3 was separately authorized and again preserved the complete outer safety
+boundary, but still did not open AMD or create `HEADLESS-0`. Its report digest
+is `20f23e577319176e3dc1373649bcd7620f9705fffa15fdf3494894f8dbc695ea`.
+The runtime copy was removed and the bounded trace was retained under the
+protected v3 evidence root. A subsequent read was refused because the host
+authentication window had expired. The next action is read-only diagnosis of
+that existing trace, not another graphical execution or broader device access.
+
+The user supplied the protected v3 trace. Hyprland loaded the intended config
+and then failed at `CBackend::create()`; the later `lspci` and working-directory
+messages are crash-report side effects. The test incorrectly forced unsupported
+`LIBSEAT_BACKEND=noop`; current libseat offers seatd, logind, embedded seatd,
+and automatic selection. A prepared, non-executed v4 removes only that invalid
+override and captures any crash report before deleting the runtime copy. It
+does not broaden device, session, namespace, time, or persistence authority.
+
+G0 v4 was separately authorized and its preserved crash report proved that
+Aquamarine found neither a seatd socket nor a logind primary session for the
+disposable user. It therefore never opened AMD. Every outer isolation and
+teardown check passed; report digest:
+`5974fa90c3b66277dbcc1c32b1fb383d00c6c269cb72070d0cfadff7d4355518`.
+A prepared, non-executed v5 runs the already-packaged seatd binary only in the
+foreground inside the disposable container, with a private socket owned by the
+disposable user. It creates/enables no service and retains exact AMD render-only
+visibility, private namespaces, bounded time, source preservation, and cleanup.
+
+G0 v5 was separately authorized. Its transient seatd process stopped before
+creating the socket because the packaged Arch version rejects `-s`; Hyprland
+therefore repeated the known no-seat failure. Isolation, unchanged source, zero
+residue, and runtime removal passed. Report digest:
+`8e178e66be24cde9907d87862dceb2ef7ee18cf6325d15a8345cbb3badae10d6`.
+Arch seatd defaults to `/run/seatd.sock`; prepared, non-executed v6 removes only
+the incompatible option and retains every safety boundary.
+
+G0 v6 started the transient mediator but uncovered a teardown bug in the test
+runner: it signaled the outer namespace wrapper rather than inner seatd and
+raised before normal cleanup. APX immediately observed the exact v6 processes
+and mount, stopped the container, verified mount disappearance, and deleted only
+the authorized v6 runtime copy. No v6 evidence report was published, so the
+render result is inconclusive. Prepared v7 targets the inner daemon PID and
+registers emergency teardown for unexpected runner exceptions. The user's
+standing authorization permits further G0 versions only within the unchanged
+AMD-render-only, no-network/input/audio/KMS, 120-second, disposable boundaries.
+
+G0 v7 passed transient-seat startup, direct inner-process teardown, and all
+prior cleanup gates. Seatd nevertheless kept the client inactive because it
+could not bind to an intentionally absent physical VT, so no device opened.
+Report digest:
+`43a7d155b5c9f8f39928416d5b6d718961bf4f945935e6983e34e8b9f108cb7b`.
+Official Arch seatd documents `SEATD_VTBOUND=0` for a seat not bound to a VT.
+Prepared v8 adds only that setting and does not add KMS, input, or another
+device.
+
+G0 v8 activated the official non-VT-bound seat, but seatd and Aquamarine proved
+the nspawn-created render entry could not be canonicalized or opened. Cleanup
+again passed; report digest:
+`555e54af0d09c4937afe74b06464d6ea941e0bc06046b2a320647205b0d7e5c7`.
+Prepared v9 replaces only that unusable bind with an ephemeral internal
+`/dev/dri/apx-amd-render` character node carrying the exact authorized AMD
+major/minor `226:129`. The closed outer device policy remains unchanged and no
+KMS, input, or other device is added.
+
+G0 v9 again cleaned up safely but did not publish the headless output. Report
+digest: `7370f014e3f8b847c47f511a669b13d3483b6d2f82e20c5b9ffa45f6f3def78d`.
+The root-owned evidence read was blocked after host authentication expired.
+Prepared v10 repeats the same runtime and device boundary while assigning only
+the new evidence directory/files to Development UID 1002, avoiding repeated
+administrator reads without exposing runtime or source content.
+
+G0 v10 made evidence directly readable and proved the current Aquamarine build
+does not accept an arbitrary alias for the explicit DRM device. It continued to
+seek the standard AMD render name. Cleanup passed; report digest:
+`c3e20c7fa4b0d2e762aaadd1046d5f8588209ff56c4b27deb5bc968a34cbe6e2`.
+Prepared v11 retains the ephemeral character node and exact major/minor
+`226:129` but names it `/dev/dri/renderD129` as expected by the backend.
+
+G0 v11 still failed to open the standard-named node, while cleanup passed;
+report digest:
+`9fe499eecc102200d01a4c81637ef14e83823b0d7eb3f650f8964a95129e2854`.
+The node-creation umask could remove write permission. Prepared v12 explicitly
+sets `0666` to match the authorized host render node and records the internal
+user's bounded pre-launch stat evidence.
+
+G0 v12 left zero observed process, mount, and runtime-copy residue, but its
+outer authorization wrapper remained stuck after the Python child ended and no
+final report was published. The render result is inconclusive. Prepared v13
+writes a bounded Development-readable progress journal from the beginning so
+the last completed stage survives any outer-wrapper failure. The prepared
+evidence path and files remain executor-owned and only group-readable by the
+Development identity; fixed ownership, permissions, and no-follow opening keep
+read access from becoming control over a privileged evidence path.
 
 - two Environments independently installing the same application;
 - deletion without residual application or user data;

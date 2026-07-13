@@ -9,24 +9,32 @@ Status: initial product threat model; validation pending.
 - Hub lifecycle authority and APX metadata;
 - host integrity, kernel, boot chain, hardware, and package/runtime state;
 - base images, templates, snapshots, archives, and backups;
+- release-candidate quarantine, trusted catalogue identities, and Hub rollback
+  generations;
 - human credentials and future multi-person ownership boundaries;
 - GPU, audio, input, camera, microphone, removable storage, and network access.
 
 ## Trust Boundaries
 
 ```text
-Human -> Hub UI -> typed APX executor -> host lifecycle primitives
-                    |                     |
-                    v                     v
-              verified policy       Environment boundary
-                                          |
-                            applications, data, assistants
+Human -> Hub client (CLI or UI) -> typed APX executor -> host lifecycle primitives
+                               |                     |
+                               v                     v
+                         verified policy       Environment boundary
+                                                     |
+                                       applications, data, assistants
 ```
 
-The Hub UI is not trusted to validate privileged operations by itself. The
+The Hub CLI/UI client is not trusted to validate privileged operations by itself. The
 executor independently validates a closed typed request, current authoritative
 state, policy, provenance, and postconditions. Templates and downloaded base
 artifacts are untrusted until verified and admitted by policy.
+
+Development and Codex are also outside the release-admission trust boundary.
+They may produce a candidate but cannot write the trusted catalogue, live Hub,
+executor, verifier, policy, trust roots, or recovery state. Candidate import
+must copy one immutable identity into host-owned quarantine before independent
+verification; no shared writable build directory crosses this boundary.
 
 ## Expected Adversaries and Failures
 
@@ -37,6 +45,8 @@ artifacts are untrusted until verified and admitted by policy.
 - a template attempting to request excessive devices, mounts, or capabilities;
 - a local assistant exceeding its configured Environment access;
 - stale, malicious, or compromised base/template content;
+- malicious Codex/build output, compromised Development local root, or a
+  candidate attempting to replace APX trust/execution components;
 - confused-deputy requests sent from the Hub to a privileged executor;
 - symlink, path traversal, race, identity reuse, or stale-plan attacks;
 - incomplete creation, shutdown, snapshot, archive, restore, or deletion;
@@ -83,6 +93,10 @@ that guarantee need a separately designed VM profile or different machine.
 - No registration publication before complete fresh verification.
 - No deletion based only on a pathname or naming convention.
 - No environment launch from an unverified base/template reference.
+- No Development candidate becomes trusted or executable merely because its
+  digest or Development signature is valid.
+- No direct Development access to the live Hub, quarantine, trusted catalogue,
+  executor, verifier, trust roots, or recovery controller.
 - No assistant cross-Environment access without future explicit policy and
   consent.
 - No use of unavailable evidence as proof of safety.
@@ -100,6 +114,8 @@ that guarantee need a separately designed VM profile or different machine.
 - network ingress, egress, DNS, and host-service reachability;
 - cgroup exhaustion and disk quota behavior;
 - malicious template and malformed metadata handling;
+- malicious Development candidate, bounded immutable import, quarantine,
+  admission, replacement-Hub rollback, and reboot-interruption handling;
 - stale plan, race, identity reuse, and interrupted-operation recovery;
 - GPU, audio, portal, secrets, clipboard, input, and removable-device leakage;
 - Odysseus and Codex data/tool permission boundaries;

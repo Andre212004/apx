@@ -1,7 +1,8 @@
 # APX Hyprland Graphical Role v1
 
-Status: exact offline closure, acquisition, and double signature verification
-passed on 2026-07-13; installation, device grants, and launch remain separate.
+Status: exact offline closure, acquisition, double signature verification, and
+disposable role construction passed on 2026-07-13; device grants and launch
+remain separate.
 
 ## Objective and machine profile
 
@@ -74,23 +75,193 @@ digest:
 `89ed0ab7623a93972bb403af33bbda4ee1ebb2717d285455fa4a240adea455df`.
 No other archive member was extracted and no package content was executed.
 
+## Disposable role construction result
+
+The separately authorized offline build copied the proven console base to
+`/tmp/apx-hyprland-build-v1` and installed only the 194 verified graphical
+packages into that copy. Its private package database contains 332 packages:
+138 from the base and 194 from the role. The completed root uses 1,599,291,522
+logical bytes and 1,739,587,584 allocated bytes, below the 3 GiB limit.
+
+The operation ran pacman with external networking disabled. A complete content
+digest before and after the operation proved that the source console base did
+not change. The result contains zero entries owned by the Development account
+and zero leftover special runtime files. An independent read reproduced the
+332 package records, report digest, and presence of Hyprland, UWSM, and Foot.
+Build report digest:
+`9331a5cf181fa550cc163a179a340aa17cc1f01aa6b2167585e8b909b087ce0e`.
+
+After temporary storage cleanup, the 2026-07-13 reconstruction repeated the
+same 332-package count, 1,739,587,584 allocated bytes, source preservation,
+zero Development-owned entries, and zero special runtime files. Per-run base
+identity and auxiliary state produced the new root-bound report digest
+`79aec029862f03c169afde83c97a1eb3fc67918b5826823f6c5b3e1f64831f56`.
+The prepared G0 v13 runner is bound to this reconstruction, not the historical
+root.
+
+This is still a stopped disposable filesystem, not a running desktop and not
+an installation on the main Arch system. It received no GPU, display, input,
+audio, host-session, Btrfs, service, or cleanup effect.
+
+The first separately authorized G0 execution safely passed its outer isolation
+and teardown boundary but did not pass the graphical gate. Container systemd
+ran as namespace PID 1 with private namespaces and all 332 packages. Exactly
+the AMD render node was visible; zero other DRM nodes were visible. Hyprland
+briefly started but exited before publishing `HEADLESS-0`, opening the AMD
+render device, or producing the internal screenshot. The run then left zero
+processes and mounts, removed its runtime copy, and preserved the graphical
+source. Evidence digest:
+`40d8a76dbe8c7f1e602b90868b68a6b31f101cc7a08a3065ef3240fda0d995a3`.
+
+The v1 runner did not retain bounded Hyprland diagnostic output, so the precise
+exit cause is not proven. The leading explanation is its use of internal root
+instead of an ordinary compositor user. A prepared v2 correction creates UID
+1000 only inside the disposable copy, runs Hyprland as that identity, stores at
+most 1 MiB of diagnostic output in a new evidence area, and otherwise keeps the
+same device, namespace, timeout, source-preservation, and teardown boundaries.
+It requires a fresh execution authorization.
+
+G0 v2 then repeated the safe outer result and proved the ordinary internal user
+was not sufficient. Container PID 1, private namespaces, all 332 packages,
+exact AMD-only device visibility, complete source preservation, zero residue,
+and runtime-copy removal passed again. Hyprland read the intended configuration
+but Aquamarine raised `CBackend::create() failed` before opening the render node
+or creating `HEADLESS-0`. Report digest:
+`c2d19362a2cdab0787938da8caf634a1aeb08c8e8f729637d776bf7984233f72`.
+
+The retained output also showed that the crash-report directory was absent and
+that normal detailed logging had disabled itself. Official current Hyprland
+documentation confirms that `AQ_NO_KMS_REQUIREMENT=1` and a render-only path in
+`AQ_DRM_DEVICES` are the intended virtual-GPU mechanism. Prepared v3 therefore
+does not broaden device access: it creates the internal cache directory and
+adds bounded Hyprland/Aquamarine trace output only. It is not executed yet.
+
+G0 v3 was subsequently authorized and repeated the same safe outer outcome:
+container PID 1, private namespaces, 332 packages, zero non-AMD DRM nodes,
+unchanged source, zero process/mount residue, and complete runtime-copy removal.
+Hyprland still exited before opening AMD or publishing `HEADLESS-0`. Report
+digest:
+`20f23e577319176e3dc1373649bcd7620f9705fffa15fdf3494894f8dbc695ea`.
+The bounded trace exists in the protected v3 evidence directory, but its second
+read was denied after the host authentication window expired. Diagnosis must
+read that existing file; another graphical execution is not justified yet.
+
+The user then supplied that trace. It confirms configuration loading followed
+by `CBackend::create() failed`; later `lspci` and working-directory warnings
+belong to crash reporting and are not the initiating failure. The experiment
+had forced `LIBSEAT_BACKEND=noop`, but current libseat supports seatd, logind,
+embedded seatd, or automatic selection—not a `noop` backend. Prepared v4 removes
+only that invalid override and preserves any generated crash report before
+runtime cleanup. Device visibility, timeout, user, namespaces, and all forbidden
+effects remain unchanged. V4 is not executed yet.
+
+G0 v4 was then separately authorized. Removing the invalid override let the
+retained crash report prove the next missing boundary: seatd had no socket and
+logind had no primary session for the disposable UID, so Aquamarine reported
+`No backend was able to open a seat` and never opened AMD. All outer isolation,
+source preservation, zero residue, and cleanup checks passed again. Report
+digest:
+`5974fa90c3b66277dbcc1c32b1fb383d00c6c269cb72070d0cfadff7d4355518`.
+
+Prepared v5 starts the already-packaged seatd binary only as a foreground
+process inside the disposable container, makes its private socket belong to
+the disposable `apx-g0` user, and stops it before container teardown. The
+container still exposes only the authorized AMD render node and no input or KMS
+node. No system unit is created or enabled. V5 is not executed yet.
+
+G0 v5 was subsequently authorized, but the transient seatd process rejected
+the cross-distribution `-s` option before creating its socket. Hyprland therefore
+repeated the already-understood no-seat failure. All isolation, unchanged-source,
+zero-residue, and cleanup checks passed. Report digest:
+`8e178e66be24cde9907d87862dceb2ef7ee18cf6325d15a8345cbb3badae10d6`.
+The packaged Arch seatd already defaults to `/run/seatd.sock` and accepts `-u`
+for socket ownership. Prepared v6 removes only `-s`; it is not executed yet.
+
+G0 v6 started seatd but exposed an executor teardown defect: signaling the
+outer namespace wrapper did not stop the inner daemon, and the Python runner
+raised before its normal cleanup. APX immediately identified the exact v6
+processes and mount, terminated the container, verified mount disappearance,
+and removed only the v6 runtime copy. No evidence report was published and the
+graphical result is inconclusive. Prepared v7 targets the inner seatd PID and
+registers emergency teardown for unexpected runner exceptions.
+
+G0 v7 then passed transient-seat startup and corrected teardown, but seatd
+considered its client inactive because it attempted to bind to a physical VT
+that is intentionally absent. Aquamarine therefore could not open any device;
+all safety and cleanup gates still passed. Report digest:
+`43a7d155b5c9f8f39928416d5b6d718961bf4f945935e6983e34e8b9f108cb7b`.
+The official Arch seatd interface provides `SEATD_VTBOUND=0` specifically for a
+seat not bound to a VT. Prepared v8 adds only that environment setting.
+
+G0 v8 successfully activated the non-VT seat, but both seatd and Aquamarine
+proved the nspawn-created `/dev/dri/renderD129` entry could not be canonicalized
+or opened. No device fd was obtained; all cleanup gates passed. Report digest:
+`555e54af0d09c4937afe74b06464d6ea941e0bc06046b2a320647205b0d7e5c7`.
+Prepared v9 removes the failing bind entry and creates one temporary character
+node named `/dev/dri/apx-amd-render` inside the container's ephemeral `/dev`,
+using the exact already-approved AMD major/minor `226:129`. The outer cgroup
+still allows only that device identity; no KMS or additional node is exposed.
+
+G0 v9 completed safely but still did not publish `HEADLESS-0`; report digest:
+`7370f014e3f8b847c47f511a669b13d3483b6d2f82e20c5b9ffa45f6f3def78d`.
+The host authentication window expired before the root-owned evidence could be
+read. V10 repeats the identical G0 boundary and changes only the new evidence
+directory ownership to Development UID 1002 so subsequent bounded diagnostics
+need no repeated administrator read authorization.
+
+G0 v10 reproduced the failure with readable evidence and showed that this
+Aquamarine build does not adopt an arbitrary alias as an explicit DRM node. It
+still searched for the standard AMD render-node name. Cleanup passed; report
+digest: `c3e20c7fa4b0d2e762aaadd1046d5f8588209ff56c4b27deb5bc968a34cbe6e2`.
+V11 keeps the ephemeral-node approach and exact `226:129` device identity but
+uses the expected internal name `/dev/dri/renderD129`.
+
+G0 v11 retained the standard name but still failed before opening the node;
+cleanup passed and report digest was
+`9fe499eecc102200d01a4c81637ef14e83823b0d7eb3f650f8964a95129e2854`.
+The temporary node creation was subject to the process umask and could therefore
+lose write permission. V12 explicitly restores mode `0666`, matching the real
+authorized render node, and records a bounded user-view stat before launch.
+
+G0 v12 left no observed process, mount, or runtime copy, but its outer
+authorization wrapper remained stuck after the Python child ended and no final
+evidence was published. The graphical outcome is inconclusive. V13 writes a
+bounded, Development-readable progress journal from the start so an outer-
+wrapper fault cannot hide the last completed controller stage. The evidence
+directory and files remain executor-owned and are only group-readable by the
+Development identity; the runner refuses changed ownership, permissions, or a
+symbolic-link replacement before appending to the journal.
+
+G0 v13 completed with report digest
+`abbb2428c5b288c9ffdc7cf624c607f908d2fab98e1e1a5da029af6334b03ef5`.
+It repeated container PID 1, private namespaces, 332 packages, transient seatd,
+zero other DRM nodes, unchanged source, zero process/mount residue, and runtime
+copy removal. Hyprland started but did not open AMD or publish `HEADLESS-0`.
+The retained trace and Aquamarine 0.12.1 source show that the backend enumerates
+DRM `cardN` devices and compares `AQ_DRM_DEVICES` against those canonical card
+paths. `AQ_NO_KMS_REQUIREMENT` permits a card without outputs; it does not make
+this physical AMD render node an independently selectable compositor card.
+
+Granting `/dev/dri/card2` would add physical KMS authority and violate G0.
+Therefore G0 is a valid negative hardware/backend result and must not be
+retried by widening the device grant. The next functional proof is G1 nested
+without a direct DRM device. G2 must separately prove that KDE has stopped
+before exclusive physical KMS handoff.
+
 Waybar is deliberately not a role seed. The final expanding APX control needs a
 dedicated panel and cannot become a generic-bar script. A temporary bar is
 permitted only as a visual fixture.
 
 ## G0: headless AMD render
 
-Create a disposable copy of the proven console root and install only the closed,
-verified graphical role. Grant only the AMD render node resolved from PCI
+Use the now-built disposable graphical root. Grant only the AMD render node resolved from PCI
 `0000:05:00.0`; deny AMD KMS, NVIDIA, `/dev/input`, audio, cameras, USB, host
 Wayland, host D-Bus, host home, host portals, and network.
 
-Use `AQ_NO_KMS_REQUIREMENT=1` and bind `AQ_DRM_DEVICES` to the resolved AMD
-render node. Current official Hyprland behavior creates `HEADLESS-0` at
-1920x1080/60. Prove an Environment-local compositor socket, process and
-`hyprctl monitors` result, then use `grim` to create a screenshot only inside
-the disposable Environment. Require clean stop, zero GPU clients/residue,
-copy removal, and unchanged source.
+The attempted `AQ_NO_KMS_REQUIREMENT=1` plus render-node-only design cannot
+select this physical AMD device in Aquamarine 0.12.1. It remains the desired
+boundary for a future render-only virtual GPU or another backend that actually
+supports it. Do not substitute the physical `card2` node in G0.
 
 ## G1: nested visible window inside KDE
 
@@ -103,14 +274,67 @@ Success means a visible nested Hyprland window, input limited to that window, a
 terminal rendered inside, no host-home or undeclared clipboard/portal access,
 and total cleanup when it closes. KDE remains the recovery desktop.
 
+The prepared G1 v1 preview is bound to graphical build report
+`79aec029862f03c169afde83c97a1eb3fc67918b5826823f6c5b3e1f64831f56`
+and the current KDE socket `/run/user/1002/wayland-0`. It grants no direct DRM,
+input, audio, D-Bus, PipeWire, host home, or network path. The direct Wayland
+socket bind is a provisional functional test only: protocol filtering and
+session-lifetime mediation remain required before it can represent final APX
+isolation. The preview executes nothing and requires a separate review before
+a visible nested run. The reproduced preview digest is
+`42f2b4a128e95c6b9e12e0f9feb6f59147711e4a9920b7a62fa0dc2884f0dc03`.
+
+G1 v1 proved that a private-user container cannot connect directly to the KDE
+socket because the correctly shifted UID lacks socket write permission. G1 v2
+added a temporary ACL for only that exact shifted UID and restored the original
+ACL byte-for-byte; Wayland connected and initialized `WAYLAND-1`, but no
+allocator existed without the compositor's render device. G1 v3 added only AMD
+`/dev/dri/renderD129`, never a `cardN` KMS node. It produced the nested monitor,
+but a controller teardown defect prevented a final report. G1 v4 confirmed the
+monitor again and narrowed the remaining defect to signaling the outer
+namespace wrapper instead of inner Hyprland.
+
+G1 v5 passed the complete nested graphical gate. Hyprland published
+`WAYLAND-1` at 1280×720/60, `grim` created a 4,319-byte screenshot inside the
+copy, and Hyprland exited with code 0. The container contained 332 packages,
+private namespaces, exactly one DRM render node, and no host Development home.
+The exact-UID socket ACL was restored, the source remained unchanged, the
+runtime copy was removed, and zero process or mount residue remained. Report
+digest:
+`7e2328625de5fde3ba15b1f249f2108922fe14b1de475d88f4b42af32386bb82`.
+
+This proves nested graphical function and lifecycle cleanup. It does not admit
+the direct KDE Wayland protocol surface as final APX isolation. A production
+mediator must constrain protocol exposure and bind permission to the APX
+session lifecycle.
+
 ## G2: exclusive physical session
 
-Only after G0 and G1 pass may a broker leave KDE and grant AMD KMS, a mediated
+G2 is the secondary compatibility gate for this existing KDE/SDDM host. It is
+not the first graphical gate for a fresh APX installation. On the preferred
+headless clean-install route, H0 starts from an independently verified state
+with no display manager or graphical owner, then grants the physical display
+and selected input devices to one disposable Hyprland Environment. The G0 and
+G1 package, rendering, isolation, and cleanup evidence may inform H0 without
+requiring the KDE-release procedure described below.
+
+Only after the G0 limitation is explicitly accepted and G1 passes may a broker
+leave KDE and request a separately reviewed G2 grant of AMD KMS, a mediated
 seat/input session, and the physical display to one Environment. Never bind all
 of `/dev/input`. The broker must prove no simultaneous KDE workload session,
 exclusive intended seat/display ownership, a recovery path, and zero surviving
 GPU/input/session process after return. This stage may not change SDDM or adopt
 greetd without a separate decision and rollback plan.
+
+The complete design and acceptance contract is now recorded in
+`hyprland-g2-exclusive-session-design-v1.md`. It fixes the safety boundary,
+trusted roles, ordered effect groups, fresh observations, failure exercises,
+and success evidence. It also records why no executable G2 preview is safe yet:
+the companion broker/recovery proposal now selects a two-VT candidate boundary
+for the experiment, and the KDE release proposal selects an independent,
+two-pass proof across session, process, service, IPC, GPU, input, VT, mount, and
+namespace state. Their installed-version mechanisms, fixtures, and recovery
+rehearsal do not exist. The documents authorize no session or host effect.
 
 ## Audio, portals, and session services
 
@@ -140,6 +364,13 @@ depend on Hyprland. KDE and GNOME adapters follow the same contract.
 
 ## Authorization boundary
 
-No installation, graphical process, GPU/input/audio grant, host
-session handoff, SDDM change, Btrfs operation, or prior-evidence cleanup is
-authorized by this plan.
+The completed disposable installation authorized for this milestone does not
+authorize a graphical process, GPU/input/audio grant, host session handoff,
+SDDM change, Btrfs operation, or prior-evidence cleanup.
+
+Interrupted graphical package acquisition may be resumed only through the
+fixed recovery path. It revalidates the plan binding, directory ownership and
+modes, expected filenames, link counts, package sizes, and package digests;
+removes only recognized `.partial` entries; and downloads only missing files.
+Existing signatures remain untrusted until the complete offline double
+signature-verification pass succeeds.

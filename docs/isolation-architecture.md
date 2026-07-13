@@ -1,6 +1,8 @@
 # Environment Isolation Architecture
 
-Status: provisional architecture direction; implementation is not authorized.
+Status: `systemd-nspawn` accepted for the first headless C1–C6 experimental
+implementation; final graphical and high-security backend decisions remain
+provisional. No host implementation is authorized.
 
 This document translates the APX product contract into isolation requirements,
 compares viable mechanisms, and selects the smallest direction worth validating
@@ -78,9 +80,9 @@ overlays, inaccessible paths, and bounded bind mounts. This matches APX's
 complete-Environment model most directly, but does not automatically make the
 container safe: every device and privileged bind expands the attack surface.
 
-## Provisional Direction
+## Accepted First Headless Direction
 
-The first architecture experiment should evaluate one bootable Arch system
+The first headless C1–C6 implementation evaluates one bootable Arch system
 container per Environment using `systemd-nspawn`, with:
 
 - a versioned read-only APX base or reproducible base snapshot;
@@ -176,6 +178,12 @@ provide evidence for:
 
 Failure of the system-container approach should cause a documented comparison
 against Podman/OCI or a hybrid backend, not ad hoc privilege expansion.
+
+The accepted headless limits are fixed in `clean-install-foundation-v1.md`.
+Private users are mandatory and C1–C6 grant no GPU, physical input, audio,
+graphical socket, FUSE, BPF, nested container engine, arbitrary bind, or host
+management surface. H0 may retain, narrow, or replace the backend after its
+separate physical-graphics evidence.
 
 The staged validation protocol, fixed experimental identity, approvals,
 evidence format, and cleanup gates are specified in

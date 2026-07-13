@@ -69,6 +69,13 @@ Development tools may include Git, GitHub CLI, Codex, ChatGPT, Brave, IDEs, comp
 
 Codex is a temporary development tool and is not part of APX.
 
+For the preferred future clean installation, APX first creates a headless Hub
+with only the bounded management CLI, then a separate headless Development
+Environment. The Git clone, Codex, compilers, tests, build outputs, and ongoing
+source work move into Development. A temporary pre-Environment bootstrap staging
+area is allowed only as a documented, bounded exception and is removed or
+archived after the installed artifact and Development are verified.
+
 ## Hub Discipline
 
 The Hub must remain focused on APX management.
@@ -90,6 +97,11 @@ customization, and tightly scoped widgets. This does not make it a general-
 purpose application Environment. Software selection for workload Environments
 must occur through reviewed templates or a future bounded management protocol,
 not an arbitrary privileged installer exposed by the Hub.
+
+The first Hub may be headless. Its `apx` CLI is the management UI and remains
+subject to the same typed operations, previews, approvals, journal, and recovery
+rules as a future graphical button. A terminal presentation does not authorize
+general development or host administration in Hub.
 
 The Hub must not be used as the live base image for other Environments. Common
 drivers, integration, fonts, certificates, and defaults belong to a reviewed,

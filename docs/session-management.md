@@ -41,6 +41,13 @@ The Hub does not remain graphically active behind a workload Environment. This
 surface is trusted lifecycle machinery, not another Environment or general
 desktop.
 
+For the preferred clean-install sequence, the initial Hub and Development
+sessions are non-graphical. A physical host-owned text console provides
+bootstrap/recovery before the Hub exists; afterward the bounded `apx` CLI in the
+headless Hub drives lifecycle operations. This CLI-first stage is not permission
+to expose internal accounts or a general host administration shell in the final
+product.
+
 ### Hub
 
 The Hub is the default minimal Environment and management surface. It can list,
@@ -113,6 +120,41 @@ The display-manager and handoff mechanism remain under evaluation. SDDM is the
 last confirmed current manager. `greetd` is only a candidate. The chosen design
 must hide internal accounts, support secure Hub entry, recover from failed
 launches, and remain desktop-independent.
+
+The primary clean-install path initially has no display manager. Its first
+graphical gate is H0, which activates one Hyprland Environment from a verified
+no-graphical-owner baseline and must return to the headless recovery/Hub path.
+SDDM/KDE G2 remains the separate in-place migration path.
+
+The separate G2 exclusive-session design in
+`hyprland-g2-exclusive-session-design-v1.md` records the physical handoff safety
+boundary and the current blockers for any executable preview. It does not
+authorize a broker, device grant, or host/session change yet.
+
+For that experiment only, `hyprland-g2-broker-recovery-boundary-v1.md` selects
+a host-owned text recovery VT, a separate Hyprland experiment VT, temporary
+SDDM quiescence, and revocable exact device leases as the candidate boundary.
+This narrows G2 without selecting the final APX broker or authorizing execution.
+
+`hyprland-g2-kde-release-proof-v1.md` separately defines the required release
+proof across login session, processes, services, graphical IPC, GPU, input, VT,
+mounts, and namespaces. A blank display or successful logout response never
+counts by itself.
+
+The 2026-07-13 read-only observation found that current SDDM behavior retains
+both an active Development KDE session and an inactive but live Hub KDE session
+on the same seat. This is current-system evidence, not intended APX behavior;
+both session generations must end before an exclusive G2 handoff.
+
+The closed G2 observer schema discovers all graphical sessions from the seat,
+classifies user-manager records separately, and permits only `released`,
+`blocked`, or `unknown`. A reboot invalidates every prior runtime identity and
+requires a fresh baseline.
+
+G2 observation is further split into an unprivileged collector, one exact
+session-local KDE adapter, a narrow privileged read-only source, and the
+separate effect executor. No observer component receives a general root shell,
+device open, or arbitrary UI path.
 
 The Hub's privileged requests are separately bounded by the proposed
 `privileged-executor-protocol-v1.md`. That proposal does not solve login or

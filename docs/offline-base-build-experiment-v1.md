@@ -45,3 +45,14 @@ an admitted reusable base release. The preview must fix the process, namespace,
 network, device, resource, read-only/writable-layer, timeout, observation,
 shutdown and cleanup boundaries. Hyprland is not part of this minimal console
 root; graphical role construction follows a successful lifecycle test.
+
+## Reconstruction rule
+
+A later reconstruction from the same authenticated manifest may legitimately
+produce different byte totals and a different machine identity because pacman,
+GnuPG, and first-root identity material contain per-run state. Finalization must
+therefore validate the canonical build-report digest and every closed semantic
+invariant—manifest, signature evidence, package counts, byte ceilings,
+ownership, and identity presence—rather than requiring the digest of this one
+historical run. The resulting final report remains bound to the exact rebuilt
+root and is not interchangeable with the historical report above.

@@ -37,6 +37,11 @@ No APX unlock screen, transition screen, session broker, automatic Hub entry,
 Environment handoff, or recovery UI exists. `greetd` remains a candidate under
 evaluation, not an adopted component.
 
+A read-only observation on 2026-07-13 found the active Development KDE session
+on `tty4` and an inactive but live Hub KDE session on `tty1` retained by SDDM
+autologin. This is current-system behavior, not acceptance of simultaneous APX
+graphical Environments. The G2 release contract must account for both.
+
 ## Visible Identity
 
 V1 has one human-facing owner identity. It is not the Hub's Linux account and
@@ -130,14 +135,19 @@ The host-visible seat has these states:
 | `locked` | APX unlock screen | broker and host services only |
 | `transition` | progress, cancel where safe, recovery | broker plus bounded lifecycle operation |
 | `hub-active` | Hub | one verified Hub graphical runtime |
+| `hub-active-headless` | APX CLI in Hub | one verified non-graphical Hub runtime |
 | `environment-active` | chosen Environment | one verified workload graphical runtime |
+| `environment-active-headless` | chosen Environment console | one verified non-graphical workload runtime |
 | `stopping` | saving/closing progress | current runtime while graceful stop is attempted |
 | `recovery` | plain-language safe choices | broker and read-only inspection |
 | `power-transition` | shutdown/restart progress | bounded host power operation |
 
 There is never a stable state with both Hub and workload graphical sessions
 active. A hidden text console or unrelated administrative login is outside the
-normal APX experience and cannot be counted as a successful APX handoff.
+normal APX experience and cannot be counted as a successful APX handoff. An
+authenticated, broker-owned headless Hub/Environment session may count in the
+CLI-first profile because it is explicitly lifecycle-managed and does not expose
+host administration or ask the person to choose an internal Linux account.
 
 ## Hub to Environment
 
@@ -298,6 +308,11 @@ session disappeared.
 
 ## Display-Manager Direction
 
+The preferred clean bootstrap initially needs no display manager. It uses the
+host-owned bootstrap/recovery console, then lifecycle-managed headless Hub and
+Environment sessions. H0 adds the first graphical owner only after this path is
+proven.
+
 The selected display/session manager must support host authentication, proper
 login-session creation, seat ownership, a fixed APX broker command, hidden
 internal accounts, and reliable session exit reporting.
@@ -310,6 +325,17 @@ control.
 
 SDDM remains the current factual system and must not be changed until a separate
 repository-reviewed experiment and explicit host approval.
+
+For the narrower G2 hardware experiment only,
+`hyprland-g2-broker-recovery-boundary-v1.md` selects a host-owned text recovery
+VT and a separate compositor VT as the candidate failure boundary. That test
+surface is not the final graphical APX broker and does not resolve the product
+display-manager or authentication decisions in this document.
+
+For the same experiment, `hyprland-g2-kde-release-proof-v1.md` defines the
+independent release conjunction. A desktop adapter may request graceful logout,
+but only the executor's repeated session, process, service, IPC, device, VT,
+mount, namespace, and SDDM observations can permit the next activation.
 
 ## Privacy
 

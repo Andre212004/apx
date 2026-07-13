@@ -3,6 +3,73 @@
 This roadmap is documentation-first. `PROJECT_STATE.md` is the canonical source
 for product intent, method, deviations, and the immediate milestone.
 
+## Accepted Delivery Order
+
+The primary first-install path is now CLI-first on a fresh minimal Arch host:
+
+```text
+headless bootstrap -> headless Hub CLI -> headless Development
+  -> lifecycle/isolation/storage/recovery -> H0 Hyprland
+  -> graphical controls -> optional graphical Hub
+```
+
+The full C0–C9 ladder is maintained in
+`headless-bootstrap-and-cli-first-v1.md`. Git/Codex/source/build tools belong in
+Development, never Hub. A Git checkout is not run as an unrestricted privileged
+installer. Existing KDE/SDDM migration and G2 remain a secondary compatibility
+campaign and no longer block the clean headless path.
+
+Development-to-Hub delivery is a promotion pipeline, not cross-Environment
+editing: an untrusted candidate crosses a bounded import into host-owned
+quarantine, passes independent verification and separate catalogue admission,
+then the executor reconstructs and verifies a replacement Hub while retaining
+the previous generation for rollback. The logical contract is in
+`development-to-hub-release-promotion-v1.md`; its physical mechanisms remain
+open.
+
+The first clean-install foundation now selects the bounded C1–C6 experiment:
+x86_64 UEFI, one target disk, LUKS2/Btrfs, systemd-boot, a closed minimal Arch
+package-name manifest, text-only broker session, password owner authentication,
+a signed APX Arch package, and `systemd-nspawn` with mandatory private users and
+no graphical/device grants. Exact target evidence and trust keys still block a
+real installation.
+
+The first pure contracts now parse a closed headless-Hub candidate, build a
+non-mutating quarantine import plan, parse clean-install target/supply evidence,
+and build a dossier that can reach only `ready-for-separate-approval`. The
+future CLI vocabulary is fixed, but import, catalogue, installer, executor
+effects, trust keys, and disposable installation remain absent.
+
+The repository now also contains in-memory exact-transition stores for release
+promotion and the full ten-stage clean-install journal. They prove approval
+separation, ordered effects, stale-writer and forged-jump refusal, and
+preserve-on-uncertainty recovery. They do not perform physical import,
+catalogue publication, disk changes, or installation.
+
+The internal Hub/base release tree now has a closed pure member-manifest and
+reproducibility contract. It binds the candidate to exact canonical metadata,
+content digests, and compressed artefact identity while rejecting unsafe or
+mutable content. A raw archive reader, package build, signatures, and physical
+admission remain absent.
+
+The first unsigned package rehearsal is also closed at the definition/evidence
+level as `apx-contracts-development`. It contains only three non-mutating
+validators and four contract documents, exposes no APX command or service, and
+can never become trusted merely by building successfully. Apache-2.0 is now the
+project licence; actual package bytes wait for a clean frozen source revision.
+
+The offline root/release-signer custody and ceremony boundary is documented,
+including separated backups, proven restoration, independent verification,
+rotation, revocation, and compromise handling. It deliberately does not choose
+or generate production keys: the exact cryptographic/tool profile and a real
+physical offline rehearsal remain gates.
+
+The repository-side disposable C0–C6 rehearsal is now fixed: UEFI VM envelope,
+no-host-share boundary, evidence/checkpoint rules, interruption injection,
+Hub/Development/package-locality/lifecycle tests, and stop conditions. It is not
+yet executable because the hypervisor/ISO, functional bootstrap, production
+trust, effect adapters, and VM-bound dossier are absent.
+
 ## Phase 0: Repository and Contract Foundation
 
 Status: substantially complete.
@@ -33,7 +100,8 @@ Goals:
 - define host versus Environment package boundaries;
 - define the host, common APX base, role-template, and mutable Environment
   boundaries;
-- validate desktop operation with Hyprland, KDE Plasma, and GNOME;
+- validate the headless backend first, then desktop operation with Hyprland,
+  KDE Plasma, and GNOME;
 - specify GPU, audio, input, portals, notifications, secrets, storage, devices,
   IPC, network, capabilities, seccomp, and cgroup policies;
 - prove that duplicate independent application installations and clean deletion
@@ -119,6 +187,38 @@ handling, desktop adapters, locking, power actions, and Hub-failure recovery.
 Authentication technology, broker/display-manager selection, and experiments
 remain unresolved.
 
+The separate `hyprland-g2-exclusive-session-design-v1.md` records the physical
+hand-off safety boundary and the current blockers for a G2 preview, but it does
+not authorize a device, session, or host effect yet.
+
+The companion `hyprland-g2-broker-recovery-boundary-v1.md` now selects a
+two-VT, host-owned recovery direction and revocable exact device leases for G2
+only. The controller, SDDM quiescence, device mediator, fixtures, and physical
+rehearsal remain gates before any executable preview.
+
+The separate `hyprland-g2-kde-release-proof-v1.md` now selects the independent
+release conjunction and two-pass stability rule. Installed-version KDE/SDDM
+operations, host observation mechanisms, evaluator fixtures, and a read-only
+preview remain required.
+
+The first read-only current-host observation found two live KDE session
+generations on the physical seat and showed that ordinary DRM descriptor scans
+cannot alone prove KMS release. The observer must therefore cover both sessions
+and a second authoritative DRM ownership mechanism before G2 execution.
+
+The logical G2 observer schema now closes the evidence record and pair-evaluator
+contract. Exact source adapters, minimal privileges, evaluator fixtures, and a
+fresh post-reboot read-only preview remain gates.
+
+The source-adapter proposal now fixes the logical API/authority mapping and
+first bounded limits. Implementation, installed-version fixtures, and the fresh
+preview remain gates; observation failure never widens privilege.
+
+For the primary clean-install path, H0 replaces G2 as the first graphical gate.
+H0 begins with no display manager or graphical owner and retains the independent
+text recovery surface. It reuses G2 device/readiness/teardown lessons without
+requiring KDE logout or SDDM quiescence.
+
 The proposed `environment-local-administration-v1.md` now defines how local
 `sudo`, package managers, installers, services, updates, devices, limits, and
 recovery remain confined to one Environment. Its confirmation mechanism and
@@ -132,7 +232,8 @@ executor.
 Goals:
 
 - implement the smallest independently validating privileged executor;
-- create one disposable experimental Environment using the selected models;
+- expose the smallest typed `apx` CLI before any graphical client;
+- create one disposable headless Environment using the selected models;
 - verify every postcondition using fresh authoritative evidence;
 - exercise failure injection, incomplete-operation recovery, and bounded
   rollback;
@@ -165,6 +266,11 @@ Possible scope:
 
 Status: pure interface-state model, product flow, and browser-based visual demo
 implemented; real Hyprland/graphical app not started.
+
+Priority: after the headless Hub CLI, Development Environment, C0–C6 lifecycle
+and recovery gates, and H0 first graphical Environment pass. The graphical Hub
+is optional; it must remain a client of the CLI protocol rather than replacing
+the independently usable command/recovery path.
 
 Possible scope:
 
@@ -216,5 +322,7 @@ Goals:
 - Environment-local software, stronger process isolation, templates, session
   handoff, the Hub UI, Odysseus integration, and Codex provisioning are not
   implemented.
+- The accepted clean-install order is headless and CLI-first, but no clean APX
+  bootstrap or mutating CLI exists.
 - The user-local Brave experiment is evidence, not the selected application
   architecture.

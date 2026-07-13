@@ -10,10 +10,17 @@ from pathlib import Path
 import stat
 import subprocess
 
+from apx_package_acquisition import AUTHORIZED_MANIFEST
+from apx_package_metadata import AUTHORIZED_SIGNATURE_EVIDENCE
 from apx_offline_base_build import GPGDIR, PACMAN_DB, ROOT, ROOTFS, EXPECTED_PACKAGES, MAX_BYTES
 
 
-AUTHORIZED_BUILD_REPORT = "f8bb104d6d0b11c4ec7d5caf14d0339fc553add4cac370d4b88652e1f2518155"
+BUILD_REPORT_FIELDS = {
+    "schema_version", "manifest_digest", "signature_evidence_digest",
+    "package_count", "local_database_count", "logical_bytes",
+    "allocated_bytes", "development_uid_entries",
+    "machine_identity_present", "report_digest",
+}
 
 
 class OfflineBaseFinalizeError(RuntimeError):
@@ -51,15 +58,39 @@ def _measure() -> tuple[int, int, int, int]:
     return logical, allocated, development, special
 
 
-def finalize_offline_base() -> OfflineBaseFinalReport:
-    if os.geteuid() != 0:
-        raise OfflineBaseFinalizeError("finalization requires ownership-visible execution")
+def _validated_build_report() -> str:
     try:
         build = json.loads((ROOT / "build-report.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise OfflineBaseFinalizeError("build report is unavailable") from error
-    if build.get("report_digest") != AUTHORIZED_BUILD_REPORT:
-        raise OfflineBaseFinalizeError("build report identity changed")
+    if not isinstance(build, dict) or set(build) != BUILD_REPORT_FIELDS:
+        raise OfflineBaseFinalizeError("build report schema changed")
+    report_digest = build.pop("report_digest")
+    canonical = json.dumps(build, sort_keys=True, separators=(",", ":"))
+    if not isinstance(report_digest, str) or hashlib.sha256(canonical.encode()).hexdigest() != report_digest:
+        raise OfflineBaseFinalizeError("build report digest is invalid")
+    integers = ("package_count", "local_database_count", "logical_bytes", "allocated_bytes", "development_uid_entries")
+    if any(not isinstance(build[field], int) or isinstance(build[field], bool) for field in integers):
+        raise OfflineBaseFinalizeError("build report numbers are invalid")
+    if (
+        build["schema_version"] != 1
+        or build["manifest_digest"] != AUTHORIZED_MANIFEST
+        or build["signature_evidence_digest"] != AUTHORIZED_SIGNATURE_EVIDENCE
+        or build["package_count"] != EXPECTED_PACKAGES
+        or build["local_database_count"] != EXPECTED_PACKAGES
+        or not 0 < build["logical_bytes"] <= MAX_BYTES
+        or not 0 < build["allocated_bytes"] <= MAX_BYTES
+        or build["development_uid_entries"] != 0
+        or build["machine_identity_present"] is not True
+    ):
+        raise OfflineBaseFinalizeError("build report invariants are not satisfied")
+    return report_digest
+
+
+def finalize_offline_base() -> OfflineBaseFinalReport:
+    if os.geteuid() != 0:
+        raise OfflineBaseFinalizeError("finalization requires ownership-visible execution")
+    build_report_digest = _validated_build_report()
     subprocess.run(
         ("/usr/bin/gpgconf", "--homedir", str(GPGDIR), "--kill", "all"),
         shell=False, stdin=subprocess.DEVNULL, capture_output=True, timeout=30,
@@ -78,7 +109,7 @@ def finalize_offline_base() -> OfflineBaseFinalReport:
     if packages != EXPECTED_PACKAGES or logical > MAX_BYTES or allocated > MAX_BYTES or development or special:
         raise OfflineBaseFinalizeError("final root invariants are not satisfied")
     draft = {
-        "schema_version": 1, "build_report_digest": AUTHORIZED_BUILD_REPORT,
+        "schema_version": 1, "build_report_digest": build_report_digest,
         "package_database_count": packages, "logical_bytes": logical,
         "allocated_bytes": allocated,
         "machine_identity_sha256": hashlib.sha256(machine_id.encode()).hexdigest(),

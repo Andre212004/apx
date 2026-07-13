@@ -19,6 +19,14 @@ Each level answers a different question:
 
 Passing one level does not automatically authorize the next.
 
+For the preferred clean-install route, the delivery gates are C0–C9 from
+`headless-bootstrap-and-cli-first-v1.md`. C0–C6 prove bootstrap, the headless
+Hub and Development Environment, package separation, lifecycle, storage,
+recovery, and ordinary CLI use before any graphical component is installed.
+H0 is then the first physical graphical gate. The older G2 campaign remains a
+separate compatibility test for migrating the current KDE/SDDM machine; it is
+not a prerequisite for the clean-install route.
+
 ## Level 1: Repository Contracts
 
 Status: active today.
@@ -111,8 +119,11 @@ stopped and revised. “Mostly isolated” is not accepted.
 
 ## Level 5: Graphical and Daily-Use Tests
 
-Status: exact first Hyprland role resolved and staged G0/G1/G2 plan prepared;
-no graphical package or runtime effect is authorized.
+Status: exact first Hyprland role resolved and built into a stopped disposable
+root; G0 completed as a bounded negative result, G1 passed nested rendering,
+and G2 has a design contract but no executable preview or authorization. This
+evidence is reusable, but the preferred clean-install route reaches physical
+graphics through H0 only after C0–C6 pass.
 
 Only after headless separation works do we add, one at a time:
 
@@ -151,6 +162,88 @@ with a valid current signer; expired signing keys remain blocked.
 Bounded graphical metadata inspection matched all 194 inside-package identities
 to the signed manifest and reproduced 1,022,339,199 declared installed bytes.
 No other package member was extracted or executed.
+The separately authorized offline role build produced a stopped 332-package
+root at `/tmp/apx-hyprland-build-v1`, using 1,739,587,584 allocated bytes under
+its 3 GiB limit. The 138-package source base remained content-identical, and an
+independent read confirmed the internal package count, key executables, and
+report digest. No compositor, hardware, audio, input, network, or host-session
+access occurred. G0 headless execution remains a later separate gate.
+The first G0 execution passed isolation and complete cleanup but not rendering:
+only the AMD render node was visible, yet Hyprland exited before publishing the
+headless output or using that node. Source preservation and zero residue passed.
+A v2 ordinary internal-user correction is prepared but not executed.
+V2 subsequently repeated complete isolation and cleanup but Aquamarine failed
+to create its backend before opening AMD or publishing `HEADLESS-0`. A v3
+bounded trace correction is prepared without broadening hardware access.
+V3 repeated safe cleanup and retained the trace, but the trace still awaits an
+authorized read after the host authentication window expired. Do not rerun G0
+until that existing evidence is diagnosed.
+The supplied trace identified the experiment's unsupported forced
+`LIBSEAT_BACKEND=noop` as a concrete configuration defect. V4 removes that
+override and preserves a crash report if needed; it is not yet executed.
+V4 proved the remaining failure is absence of a seat session inside the
+disposable container. V5 prepares a foreground, runtime-only seatd mediator
+without a service or broader device visibility; it is not executed.
+V5 then exposed a command-version mismatch before seatd started: Arch seatd
+rejects the explicit `-s` option and already defaults to the intended socket.
+V6 removes only that option and remains unexecuted.
+V6 started seatd but the test runner failed while stopping its namespace
+wrapper. Explicit recovery stopped the container and removed the v6 copy. V7
+adds inner-process signaling and exception-safe emergency teardown.
+V7 passed mediator lifecycle but seatd refused the client because no physical
+VT exists. V8 uses the official non-VT-bound seat setting without adding KMS,
+input, or any device.
+V8 activated the non-VT seat but exposed an unusable nspawn bind entry. V9 uses
+an ephemeral internal node for the identical AMD device number while the outer
+device policy remains closed.
+V9 still failed before the headless output and its protected diagnostic read
+was authentication-blocked. V10 changes only new evidence ownership to the
+Development identity; runtime and hardware boundaries are identical.
+V10 proved the Aquamarine version ignores the arbitrary internal alias. V11
+uses the standard render-node name for the same ephemeral `226:129` device.
+V11 still failed to open it. V12 explicitly restores the real node's `0666`
+mode after creation and captures the disposable user's pre-launch view.
+V12 cleaned all observed runtime state but lost its final controller output
+when the outer authorization wrapper stuck. V13 adds a bounded stage journal.
+Its evidence remains executor-owned and only group-readable by Development, so
+read access does not grant control over the privileged evidence path.
+V13 then completed every outer isolation and teardown gate but repeated the
+render failure. Aquamarine's source and retained trace establish that its DRM
+backend selects canonical `cardN` paths; this physical render node is not an
+independent compositor card. G0 must not widen to AMD `card2`, because that
+would add physical KMS authority. The accepted next proof is G1 nested with no
+direct DRM device; G2 alone may test exclusive KMS after KDE teardown.
+G1 v1 then showed that private-user identity correctly blocks direct connection
+to the owner-only KDE socket. V2 granted only the exact shifted UID through a
+temporary, exactly restored ACL and reached the Wayland backend, but lacked an
+allocator. V3 added only AMD `renderD129` and produced `WAYLAND-1`; v4 repeated
+that proof while narrowing a controller teardown defect. V5 corrected direct
+inner-Hyprland signaling and passed the complete nested gate: 1280×720/60
+monitor evidence, internal screenshot, exit code 0, ACL restoration, unchanged
+source, runtime removal, and zero process/mount residue. Direct Wayland protocol
+exposure remains provisional and is not a final isolation result.
+The G2 design now requires an independently recoverable broker surface,
+authoritative KDE release, exact AMD KMS/render resolution, mediated selected
+input, journaled grant and revocation, and verified return or safe recovery.
+The candidate experiment boundary is now a host-owned text recovery VT plus a
+separate Hyprland VT, temporary exact SDDM quiescence, and revocable per-run
+device mediation. An executable physical-session preview remains blocked until
+those mechanisms, the selected two-pass KDE/SDDM release evaluator, fixtures,
+recovery rehearsal, and exact approval exist.
+The first current-host read-only observation then found two live KDE session
+generations on `seat0`: active Development on `tty4` and inactive Hub on `tty1`
+through SDDM autologin. It also proved ordinary DRM descriptor scans are
+insufficient as the sole KMS release authority. G2 must model and release both
+sessions and add a version-bound DRM master/logind/lease observation before a
+physical preview can be prepared.
+The logical observer schema now defines automatic graphical-session discovery,
+separate manager-session classification, closed evidence sources, independent
+DRM fields, reboot invalidation, two immutable passes, and the three public
+results. Pure evaluator and failure fixtures remain unimplemented.
+The source-adapter proposal now maps every observer field to package, login1,
+systemd, cgroup/proc, sysfs, kernel DRM, IPC, mount/namespace, KDE, or recovery
+evidence and separates unprivileged, session-local, privileged-read, and effect
+authority. Its first limits and failure fixtures are specified but unimplemented.
 
 ## Level 6: Attack and Recovery Campaign
 

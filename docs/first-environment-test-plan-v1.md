@@ -210,12 +210,14 @@ is still pending, report cleanup as incomplete rather than claiming success.
 
 ## Route to the graphical demonstration
 
-After this console test passes, build a separate versioned Hyprland role from
-the admitted base, add the graphical packages through the same local package
-boundary, validate GPU/input/audio/portal access, and start a disposable
-graphical Environment. Only after that works should APX connect the Hub button,
-Environment switching, right-click deletion, and archived-Environment views to
-the real lifecycle executor.
+This passed console result is evidence for the new clean-install sequence, but
+it does not replace C0–C6. First prove the real bootstrap, headless Hub,
+headless Development Environment, Environment-local packages, lifecycle,
+storage, recovery, and daily CLI operation. Then build a separate versioned
+Hyprland role from the admitted base, validate GPU/input/audio/portal access,
+and run H0 with one disposable graphical Environment on a host with no active
+graphical owner. Only after H0 works should APX connect graphical Hub controls
+to the same lifecycle protocol already used by the CLI.
 
 ## Authorization boundary
 

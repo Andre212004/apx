@@ -64,6 +64,8 @@ def acquire_fixed_packages(
     manifest_path = Path(manifest_path)
     if root != ROOT and not str(root).startswith("/tmp/"):
         raise ValueError("package acquisition root is outside /tmp policy")
+    if os.path.lexists(root):
+        raise RuntimeError("package acquisition root exists; refusing adoption")
     manifest = parse_resolution_manifest(manifest_path.read_text(encoding="utf-8"))
     if manifest.manifest_digest != AUTHORIZED_MANIFEST:
         raise ValueError("resolution evidence does not match authorization")

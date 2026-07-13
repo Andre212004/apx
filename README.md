@@ -112,6 +112,14 @@ APX is in the documentation and architecture foundation phase.
 
 This repository contains architecture documentation and a read-only inspection and creation-planning prototype. No privileged creation or mutating APX runtime exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
 
+The accepted primary delivery order is now a fresh minimal Arch installation,
+a verified APX bootstrap, a headless Hub managed through the bounded `apx` CLI,
+and a separate headless Development Environment. Lifecycle, package isolation,
+storage, and recovery must work without graphics before the first Hyprland
+Environment is attempted. A graphical Hub is later and optional. Migration from
+the current KDE/SDDM installation remains a secondary compatibility path; no
+reinstallation of the current machine is authorized by this decision.
+
 `apx host check` performs a read-only readiness inspection for the proposed first experimental Environment, `trial`. It reports identity, storage, graphical-session, and account-policy evidence independently, marks sandbox-visible evidence as requiring authoritative host confirmation, and emits a deterministic non-executing manual plan. It does not create or modify host resources.
 
 `apx host doctor` gives a short plain-language safety result for the newer
@@ -164,6 +172,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 ```text
 .
 ├── AGENTS.md
+├── LICENSE
 ├── PROJECT_STATE.md
 ├── docs/
 │   ├── architecture.md
@@ -172,11 +181,19 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── base-snapshot-acquisition-v1.md
 │   ├── btrfs-storage-layout-v1.md
 │   ├── brave-user-local-experiment.md
+│   ├── bootstrap-development-package-v1.md
 │   ├── cleanup-completion-v1.md
+│   ├── clean-install-foundation-v1.md
+│   ├── clean-install-dossier-schema-v1.md
+│   ├── clean-install-cli-contract-v1.md
+│   ├── clean-install-readiness-2026-07-13.md
 │   ├── database-acquisition-experiment-v1.md
 │   ├── development-principles.md
+│   ├── development-to-hub-release-promotion-v1.md
+│   ├── disposable-clean-install-rehearsal-v1.md
 │   ├── environment-lifecycle-and-storage-v1.md
 │   ├── environment-local-administration-v1.md
+│   ├── headless-bootstrap-and-cli-first-v1.md
 │   ├── human-identity-and-session-handoff-v1.md
 │   ├── hub-experience-v1.md
 │   ├── installation-migration-v1.md
@@ -185,6 +202,9 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── package-resolution-experiment-v1.md
 │   ├── package-acquisition-experiment-v1.md
 │   ├── privileged-executor-protocol-v1.md
+│   ├── release-candidate-schema-v1.md
+│   ├── release-artifact-manifest-v1.md
+│   ├── release-key-custody-and-ceremony-v1.md
 │   ├── quota-enforcement-fixture-v1.md
 │   ├── roadmap.md
 │   ├── session-management.md
@@ -197,7 +217,10 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_acquisition.py
 │   ├── apx_capacity.py
 │   ├── apx_cleanup.py
+│   ├── apx_clean_install_dossier.py
+│   ├── apx_clean_install_journal.py
 │   ├── apx_consistency.py
+│   ├── apx_contracts_package.py
 │   ├── apx_downloader.py
 │   ├── apx_database_acquisition.py
 │   ├── apx_executor_contract.py
@@ -207,6 +230,9 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_http.py
 │   ├── apx_installation.py
 │   ├── apx_policy.py
+│   ├── apx_release_candidate.py
+│   ├── apx_release_artifact.py
+│   ├── apx_release_promotion.py
 │   ├── apx_package_acquisition.py
 │   ├── apx_stage2_gate.py
 │   ├── apx_staging.py
@@ -241,6 +267,29 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 Start with [docs/architecture.md](docs/architecture.md). The proposed storage
 and lifecycle contract is in
 [docs/environment-lifecycle-and-storage-v1.md](docs/environment-lifecycle-and-storage-v1.md).
+The accepted clean-install and CLI-first delivery order is in
+[docs/headless-bootstrap-and-cli-first-v1.md](docs/headless-bootstrap-and-cli-first-v1.md).
+The fixed first headless disk, boot, package, backend, authentication, and
+bootstrap target is in
+[docs/clean-install-foundation-v1.md](docs/clean-install-foundation-v1.md).
+Its pure dossier schema and future command vocabulary are in
+[docs/clean-install-dossier-schema-v1.md](docs/clean-install-dossier-schema-v1.md)
+and [docs/clean-install-cli-contract-v1.md](docs/clean-install-cli-contract-v1.md).
+The closed internal member manifest and exact-rebuild policy for Hub/base
+artefacts are in
+[docs/release-artifact-manifest-v1.md](docs/release-artifact-manifest-v1.md).
+The deliberately unsigned, non-functional first package rehearsal is specified
+in
+[docs/bootstrap-development-package-v1.md](docs/bootstrap-development-package-v1.md).
+The offline production-key roles, custody, recovery, and mandatory rehearsal
+are defined in
+[docs/release-key-custody-and-ceremony-v1.md](docs/release-key-custody-and-ceremony-v1.md).
+The exact disposable-machine envelope and C0–C6 fault-injection run order are
+in
+[docs/disposable-clean-install-rehearsal-v1.md](docs/disposable-clean-install-rehearsal-v1.md).
+The isolated path for promoting Codex-assisted Development work into a verified
+replacement Hub is in
+[docs/development-to-hub-release-promotion-v1.md](docs/development-to-hub-release-promotion-v1.md).
 Its security review and proposed physical mapping are in
 [docs/lifecycle-threat-model-review-v1.md](docs/lifecycle-threat-model-review-v1.md)
 and [docs/btrfs-storage-layout-v1.md](docs/btrfs-storage-layout-v1.md).

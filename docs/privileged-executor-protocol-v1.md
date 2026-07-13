@@ -46,14 +46,14 @@ The design separates five responsibilities:
 
 | Component | Responsibility | Explicitly cannot do |
 |---|---|---|
-| Hub UI | show choices, effects, progress, and recovery | invent privileged effects |
+| Hub client (CLI or UI) | show choices, effects, progress, and recovery | invent privileged effects |
 | planner | observe state and create a deterministic plan | mutate the host |
 | approval authority | prove the human approved one exact plan | change the plan |
 | executor | revalidate and perform typed effects | accept arbitrary commands |
 | verifier | independently observe postconditions | declare intent as evidence |
 
 These may initially share repository code, but their trust roles remain
-separate. The Hub UI and planner are not trusted merely because APX supplied
+separate. The Hub client and planner are not trusted merely because APX supplied
 them. The executor treats every incoming value as untrusted.
 
 ## Host Placement
@@ -121,6 +121,13 @@ Read-only list, inspect, status, and plan operations do not use privileged
 mutation authority. Shared-base garbage collection, policy migration,
 replace-in-place restore, host update, and arbitrary package installation from
 the Hub are outside v1.
+
+Candidate import, release verification/admission, replacement-Hub creation,
+Hub-generation selection, and old-Hub retirement are also outside this v1
+catalogue. Their logical separation is proposed in
+`development-to-hub-release-promotion-v1.md`. They require new closed operation
+families and cannot be disguised as `create`, `restore`, a host update, or an
+arbitrary package action under the current protocol.
 
 ## Approval Classes
 

@@ -116,8 +116,8 @@ The first catalogue may define these families after individual review:
 
 | Family | Intended purpose | Typical contents | Important exclusions |
 |---|---|---|---|
-| Hub | APX management and system summaries | APX UI and tightly scoped widgets | browser, editor, games, development tools |
-| Minimal | simple trusted workspace | small desktop and basic utilities | role-specific applications |
+| Hub | APX management and system summaries | APX CLI; optional later UI and tightly scoped widgets | browser, editor, games, development tools |
+| Minimal | simple trusted workspace | headless baseline or small desktop and basic utilities | role-specific applications |
 | University | study and coursework | office, PDF, browser, communication choices | personal university login or documents |
 | Development | software development | editor, Git, compiler, build/test tools | personal source code, keys, Codex credentials |
 | Games | gaming | launcher/runtime and reviewed graphics integration | accounts, saved games, broad device access by default |
@@ -130,9 +130,10 @@ template dynamically from arbitrary mix-and-match components.
 
 ## Hub Template Rules
 
-The Hub release may contain the APX management UI, status presentation, visual
-customization, and reviewed widgets needed for its role. The package containing
-the UI does not contain administrator credentials.
+The first Hub release may contain only the APX CLI and status presentation. A
+later variant may add graphical management UI, visual customization, and
+reviewed widgets needed for its role. Neither CLI nor UI package contains
+administrator credentials.
 
 Hub authority is supplied at runtime through the bounded broker/executor
 protocol. It is not a file, group membership, reusable token, socket copied into
@@ -315,6 +316,12 @@ invented as an in-place package command here.
 For the Hub, reconstruction may use the last known-good release or a newly
 approved release. APX must explain whether safe Hub preferences can be restored;
 live Hub authority and unknown mutable state never migrate automatically.
+
+The Development-to-Hub path is defined separately in
+`development-to-hub-release-promotion-v1.md`. A Development build is an
+untrusted candidate even when Codex created it and its digest matches. It must
+cross a bounded immutable import, independent verification, and separate
+catalogue admission before the executor may reconstruct a Hub from it.
 
 ## Retirement and Emergency Response
 

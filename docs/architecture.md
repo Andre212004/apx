@@ -8,7 +8,7 @@ The operating system remains Linux. APX is an orchestration layer that manages i
 
 A read-only APX inspection and creation-planning prototype exists in this repository. No privileged creation or mutating APX runtime exists. Existing manually created users do not yet represent the intended APX storage model. Their homes remain ordinary directories under the existing `@home` subvolume rather than dedicated Btrfs home subvolumes.
 
-Development currently takes place in the Development Environment named `apx-development`. SDDM currently manages graphical sessions. Codex is a temporary development tool and is not part of APX.
+Development currently takes place in the Development Environment named `apx-development`. SDDM currently manages graphical sessions. A 2026-07-13 read-only observation found active Development KDE on `tty4` and an inactive but live Hub KDE session on `tty1` through SDDM autologin; this is current state, not intended one-session APX behavior. Codex is a temporary development tool and is not part of APX.
 
 ## Non-Goals
 
@@ -36,6 +36,12 @@ The host owns:
 The boundary between minimal host software and Environment-local software is
 under evaluation. One host kernel is confirmed; one globally shared application
 and package set is not.
+
+For the preferred clean-install path, the host begins without a graphical
+desktop or display manager. It acquires a pinned APX source/release, installs a
+reviewed versioned artifact through a future typed bootstrap, creates a headless
+Hub, then creates a separate Development Environment. A mutable Git checkout is
+not a privileged installation interface.
 
 ## Environment-Local Applications and Data
 
@@ -503,6 +509,10 @@ Implementation should follow documented architecture. When a design question is 
 - Each Environment has its own graphical login session, with only one graphical Environment active at a time.
 - The Hub is an Environment dedicated to APX management.
 - The Hub is the default Environment in the intended session model.
+- The first Hub may be headless and use the bounded `apx` CLI as its management
+  surface.
+- The APX CLI is implemented and validated before graphical management controls;
+  later buttons remain clients of the same typed protocol.
 - The intended lifecycle is `Boot -> Hub -> Environment -> Hub`.
 - The Hub must not become a development workspace.
 - No implementation decision may require a unique lifecycle exception for the Hub.
@@ -517,10 +527,29 @@ Implementation should follow documented architecture. When a design question is 
 - Selected Environments may run isolated Odysseus or Codex assistants under
   explicit future Hub policy.
 - Normal Environment services use `Linger=no` and stop with the Environment's final login session.
+- Git, Codex, source, compilers, tests, and build outputs belong in Development,
+  never Hub or the steady-state host.
+- The preferred clean-install validation order proves headless lifecycle,
+  isolation, storage, package locality, and recovery before Hyprland or another
+  graphical Environment.
 
 ## Ideas Under Evaluation
 
 - The display-manager and session-handoff mechanism remains under evaluation; `greetd` has not been adopted.
+- H0 is the first graphical gate for a clean headless host. It starts with no
+  graphical owner or display manager and returns through an independent text
+  recovery path.
+- The separate G2 exclusive-session design records the physical handoff safety
+  boundary. Its companion broker/recovery proposal selects a two-VT,
+  host-owned recovery direction for that experiment only; an executable
+  preview remains blocked on exact mechanisms, fixtures, evidence, and fresh
+  approval. The KDE/SDDM release proposal adds a generation-bound, two-pass
+  conjunction so no single logout response, blank display, or missing process
+  can authorize physical device handoff. Observation is split between an
+  unprivileged collector, exact session-local adapter, narrow privileged
+  read-only source, and separate effect executor.
+  G2 is now the secondary in-place KDE/SDDM migration campaign and does not
+  block the primary headless bootstrap or H0.
 - The per-Environment application/root filesystem and normal/high-security
   isolation mechanisms remain under evaluation.
 

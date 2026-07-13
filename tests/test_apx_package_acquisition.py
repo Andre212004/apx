@@ -18,6 +18,10 @@ import apx_resolution
 class PackageAcquisitionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if not acquisition.MANIFEST_PATH.exists():
+            raise unittest.SkipTest(
+                "external package manifest was not retained across reboot"
+            )
         cls.real_manifest = apx_resolution.parse_resolution_manifest(
             acquisition.MANIFEST_PATH.read_text(encoding="utf-8")
         )
