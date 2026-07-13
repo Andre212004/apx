@@ -485,6 +485,14 @@ matched both recorded SHA-256 values. Quotas stayed healthy; no installation,
 extraction, execution, other download, or cleanup occurred. Exact evidence and
 the preserved boundary are in `docs/database-acquisition-experiment-v1.md`.
 
+`src/apx_repository_db.py` now strictly reopens staged Arch database archives
+without extraction. It binds the regular-file SHA-256, bounds compressed and
+expanded bytes and record counts, rejects traversal and unexpected archive
+members, and validates unique safe package names/files, version, architecture,
+sizes, SHA-256, base64 signature, and dependency fields. The two real staged
+databases passed: 296 `core` and 14,842 `extra` package records. This validates
+metadata structure only; it does not yet accept a resolved package closure.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

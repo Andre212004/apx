@@ -37,3 +37,9 @@ The evidence remains at
 It is not yet a verified base. The next stage may reopen these exact identities
 to resolve a closed package manifest. It must not silently redownload or replace
 them. Cleanup requires separate approval and complete-cleanup verification.
+
+The repository's strict no-extraction parser subsequently reopened both exact
+files. It validated archive paths, bounded expansion, required metadata,
+architectures, sizes, package hashes, encoded signatures, uniqueness, and
+dependencies for 296 `core` and 14,842 `extra` records. This does not yet prove
+that the selected minimal package dependency closure is correct.

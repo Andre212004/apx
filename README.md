@@ -210,7 +210,8 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_trust_evidence.py
 │   ├── apx_transfer.py
 │   ├── apx_environment.py
-│   └── apx_registration.py
+│   ├── apx_registration.py
+│   └── apx_repository_db.py
 ├── tests/
 ├── prototypes/
 │   └── hub-demo/

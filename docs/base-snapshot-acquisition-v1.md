@@ -87,6 +87,12 @@ repository-database transfer boundary only; package resolution, package and
 signature downloads, complete manifest verification, base extraction, and
 Stage 2 remain blocked.
 
+`src/apx_repository_db.py` implements the strict no-extraction database parser.
+It rechecks the staged regular-file digest, bounds archive expansion and member
+count/size, rejects traversal and unexpected members, and validates the package
+identity, architecture, sizes, SHA-256, encoded signature, uniqueness, and
+dependency fields needed to check resolver output independently.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

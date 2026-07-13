@@ -244,6 +244,10 @@ One separately authorized real network fixture acquired only the dated Arch
 `core.db` and `extra.db`, stayed within its per-file and aggregate bounds,
 published exactly two regular files, and reproduced both hashes on independent
 reopen. Package acquisition, extraction, and installation were not exercised.
+Repository-database parser fixtures cover file digest and symlink refusal,
+archive traversal and unexpected members, expansion bounds, duplicate package
+and field identities, malformed text/numbers/hashes/signatures/architectures,
+and canonical package metadata without extracting archive contents.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account
