@@ -24,7 +24,9 @@ TRUST_INPUT_HASHES = {
     TRUSTED: "384c7daf07a89ec6610859142b009ca5c0b3062ed3ab2d3c50629fef9d002e8f",
     REVOKED: "aafbc33d6be7e200dd6226dbb467623a38a00db431826258bccfaf5cebfef6a1",
 }
-BAD_STATUS = {"BADSIG", "ERRSIG", "NO_PUBKEY", "REVKEYSIG", "EXPKEYSIG", "KEYEXPIRED", "SIGEXPIRED"}
+# KEYEXPIRED alone may describe an unrelated historical subkey on an otherwise
+# valid identity. EXPKEYSIG identifies an expired signing key and remains fatal.
+BAD_STATUS = {"BADSIG", "ERRSIG", "NO_PUBKEY", "REVKEYSIG", "EXPKEYSIG", "SIGEXPIRED"}
 MAX_OUTPUT = 4 * 1024**2
 
 

@@ -144,6 +144,10 @@ The separately authorized graphical acquisition published exactly 194 packages
 and 194 signatures totaling 264,707,836 bytes. Independent reopen matched every
 package hash/size and found zero missing, unexpected, or partial files. Signer
 trust and the independent cryptographic pass remain required.
+Graphical signature verification then passed all 194 packages twice with 25
+trusted primary identities. A regression fixture distinguishes an unrelated
+expired historical subkey warning from `EXPKEYSIG`: only the former may coexist
+with a valid current signer; expired signing keys remain blocked.
 
 ## Level 6: Attack and Recovery Campaign
 

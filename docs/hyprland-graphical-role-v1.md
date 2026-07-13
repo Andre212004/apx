@@ -1,8 +1,7 @@
 # APX Hyprland Graphical Role v1
 
-Status: exact offline closure and separately authorized package/signature
-acquisition passed on 2026-07-13; signature trust verification, installation,
-device grants, and launch remain separate.
+Status: exact offline closure, acquisition, and double signature verification
+passed on 2026-07-13; installation, device grants, and launch remain separate.
 
 ## Objective and machine profile
 
@@ -51,9 +50,22 @@ detached signatures into
 264,707,836, below the 277,362,247-byte authorization. Independent reopening
 reproduced every package size and SHA-256, found every non-empty bounded
 signature, and found zero missing, unexpected, or partial files. Nothing was
-installed, extracted, executed, or granted GPU access. Every detached signature
-must still pass the frozen Arch trust and independent GnuPG verification before
-the role can be built.
+installed, extracted, executed, or granted GPU access. Detached-signature trust
+was the next separate gate and is recorded below.
+
+Double offline signature verification now passed all 194 packages. GnuPG and
+the independent `gpgv` path agreed on every signer; 25 trusted primary signing
+identities were accepted. Evidence digest:
+`15ee100d7be5bfef16278f476503c2b2d7e3546fb3027b5f3a541180dc302863`.
+
+The first pass stopped safely on `seatd` because the parser treated warnings
+about unrelated expired historical subkeys as an expired current signing key.
+Inspection proved its actual signing subkey valid through 2027, its primary key
+valid through 2026-12-31, a valid signature, no revocation, and current Arch
+master certifications. Policy now ignores bare `KEYEXPIRED` only when a valid
+signature exists; `EXPKEYSIG`, expired signatures, revocation, unknown keys,
+bad signatures, and insufficient master trust remain fatal. The refused v1
+evidence was preserved and the successful run used a new v2 root.
 
 Waybar is deliberately not a role seed. The final expanding APX control needs a
 dedicated panel and cannot become a generic-bar script. A temporary bar is

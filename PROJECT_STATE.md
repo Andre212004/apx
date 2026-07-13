@@ -886,6 +886,17 @@ extracted, or executed and no GPU/system effect occurred. Detached-signature
 trust verification and the independent second cryptographic pass remain the
 next gate before any role build.
 
+All 194 graphical package signatures subsequently passed offline GnuPG trust
+validation and an independent `gpgv` pass; both paths agreed on every signer
+across 25 trusted primary identities. Evidence digest:
+`15ee100d7be5bfef16278f476503c2b2d7e3546fb3027b5f3a541180dc302863`.
+The first attempt safely exposed an overly broad interpretation of bare
+`KEYEXPIRED` warnings from unrelated historical subkeys. The corrected policy
+still blocks `EXPKEYSIG`, expired signatures, revoked/unknown/bad signatures,
+and insufficient Arch master trust. No install, extraction, execution, GPU, or
+system effect occurred. Bounded metadata inspection and a separately approved
+disposable graphical-role build are next.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

@@ -24,6 +24,18 @@ class SignatureVerificationTests(unittest.TestCase):
                 with self.assertRaises(verification.SignatureVerificationError):
                     verification.parse_valid_signature(output)
 
+    def test_unrelated_expired_subkey_warning_does_not_override_valid_signer(self):
+        signer, primary = "1" * 40, "2" * 40
+        output = (
+            "[GNUPG:] KEYEXPIRED 1642399435\n"
+            f"[GNUPG:] VALIDSIG {signer} 2026 0 0 0 0 0 0 0 {primary}\n"
+        )
+        self.assertEqual(verification.parse_valid_signature(output), (signer, primary))
+        with self.assertRaises(verification.SignatureVerificationError):
+            verification.parse_valid_signature(
+                f"[GNUPG:] EXPKEYSIG dead user\n[GNUPG:] VALIDSIG {signer} 2026 0 0 0 0 0 0 0 {primary}\n"
+            )
+
     def test_only_valid_unique_current_master_certifications_count(self):
         def row(validity, issuer):
             return ":".join(["sig", validity] + [""] * 10 + [issuer])
