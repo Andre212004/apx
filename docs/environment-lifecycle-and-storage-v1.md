@@ -223,6 +223,13 @@ Any disagreement stops rather than widening deletion by path or owner.
 Deletion is leaf-first and registration-last. Final verification proves target
 absence and continued identity of protected neighbors.
 
+The user selects either `environment-only`, preserving every enumerated
+snapshot and archive, or `complete-purge`, including those copies after strong
+confirmation. Logical path disappearance moves the Environment to visible
+`cleaning`; only complete resource, runtime, qgroup, account, registration, and
+physical-cleanup evidence moves it to absent and permits identity reuse. The
+detailed contract is `cleanup-completion-v1.md`.
+
 ## Incomplete Operations and Recovery
 
 Recovery begins read-only and classifies every involved resource as

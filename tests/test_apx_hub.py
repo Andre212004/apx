@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import apx_hub
 
 
-def environment(name: str, *, role: str = "standard", state: str = "inactive"):
+def environment(name: str, *, role: str = "standard", state: str = "inactive", cleanup_summary=None):
     return apx_hub.EnvironmentSummary(
         logical_name=name,
         display_name=name.replace("-", " ").title(),
@@ -21,6 +21,7 @@ def environment(name: str, *, role: str = "standard", state: str = "inactive"):
         security_profile="Normal",
         template_name="Universidade 1.0",
         storage_summary="12 GB utilizados",
+        cleanup_summary=cleanup_summary,
     )
 
 
@@ -56,6 +57,7 @@ class HubViewTests(unittest.TestCase):
         self.assertTrue(action(card, "archive").enabled)
         self.assertTrue(action(card, "destroy").enabled)
         self.assertEqual(action(card, "destroy").approval_class, "strong-confirmation")
+        self.assertIn("preservar as cópias", action(card, "destroy").explanation)
         for item in card.actions:
             self.assertFalse(hasattr(item, "command"))
             self.assertFalse(hasattr(item, "path"))
@@ -83,6 +85,21 @@ class HubViewTests(unittest.TestCase):
         card = next(item for item in view.environment_cards if item.logical_name == "work")
         self.assertEqual({item.action_id for item in card.actions}, {"retry-check", "details"})
         self.assertTrue(all(item.request_kind is None for item in card.actions))
+
+    def test_cleaning_environment_remains_visible_with_read_only_progress(self) -> None:
+        view = ready_view(
+            environment("games", state="cleaning", cleanup_summary="A limpar — 7/9 recursos")
+        )
+        card = next(item for item in view.environment_cards if item.logical_name == "games")
+        self.assertEqual(card.state_label, "A limpar — 7/9 recursos")
+        self.assertEqual({item.action_id for item in card.actions}, {"cleanup-status", "details"})
+        self.assertTrue(all(item.enabled and item.request_kind is None for item in card.actions))
+
+    def test_cleanup_progress_is_required_only_for_cleaning_state(self) -> None:
+        with self.assertRaises(ValueError):
+            ready_view(environment("games", state="cleaning"))
+        with self.assertRaises(ValueError):
+            ready_view(environment("games", cleanup_summary="unexpected"))
 
     def test_unavailable_or_busy_system_disables_all_mutating_actions(self) -> None:
         for state in ("busy", "incomplete", "unavailable"):

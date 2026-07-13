@@ -436,6 +436,19 @@ never adopted. Existing state, symlinks, non-regular entries, changed modes or
 plan binding, duplicate names, and unsafe filenames fail closed. It never
 selects or writes a production host path and is not the authoritative store.
 
+The repository now implements the pure complete-cleanup contract in
+`src/apx_cleanup.py` and documents it in `docs/cleanup-completion-v1.md`.
+Deletion offers `environment-only`, which preserves enumerated snapshots and
+archives, or `complete-purge`, which includes every enumerated Environment
+copy. Completion requires selected resources, account, registration, runtime,
+mounts, open handles, network state, deleted-subvolume records, and qgroups to
+be absent; quota state must remain consistent and protected neighbors
+unchanged. `<under deletion>` and `<stale>` remain visible as `freeing-space`.
+Identity reuse is forbidden until complete. Observed physical reclaim is
+reported without claiming it must equal logical size. The Hub now supports a
+read-only `cleaning` card and retains it until final evidence passes. No
+destructive executor is implemented.
+
 `src/apx_downloader.py` now implements a bounded streaming HTTPS transfer
 contract with an injected non-redirecting opener and protected-byte sink. It
 requires the exact archive host/date/path, a safe matching filename, status

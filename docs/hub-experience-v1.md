@@ -121,6 +121,13 @@ delete remain blocked until verified stop.
 Normal actions disappear. The card offers recovery and read-only details. The
 user is not encouraged to delete ambiguous state to remove the warning.
 
+After deletion is approved, the card remains visible as `A limpar` with
+read-only progress until complete cleanup evidence passes. The confirmation
+offers `Environment only` (preserve listed snapshots and archives) and `Delete
+everything` (include all listed copies with strong data-loss confirmation).
+The name cannot be reused while the card remains. A stuck cleanup exposes
+diagnostics and separately approved recovery, never an automatic force option.
+
 ### State unconfirmed
 
 Only “Check again” and read-only details are available. The Hub explains that

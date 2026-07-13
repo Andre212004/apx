@@ -232,6 +232,11 @@ The bounded downloader fixture simulates exact responses, redirects, status
 failures, missing or contradictory lengths, early and excessive bodies,
 digest disagreement, non-byte data, network/read/staging failures, and timeout
 policy without making a network connection.
+Complete-cleanup fixtures cover both user scopes, strong approval, exact
+resource sets and digests, identity disagreement, runtime/open-handle/mount/
+network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account
+and registration residue, factual reclaim, pending identity reuse, and the
+Hub's persistent read-only progress card.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are

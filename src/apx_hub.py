@@ -9,10 +9,10 @@ from apx_environment import validate_logical_name
 
 HUB_VIEW_SCHEMA_VERSION = 1
 SYSTEM_STATES = ("ready", "busy", "incomplete", "unavailable")
-ENVIRONMENT_STATES = ("inactive", "active", "incomplete", "unconfirmed")
+ENVIRONMENT_STATES = ("inactive", "active", "incomplete", "unconfirmed", "cleaning")
 ROLES = ("hub", "standard", "development")
 APPROVAL_CLASSES = ("none", "unlocked-session", "explicit-confirmation", "strong-confirmation")
-READ_ONLY_ACTIONS = ("details", "retry-check", "system-details")
+READ_ONLY_ACTIONS = ("details", "retry-check", "cleanup-status", "system-details")
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,7 @@ class EnvironmentSummary:
     security_profile: str
     template_name: str
     storage_summary: str
+    cleanup_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,16 @@ def _validate_environment(summary: EnvironmentSummary) -> None:
     for value in (summary.security_profile, summary.template_name, summary.storage_summary):
         if not value or len(value) > 160 or any(not character.isprintable() for character in value):
             raise ValueError("invalid Environment summary text")
+    if summary.state == "cleaning":
+        if (
+            not isinstance(summary.cleanup_summary, str)
+            or not summary.cleanup_summary
+            or len(summary.cleanup_summary) > 160
+            or any(not character.isprintable() for character in summary.cleanup_summary)
+        ):
+            raise ValueError("cleaning Environment requires safe progress text")
+    elif summary.cleanup_summary is not None:
+        raise ValueError("cleanup progress is valid only while cleaning")
 
 
 def _environment_actions(
@@ -126,6 +137,19 @@ def _environment_actions(
 ) -> tuple[HubAction, ...]:
     system_ready = system_state == "ready" and hub_is_active
     details = _action("details", "Ver detalhes", True, "Mostra informação sem fazer alterações.", None, "none")
+
+    if summary.state == "cleaning":
+        return (
+            _action(
+                "cleanup-status",
+                "Ver limpeza",
+                True,
+                "Mostra os recursos e o espaço que ainda estão a ser libertados. Não força a eliminação.",
+                None,
+                "none",
+            ),
+            details,
+        )
 
     if summary.state == "incomplete":
         return (
@@ -199,7 +223,7 @@ def _environment_actions(
             "destroy",
             "Apagar",
             system_ready,
-            "Apaga os programas e ficheiros deste Environment. Cópias guardadas são mostradas separadamente." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
+            "No aviso seguinte escolhes preservar as cópias ou apagar completamente o Environment, snapshots e arquivos." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
             "destroy" if system_ready else None,
             "strong-confirmation" if system_ready else "none",
         ),
@@ -218,6 +242,7 @@ def _environment_card(
         "active": "Aberto agora",
         "incomplete": "Precisa de recuperação",
         "unconfirmed": "Estado por confirmar",
+        "cleaning": summary.cleanup_summary or "A limpar",
     }
     return EnvironmentCard(
         logical_name=summary.logical_name,

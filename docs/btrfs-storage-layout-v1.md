@@ -269,6 +269,12 @@ path disappearance alone is not final proof of reclaimed storage. Final
 reporting distinguishes logical absence from completed filesystem cleanup and
 observed quota/free-space recovery.
 
+`cleanup-completion-v1.md` now fixes the repository-level completion rule:
+target `DELETED`, `<under deletion>`, and `<stale>` identities remain pending;
+they are not success even when only metadata-sized usage remains. Identity and
+name reuse waits for authoritative absence, healthy quotas, protected-neighbor
+verification, and fresh physical-capacity observation.
+
 ## Capacity and Reserve Policy
 
 The Stage 2 experiment retains its proposed 8 GiB root and 2 GiB home budgets.
