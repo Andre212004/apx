@@ -63,6 +63,14 @@ non-byte responses, network/read/sink failure, and digest disagreement abort.
 The current tests provide fake responses; no production opener or network
 execution command is implemented.
 
+`src/apx_http.py` supplies the fixed direct transport opener. Environment
+proxy discovery is disabled, redirects and cookies are absent, TLS uses system
+CA validation with hostname checking and a TLS 1.2 minimum, and the GET request
+contains only fixed content, encoding, connection, and APX user-agent headers.
+It rejects any URI authority or suffix change and sanitizes transport errors.
+Unit tests inject an opener; this does not constitute network approval or a
+real download.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

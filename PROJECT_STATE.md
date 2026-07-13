@@ -460,6 +460,14 @@ bytes, malformed or non-byte responses, timeouts/open/read failures, digest
 disagreement, and staging rejection. Tests use fake responses; the module does
 not construct a network opener or perform a real download by itself.
 
+`src/apx_http.py` now implements the fixed direct HTTPS opener for the Arch
+Linux Archive. It disables environment proxies, cookies, and redirects; uses
+the system CA trust with hostname verification and TLS 1.2 minimum; sends only
+fixed non-secret GET headers; and rejects alternate schemes, hosts,
+credentials, ports, query strings, fragments, changed final URI, invalid
+timeouts, and sanitized connection/status failures. Tests inject responses;
+no real acquisition has been performed.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or
