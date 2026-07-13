@@ -111,7 +111,8 @@ stopped and revised. “Mostly isolated” is not accepted.
 
 ## Level 5: Graphical and Daily-Use Tests
 
-Status: future.
+Status: exact first Hyprland role resolved and staged G0/G1/G2 plan prepared;
+no graphical package or runtime effect is authorized.
 
 Only after headless separation works do we add, one at a time:
 
@@ -132,6 +133,13 @@ host access, it remains disabled until a narrower design exists.
 Exit requirement: the owner can use and switch Environments without seeing
 internal Linux accounts, leaking data, leaving background runtimes, or losing a
 recovery route to the Hub.
+
+The first closure uses 194 new packages and is bound to manifest digest
+`e2f6adfc19e00dfe7cae21b4eab1650437edf24d817dc355a9af449d1cd9b25e`.
+G0 uses only the AMD render node and a headless Hyprland output; G1 adds a
+mediated nested window while KDE remains available; G2 alone may request an
+exclusive physical session. NVIDIA, raw input, audio, host Wayland/PipeWire/
+D-Bus/portal sockets, and host home remain denied until their named stage.
 
 ## Level 6: Attack and Recovery Campaign
 

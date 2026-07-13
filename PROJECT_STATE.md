@@ -862,6 +862,22 @@ portal/session boundaries, then perform a disposable graphical boot before
 wiring the real Hub UI. The console result does not authorize those downloads
 or device/session effects.
 
+The first Hyprland graphical role is now resolved offline against the same
+dated 2026-07-11 Arch databases. Fourteen explicit seeds produce 194 new
+packages, 264,648,263 compressed bytes, and 1,022,339,199 declared installed
+bytes; base plus role totals 332 packages. The manifest digest is
+`e2f6adfc19e00dfe7cae21b4eab1650437edf24d817dc355a9af449d1cd9b25e`.
+No network, download, installation, extraction, or graphical execution occurred.
+
+The host has AMD PCI `0000:05:00.0` using `amdgpu` and NVIDIA PCI
+`0000:01:00.0` using `nouveau`. `docs/hyprland-graphical-role-v1.md` selects
+only AMD for G0 headless rendering, keeps KDE available for G1 nested display,
+and defers physical KMS/input handoff to G2. NVIDIA, raw input, audio, and host
+Wayland/PipeWire/D-Bus/portal sockets are not part of G0. Waybar is not the
+final panel; the expanding APX taskbar control remains a dedicated component
+with a desktop-independent lifecycle contract. Package acquisition and every
+graphical/device/session effect require later approvals.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;
