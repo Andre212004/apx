@@ -269,6 +269,10 @@ paths, invalid path encoding, oversized listings, non-`/tmp` targets, changed
 receipts, excessive declared or observed storage, and special filesystem
 entries. The real extraction stayed below 1 GiB; an independent tree walk
 reproduced its file-type counts and byte totals with zero special entries.
+Candidate-admission checks bind the extraction receipt to the live disposable
+tree, require the minimal runtime, reject machine-local identity, report actual
+ownership, and require a populated local pacman database. The real candidate
+truthfully returned `not-admitted`; no boot or repair was attempted.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

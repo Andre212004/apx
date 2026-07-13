@@ -723,6 +723,18 @@ This proves bounded assembly of a candidate filesystem; it does not admit a
 base release, create an Environment, execute candidate content, or authorize a
 host change. Candidate sanitization and structural validation are next.
 
+Read-only candidate admission has now passed evidence integrity, core runtime
+presence, and absence of machine-local identity. It truthfully reports four
+blockers: raw extraction has development-fixture ownership, the local pacman
+installed-package database is absent, isolated boot/stop has not passed, and no
+generation-bound lifecycle record exists. The assessment digest is
+`fcd1cc097f5ffb494225b73fe5bbbb627686a448b6542ae31587daa26900543a`.
+`docs/first-environment-test-plan-v1.md` defines the closed route: rebuild a
+correct offline disposable root, preview the isolated systemd-nspawn boundary,
+perform one bounded networkless console boot, then verify complete stop and
+cleanup. This remains a proposal and authorizes no package execution, boot, or
+host mutation. A graphical Hyprland role follows a successful console gate.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

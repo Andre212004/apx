@@ -119,6 +119,14 @@ confirmed 23,144 regular files, 1,191 directories, 7,519 symbolic links, zero
 special files, and tree digest
 `0f4e517a27ec474f63a3de74cec5df4f1a3adaee9a235a9c7e3c736a4e1622c1`.
 This is a disposable candidate filesystem, not an admitted APX base release.
+The read-only admission assessment passed receipt integrity, required runtime
+presence, and machine-identity cleanliness, but correctly returned
+`not-admitted`. Raw extraction has development-fixture ownership and no pacman
+installed-package database; isolated boot, shutdown, and generation-bound
+lifecycle evidence also do not yet exist. Assessment digest:
+`fcd1cc097f5ffb494225b73fe5bbbb627686a448b6542ae31587daa26900543a`.
+The closed route to the first console Environment test is recorded in
+`first-environment-test-plan-v1.md`.
 
 ## Trust Inputs
 
