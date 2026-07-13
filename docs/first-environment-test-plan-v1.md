@@ -69,6 +69,16 @@ and a volatile overlay over the unchanged source root. Preview digest:
 `676d22c1d3b9f8d5f9005d20583addeafdc0abdf42986b38b9c67cda29b8fd28`.
 Generating this preview did not execute `systemd-nspawn`.
 
+The first authorized Phase C attempt stopped before starting systemd because
+the installed nspawn parser requires comma-separated capability names. It
+returned code 1, started no candidate content, left zero matching processes and
+mounts, and preserved the source report. Failed-attempt report digest:
+`daddc5109d728b2c9083114019da457568fa38488e5917409aa28c1f3fc5f413`.
+The punctuation-only correction preserves the same dropped capabilities and
+produces preview digest
+`53c30a3c55c1a6b5b196d9f73694b3b6851e7cab84fdcd6f4bcace24bdb91944`.
+It is deliberately blocked from execution until separately authorized.
+
 ## Phase C: bounded console boot
 
 Start only `/usr/lib/systemd/systemd` with a fixed timeout, private process and

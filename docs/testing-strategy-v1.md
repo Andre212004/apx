@@ -284,6 +284,10 @@ The first-boot preview is deterministic and contains no execution capability.
 Fixtures require the two-minute timeout, memory/CPU/task ceilings, private
 network and user mapping, volatile source preservation, closed devices, no
 machine registration, and no host bind, home path, port, or external network.
+The first real attempt exercised fail-safe behavior: an option-format error
+stopped before systemd, and post-checks found zero processes and mounts with the
+source unchanged. The corrected comma-separated capability form has a new
+preview digest and the executor refuses it until that digest is authorized.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

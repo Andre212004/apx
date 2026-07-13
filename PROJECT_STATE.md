@@ -756,6 +756,16 @@ device policy, and caps the test at 120 seconds, 512 MiB memory, 256 tasks, and
 No container was started. Phase C boot and transient cleanup still require an
 exact separate approval.
 
+The first Phase C attempt was authorized against that digest but stopped before
+systemd because nspawn requires comma-separated capability names. It returned
+code 1, left zero matching processes and mounts, and preserved the source. The
+failed-attempt report digest is
+`daddc5109d728b2c9083114019da457568fa38488e5917409aa28c1f3fc5f413`.
+The same protection list is now encoded with the required punctuation under
+corrected preview digest
+`53c30a3c55c1a6b5b196d9f73694b3b6851e7cab84fdcd6f4bcace24bdb91944`.
+The executor intentionally refuses this corrected plan until separate approval.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

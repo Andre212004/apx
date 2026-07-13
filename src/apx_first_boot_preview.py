@@ -46,7 +46,7 @@ def fixed_command() -> tuple[str, ...]:
         "--property=TasksMax=" + TASKS_MAX,
         "--property=CPUQuota=" + CPU_QUOTA,
         "--property=DevicePolicy=closed",
-        "--drop-capability=CAP_SYS_MODULE CAP_SYS_RAWIO CAP_SYS_TIME CAP_MKNOD CAP_NET_ADMIN CAP_NET_RAW",
+        "--drop-capability=CAP_SYS_MODULE,CAP_SYS_RAWIO,CAP_SYS_TIME,CAP_MKNOD,CAP_NET_ADMIN,CAP_NET_RAW",
         "--", "--unit=multi-user.target",
     )
 
