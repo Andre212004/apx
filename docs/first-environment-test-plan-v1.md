@@ -92,6 +92,19 @@ unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
 
+The authorized v5 run again retained container PID 1 until the 120-second
+timeout, removed its runtime copy, left zero processes and mounts, and preserved
+the source. Explicit console flags still produced no systemd readiness marker,
+so success remains unproven. Report digest:
+`a68561a540c9cd2c8801df3e1696dded28581119fdd0577a2040938e2fa40156`.
+V6 keeps the same boot boundary but adds a 30-second read-only observer through
+`/proc`. It must identify the container PID 1 executable, distinct PID/mount/
+user/network namespaces, the internal systemd runtime marker, exactly 138
+package records, and absence of the host Development home. It may then stop the
+test early. V6 preview digest:
+`7585522ccf01168db8efa4b6d6382d23f475bbc4b64d0f68580e127e189617ad`.
+It is not authorized to execute.
+
 The authorized v4 run retained a container PID 1 for the full 120-second bound,
 then timeout requested termination. It removed the runtime copy, left zero
 processes and mounts, and preserved the source. However, the console exposed no

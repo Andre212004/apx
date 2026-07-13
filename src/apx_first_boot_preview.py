@@ -16,8 +16,9 @@ TIMEOUT_SECONDS = 120
 MEMORY_MAX = "512M"
 TASKS_MAX = "256"
 CPU_QUOTA = "50%"
-RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v5/rootfs")
+RUNTIME_ROOT = Path("/tmp/apx-first-console-runtime-v6/rootfs")
 RUNTIME_MAX_BYTES = 1024**3
+OBSERVATION_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,7 @@ def build_preview() -> FirstBootPreview:
             "create one exact temporary runtime copy below /tmp, capped at 1 GiB",
             "shift ownership only in the temporary copy for private user isolation",
             "write one fixed no-core-dump policy only inside the temporary copy",
+            "read container process, namespace, runtime marker, and package-count evidence through /proc for at most 30 seconds",
             "create transient mount, namespace, and cgroup runtime state",
             "write only to the disposable runtime copy and bounded process output",
         ),
@@ -79,6 +81,8 @@ def build_preview() -> FirstBootPreview:
         ),
         "pass_conditions": (
             "container systemd reports ready before the timeout",
+            "container PID 1 executable is the systemd binary from the runtime copy",
+            "PID, mount, user, and network namespaces differ from the observer",
             "the internal Arch identity and 138-package database are visible",
             "the host Development home and host package database are not visible",
             "shutdown leaves no matching process, mount, cgroup, namespace, or registration",

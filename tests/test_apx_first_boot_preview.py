@@ -41,6 +41,7 @@ class FirstBootPreviewTests(unittest.TestCase):
         self.assertNotEqual(preview.RUNTIME_ROOT, preview.ROOTFS)
         self.assertTrue(str(preview.RUNTIME_ROOT).startswith("/tmp/"))
         self.assertEqual(preview.RUNTIME_MAX_BYTES, 1024**3)
+        self.assertEqual(preview.OBSERVATION_SECONDS, 30)
 
     def test_module_cannot_execute_nspawn(self):
         source = Path(preview.__file__).read_text(encoding="utf-8")

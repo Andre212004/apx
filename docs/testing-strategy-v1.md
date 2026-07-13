@@ -300,6 +300,10 @@ V4 ran to its timeout and proved cleanup/source preservation, but produced no
 positive systemd readiness evidence and exposed an incompatible core rlimit.
 V5 requires explicit console status and disables core storage through one fixed
 policy inside the runtime copy instead of weakening private-user isolation.
+V5 proved the same cleanup but confirmed that console output is not a usable
+readiness channel here. V6 therefore requires bounded read-only `/proc`
+observation of PID 1, four namespace identities, systemd runtime state, the
+internal package count, and absence of the host Development home.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

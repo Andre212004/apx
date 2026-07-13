@@ -801,6 +801,18 @@ and cleanup rule remains. V5 preview digest:
 `93aa2e816680a6f570ea584352063ab4841e5a1eca11cfc4ca0df466c9840c0e`.
 The executor refuses v5 until separate authorization.
 
+V5 was separately authorized and again retained container PID 1 to timeout,
+then removed the copy with zero process/mount residue and an unchanged source.
+Explicit console logging still produced no readiness marker, so it is not a
+passed boot. Report digest:
+`a68561a540c9cd2c8801df3e1696dded28581119fdd0577a2040938e2fa40156`.
+V6 keeps the same isolation and adds at most 30 seconds of read-only `/proc`
+observation to prove the PID 1 executable, four distinct namespaces, systemd
+runtime marker, 138 internal package records, and hidden host Development home.
+Its preview digest is
+`7585522ccf01168db8efa4b6d6382d23f475bbc4b64d0f68580e127e189617ad`.
+The executor refuses v6 until separate authorization.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;
