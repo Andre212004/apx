@@ -316,6 +316,10 @@ V8 confirmed the user-session condition is genuinely not reached within the
 observation window. V9 permits only fixed read-only systemctl queries for the
 manager state, two named units, failed units, and pending jobs so the blocking
 condition can be diagnosed without changing container state.
+V9 reported system state `running`, both named units active, no failed units,
+and no pending jobs. The final evidence-only assessment requires six independent
+truths and passed all of them: boot, isolation, package boundary, session
+readiness, clean lifecycle, and source preservation.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

@@ -848,6 +848,20 @@ It cannot change a unit. V9 preview digest:
 `1f3bbd7c8b9701dd523c8185379093e82a8b9966e177dec229c296acc39aafa6`.
 The executor refuses v9 until separate authorization.
 
+V9 was separately authorized and completed the first console lifecycle gate.
+Inside the isolated root, systemd reported `running`, multi-user and user-session
+units were active, and no failed unit or pending job existed. All prior PID 1,
+namespace, 138-package, hidden-host-home, clean-stop, zero-residue, copy-removal,
+and source-preservation evidence repeated. V9 report digest:
+`f129d383b0b6c4cc8a80882a46a7237c16becb76693a1af97b2f20ea11b44432`.
+The final evidence-only assessment passed all six gates with digest
+`de0266fa91884d05c84887a4a91740e52db82c3067d5fc454337f3509c6998b6`.
+The next milestone is a separately versioned Hyprland graphical role: resolve
+and authenticate its exact packages, define private display/GPU/input/audio/
+portal/session boundaries, then perform a disposable graphical boot before
+wiring the real Hub UI. The console result does not authorize those downloads
+or device/session effects.
+
 - two Environments independently installing the same application;
 - deletion without residual application or user data;
 - desktop operation under Hyprland, KDE Plasma, and GNOME;

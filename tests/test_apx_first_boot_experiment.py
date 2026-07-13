@@ -10,23 +10,31 @@ import apx_first_boot_experiment as experiment
 
 class FirstBootExperimentTests(unittest.TestCase):
     def test_executor_is_bound_to_authorized_preview(self):
-        self.assertNotEqual(experiment.AUTHORIZED_PREVIEW, experiment.build_preview().preview_digest)
+        self.assertEqual(experiment.AUTHORIZED_PREVIEW, experiment.build_preview().preview_digest)
         self.assertEqual(experiment.FINAL_REPORT_DIGEST, "741fe1c332c334f9f0667b295ae98e7de686c752c3f415e169e0e48912535b68")
 
-    def test_eighth_attempt_preserves_previous_evidence(self):
+    def test_ninth_attempt_preserves_previous_evidence(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")
-        self.assertIn('"first-boot-report-v8.json"', source)
-        self.assertIn('"first-boot-output-v8.log"', source)
+        self.assertIn('"first-boot-report-v9.json"', source)
+        self.assertIn('"first-boot-output-v9.log"', source)
 
     def test_observer_is_read_only_and_bounded(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")
         self.assertIn('Path("/proc")', source)
         self.assertIn("OBSERVATION_SECONDS", source)
-        self.assertNotIn("nsenter", source)
         self.assertIn('line.startswith("NSpid:")', source)
         self.assertIn('nspid.split()[-1] == "1"', source)
         self.assertIn('invocation:systemd-user-sessions.service', source)
         self.assertIn('root / "run/nologin"', source)
+
+    def test_systemctl_queries_are_fixed_read_only_and_bounded(self):
+        source = Path(experiment.__file__).read_text(encoding="utf-8")
+        self.assertIn('"/usr/bin/nsenter"', source)
+        self.assertIn('("is-system-running",)', source)
+        self.assertIn('("list-units", "--failed", "--no-legend")', source)
+        self.assertIn('("list-jobs", "--no-legend")', source)
+        for forbidden in ('"start"', '"stop"', '"enable"', '"disable"', '"restart"'):
+            self.assertNotIn(forbidden, source)
 
     def test_runtime_copy_is_exact_bounded_and_removed(self):
         source = Path(experiment.__file__).read_text(encoding="utf-8")

@@ -17,7 +17,7 @@ from apx_first_boot_preview import FINAL_REPORT_DIGEST, MACHINE, OBSERVATION_SEC
 from apx_offline_base_build import ROOT, ROOTFS
 
 
-AUTHORIZED_PREVIEW = "d0fa74a7695412a7cbc7560e70f879a3248562417754a1ac3895dd263c40e2f9"
+AUTHORIZED_PREVIEW = "1f3bbd7c8b9701dd523c8185379093e82a8b9966e177dec229c296acc39aafa6"
 FINAL_REPORT = ROOT / "final-report.json"
 OUTPUT_LIMIT = 4 * 1024**2
 
@@ -43,6 +43,10 @@ class FirstBootReport:
     internal_package_count: int
     host_development_home_hidden: bool
     observation_seconds: float
+    system_state_query: str
+    named_units_query: tuple[str, ...]
+    failed_units_query: tuple[str, ...]
+    pending_jobs_query: tuple[str, ...]
     source_report_unchanged: bool
     matching_processes_after: int
     matching_mounts_after: int
@@ -138,6 +142,24 @@ def _observe_container(outer_pid: int) -> tuple[int | None, int | None, bool, bo
     return nspawn_pid, container_pid, True, namespaces, packages, runtime, host_hidden, multi_user
 
 
+def _systemctl_query(container_pid: int, arguments: tuple[str, ...]) -> tuple[int, tuple[str, ...]]:
+    command = (
+        "/usr/bin/nsenter", "--target", str(container_pid), "--mount", "--uts",
+        "--ipc", "--net", "--pid", "--user", "--cgroup",
+        "--root=/proc/" + str(container_pid) + "/root", "--wd=/", "--",
+        "/usr/bin/systemctl", "--no-pager", "--plain", *arguments,
+    )
+    result = subprocess.run(
+        command, shell=False, stdin=subprocess.DEVNULL, capture_output=True,
+        timeout=5, env={"LC_ALL": "C", "PATH": "/usr/bin"}, check=False,
+    )
+    output = result.stdout + result.stderr
+    if len(output) > 64 * 1024:
+        raise FirstBootExperimentError("read-only systemctl query output exceeded policy")
+    lines = tuple(line for line in output.decode("utf-8", "replace").splitlines() if line)
+    return result.returncode, lines
+
+
 def _tree_content_digest(root: Path) -> tuple[str, int, int]:
     digest = hashlib.sha256(); logical = allocated = 0; seen = set()
     for directory, names, files in os.walk(root, followlinks=False):
@@ -219,6 +241,18 @@ def execute_first_boot() -> FirstBootReport:
             break
         time.sleep(0.25)
     observation_elapsed = time.monotonic() - observed_at
+    system_state = "unobserved"; named_units: tuple[str, ...] = ()
+    failed_units: tuple[str, ...] = (); pending_jobs: tuple[str, ...] = ()
+    if container_pid is not None:
+        _, state_lines = _systemctl_query(container_pid, ("is-system-running",))
+        if state_lines:
+            system_state = state_lines[0]
+        _, named_units = _systemctl_query(
+            container_pid, ("is-active", "multi-user.target", "systemd-user-sessions.service")
+        )
+        _, failed_units = _systemctl_query(container_pid, ("list-units", "--failed", "--no-legend"))
+        _, pending_jobs = _systemctl_query(container_pid, ("list-jobs", "--no-legend"))
+        multi_user_observed = multi_user_observed or named_units == ("active", "active")
     if nspawn_pid is not None:
         os.kill(nspawn_pid, signal.SIGTERM)
     try:
@@ -256,6 +290,8 @@ def execute_first_boot() -> FirstBootReport:
         "internal_package_count": packages,
         "host_development_home_hidden": host_hidden,
         "observation_seconds": round(observation_elapsed, 3),
+        "system_state_query": system_state, "named_units_query": named_units,
+        "failed_units_query": failed_units, "pending_jobs_query": pending_jobs,
         "source_report_unchanged": before == after and source_digest == after_source_digest,
         "matching_processes_after": residue[0], "matching_mounts_after": residue[1],
         "output_sha256": hashlib.sha256(output).hexdigest(), "output_bytes": len(output),
@@ -268,13 +304,13 @@ def execute_first_boot() -> FirstBootReport:
     draft["runtime_copy_removed"] = runtime_removed
     digest = hashlib.sha256(json.dumps(draft, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     report = FirstBootReport(**draft, report_digest=digest)
-    descriptor = os.open(ROOT / "first-boot-report-v8.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    descriptor = os.open(ROOT / "first-boot-report-v9.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, (json.dumps(asdict(report), sort_keys=True, indent=2) + "\n").encode())
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
-    output_path = ROOT / "first-boot-output-v8.log"
+    output_path = ROOT / "first-boot-output-v9.log"
     descriptor = os.open(output_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
         os.write(descriptor, output)
@@ -297,6 +333,10 @@ def main() -> int:
     print(f"Private namespaces observed: {report.private_namespaces_observed}")
     print(f"Internal packages observed: {report.internal_package_count}")
     print(f"Host Development home hidden: {report.host_development_home_hidden}")
+    print(f"System state: {report.system_state_query}")
+    print(f"Named units: {report.named_units_query}")
+    print(f"Failed units: {report.failed_units_query}")
+    print(f"Pending jobs: {report.pending_jobs_query}")
     print(f"Processes after: {report.matching_processes_after}")
     print(f"Mounts after: {report.matching_mounts_after}")
     print(f"Source unchanged: {report.source_report_unchanged}")

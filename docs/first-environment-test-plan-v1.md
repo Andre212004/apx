@@ -1,7 +1,7 @@
 # First APX Environment Test Plan v1
 
-Status: Phase A disposable offline-root build passed on 2026-07-12; boot phases
-remain proposals and are not authorized.
+Status: all first-console build, boot, observation, stop, and cleanup gates
+passed by 2026-07-13; graphical Environment work remains separate.
 
 ## Plain-language objective
 
@@ -91,6 +91,17 @@ and requires deletion of the copy after verified shutdown. The source remains
 unchanged. V3 preview digest:
 `6853311174a1cf4b3822f663a96fc9715e8871f4b36e00ab7dd38400c4bc07a6`.
 It is not authorized to execute.
+
+The authorized v9 run closed the console gate. Read-only systemctl queries
+reported overall state `running`, both `multi-user.target` and
+`systemd-user-sessions.service` active, zero failed units, and zero pending
+jobs. Every v7 isolation/package proof repeated; clean stop returned code 0,
+removed the copy, left zero residue, and preserved the source. V9 report digest:
+`f129d383b0b6c4cc8a80882a46a7237c16becb76693a1af97b2f20ea11b44432`.
+The evidence-only final assessment passed boot, isolation, own package boundary,
+session readiness, clean lifecycle, and source preservation. Assessment digest:
+`de0266fa91884d05c84887a4a91740e52db82c3067d5fc454337f3509c6998b6`.
+The first console Environment lifecycle gate is complete.
 
 The authorized v8 run repeated every v7 success but did not observe the
 user-sessions readiness condition within 30 seconds. It stopped cleanly with
