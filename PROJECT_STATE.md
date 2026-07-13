@@ -436,6 +436,15 @@ never adopted. Existing state, symlinks, non-regular entries, changed modes or
 plan binding, duplicate names, and unsafe filenames fail closed. It never
 selects or writes a production host path and is not the authoritative store.
 
+`src/apx_downloader.py` now implements a bounded streaming HTTPS transfer
+contract with an injected non-redirecting opener and protected-byte sink. It
+requires the exact archive host/date/path, a safe matching filename, status
+200, unchanged final URI, one valid Content-Length, approved maximum and any
+known exact size/hash. It closes and rejects redirects, early EOF, excess
+bytes, malformed or non-byte responses, timeouts/open/read failures, digest
+disagreement, and staging rejection. Tests use fake responses; the module does
+not construct a network opener or perform a real download by itself.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

@@ -55,6 +55,14 @@ without overwriting. Interrupted or mismatched files retain a `.partial`
 identity and cannot become accepted input. This fixture never chooses
 `/var/lib/apx` and is not production executor storage.
 
+`src/apx_downloader.py` implements the bounded streaming boundary using an
+injected non-redirecting HTTPS opener and protected staging sink. It requires
+status 200, unchanged final URI, a single valid Content-Length, and the fixed
+maximum plus any already known exact size and digest. Early EOF, excess bytes,
+non-byte responses, network/read/sink failure, and digest disagreement abort.
+The current tests provide fake responses; no production opener or network
+execution command is implemented.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

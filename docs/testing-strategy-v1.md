@@ -228,6 +228,10 @@ The disposable acquisition-staging fixture tests exclusive reservation,
 plan-binding changes, restrictive modes, no-overwrite publication, bounded
 streaming, exact hashes and sizes, preserved partial failures, symbolic-link
 and non-regular-entry refusal, and unsafe parent or filename rejection.
+The bounded downloader fixture simulates exact responses, redirects, status
+failures, missing or contradictory lengths, early and excessive bodies,
+digest disagreement, non-byte data, network/read/staging failures, and timeout
+policy without making a network connection.
 Level 3
 already has architecture and review documents, but its real
 base, executor, authentication, quota topology, and host-changing approval are
