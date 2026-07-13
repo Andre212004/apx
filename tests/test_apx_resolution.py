@@ -95,6 +95,5 @@ class ResolutionTests(unittest.TestCase):
         with self.assertRaises(apx_resolution.ResolutionError):
             self.build(databases=(core, self.databases()[1]))
 
-
 if __name__ == "__main__":
     unittest.main()

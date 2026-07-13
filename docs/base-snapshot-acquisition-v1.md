@@ -100,6 +100,13 @@ cross-checks every result with repository metadata. It selected 138 unique
 packages totaling 128,264,129 bytes. Package and detached-signature acquisition
 remains separately approval-blocked.
 
+The separately authorized real closed acquisition is recorded in
+`package-acquisition-experiment-v1.md`. It published exactly the 138 package and
+138 detached-signature files, stayed below its combined authorization, and
+independently reproduced every package size/hash with no partial or unexpected
+entry. Detached-signature signer verification and the independent GnuPG pass
+remain required before snapshot evidence can be `verified`.
+
 ## Trust Inputs
 
 Package authenticity depends on a reviewed Arch Linux keyring artifact. For the

@@ -503,6 +503,17 @@ packages totaling 128,264,129 bytes with manifest digest
 No network, download, install, or extraction occurred. Exact evidence is in
 `docs/package-resolution-experiment-v1.md`.
 
+`src/apx_package_acquisition.py` now implements the zero-argument acquisition
+bound to that exact manifest. The user separately authorized and ran it on
+2026-07-12. Direct protected streaming published exactly 138 package and 138
+detached-signature regular files totaling 128,294,816 bytes, below the
+137,308,097-byte authorization. Independent reopen verified every package size
+and SHA-256, signature non-empty/size/mode bounds, zero partials, and zero
+unexpected entries. Quotas remained healthy; no install, extraction, execution,
+other download, or cleanup occurred. Evidence is in
+`docs/package-acquisition-experiment-v1.md`. Cryptographic signer verification
+and independent second pass remain blocked.
+
 The repository now implements a pure future-Hub view model in `src/apx_hub.py`.
 It renders deterministic Environment and template cards, plain-language state,
 warnings, and fixed request kinds from supplied evidence without reading or

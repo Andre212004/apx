@@ -183,6 +183,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── isolation-architecture.md
 │   ├── lifecycle-threat-model-review-v1.md
 │   ├── package-resolution-experiment-v1.md
+│   ├── package-acquisition-experiment-v1.md
 │   ├── privileged-executor-protocol-v1.md
 │   ├── quota-enforcement-fixture-v1.md
 │   ├── roadmap.md
@@ -206,6 +207,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── apx_http.py
 │   ├── apx_installation.py
 │   ├── apx_policy.py
+│   ├── apx_package_acquisition.py
 │   ├── apx_stage2_gate.py
 │   ├── apx_staging.py
 │   ├── apx_trust_evidence.py

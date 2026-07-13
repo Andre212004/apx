@@ -66,6 +66,66 @@ def _manifest_digest(manifest: ResolutionManifest) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def parse_resolution_manifest(text: str) -> ResolutionManifest:
+    if not isinstance(text, str) or len(text.encode("utf-8")) > OUTPUT_MAX:
+        raise ResolutionError("serialized resolution manifest is invalid or oversized")
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise ResolutionError("resolution manifest JSON is invalid") from error
+    expected = set(ResolutionManifest.__dataclass_fields__)
+    if not isinstance(payload, dict) or set(payload) != expected:
+        raise ResolutionError("resolution manifest fields do not match schema")
+    package_fields = set(ResolvedPackage.__dataclass_fields__)
+    raw_packages = payload["packages"]
+    if not isinstance(raw_packages, list):
+        raise ResolutionError("resolution packages must be a list")
+    packages: list[ResolvedPackage] = []
+    for raw in raw_packages:
+        if not isinstance(raw, dict) or set(raw) != package_fields:
+            raise ResolutionError("resolved package fields do not match schema")
+        packages.append(ResolvedPackage(**raw))
+    try:
+        manifest = ResolutionManifest(
+            schema_version=payload["schema_version"],
+            plan_digest=payload["plan_digest"],
+            database_digests=tuple(tuple(item) for item in payload["database_digests"]),
+            seeds=tuple(payload["seeds"]),
+            packages=tuple(packages),
+            aggregate_package_bytes=payload["aggregate_package_bytes"],
+            manifest_digest=payload["manifest_digest"],
+        )
+    except (TypeError, ValueError) as error:
+        raise ResolutionError("resolution manifest values are malformed") from error
+    if (
+        type(manifest.schema_version) is not int
+        or manifest.schema_version != 1
+        or manifest.seeds != BASE_PACKAGES
+        or manifest.database_digests != tuple(sorted(DATABASE_DIGESTS.items()))
+        or not 0 < len(manifest.packages) <= MAX_PACKAGES
+        or type(manifest.aggregate_package_bytes) is not int
+        or manifest.aggregate_package_bytes != sum(item.compressed_size for item in manifest.packages)
+        or manifest.aggregate_package_bytes > MAX_AGGREGATE_BYTES
+        or tuple(manifest.packages) != tuple(sorted(manifest.packages, key=lambda item: (item.repository, item.filename)))
+        or len({item.name for item in manifest.packages}) != len(manifest.packages)
+        or len({item.filename for item in manifest.packages}) != len(manifest.packages)
+        or manifest.manifest_digest != _manifest_digest(manifest)
+    ):
+        raise ResolutionError("resolution manifest invariants or digest do not match")
+    for item in manifest.packages:
+        if (
+            item.repository not in {"core", "extra"}
+            or item.architecture not in {"any", "x86_64"}
+            or type(item.compressed_size) is not int
+            or item.compressed_size < 0
+            or len(item.sha256) != 64
+            or item.package_uri != f"{BASE_URI}/{item.repository}/os/x86_64/{item.filename}"
+            or item.signature_uri != item.package_uri + ".sig"
+        ):
+            raise ResolutionError("resolved package invariant is invalid")
+    return manifest
+
+
 def build_resolution_manifest(
     output: str,
     *,

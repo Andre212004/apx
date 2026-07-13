@@ -252,6 +252,10 @@ Closed-resolution fixtures reject missing seeds, duplicate or unknown packages,
 malformed rows, version/architecture/filename/size/URL disagreement, missing
 or duplicate database evidence, output/count/aggregate bounds, and bad plan
 identity. The real offline resolver produced identical independent passes.
+The fixed package acquisition reparses the authorized manifest before any
+effect, produces exactly package/signature pairs, refuses existing or non-`/tmp`
+roots, and blocks tampered evidence before network use. The real run stayed
+bounded and its independent reopen verified 276 expected regular files.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account
