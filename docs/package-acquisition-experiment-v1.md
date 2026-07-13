@@ -1,7 +1,7 @@
 # Closed Package and Signature Acquisition Experiment v1
 
-Status: separately authorized real acquisition passed on 2026-07-12; files are
-preserved pending cryptographic signer verification or separate cleanup.
+Status: real acquisition and double offline signature verification passed on
+2026-07-12; files are preserved pending package-metadata inspection or cleanup.
 
 ## Authorization
 
@@ -34,12 +34,21 @@ regular mode-0600 file within the 64 KiB bound. All 276 identities passed.
 Quotas remained full, consistent, and without limit override. No package was
 installed, extracted, or executed.
 
+`src/apx_signature_verification.py` then reopened every package and detached
+signature. It verified all 138 pairs with GnuPG, required each signing identity
+to be a current Arch master or validly certified by at least three of the five
+current Arch masters, rejected Arch's revoked identities, and repeated every
+check with the separate `gpgv` program. Both passes identified the same signer
+for every package. The receipt contains 15 trusted primary signing identities
+and has digest
+`468116fb5277d91a099d0d4adbc5ca6579a5962965b062c0b6a1f09db9e4ea84`.
+
 ## Remaining Boundary
 
 Files remain under operation
-`op-574f5d31e7c4ee46b1982fe2baf285d0` in the authorized root. Database-embedded
-signature fields do not replace detached signature verification. The next
-stage must verify every reopened package/signature pair with the isolated
-trusted keyring, record accepted signer fingerprints, repeat verification with
-the independent GnuPG path, and reject the entire candidate on one failure.
-Extraction and Stage 2 remain blocked.
+`op-574f5d31e7c4ee46b1982fe2baf285d0` in the authorized root. The signature
+receipt is under `/tmp/apx-signature-verification-20260711-v1/`. The next stage
+may inspect bounded package metadata such as `.PKGINFO` without executing
+package content. It must bind name, version, architecture and dependencies to
+the verified receipt before any disposable base extraction. Extraction and
+Stage 2 remain blocked.

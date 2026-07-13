@@ -698,11 +698,17 @@ Read-only metadata matched package name, version, architecture, and packager.
 No package was installed. This closes the matching keyring archive blocker but
 does not authorize or complete base acquisition.
 
-The current Arch repositories have been resolved non-mutatingly to 138 packages
-with recorded database and manifest digests. This is not yet an accepted
-snapshot: every package and its signature must be downloaded and verified
-before base creation. The implemented contract does not make this observed
-resolution acceptable and authorizes no download or host mutation.
+The dated Arch repositories were resolved non-mutatingly to a closed set of 138
+packages. A separately authorized download acquired exactly those packages and
+their 138 detached signatures. Every package hash matches the closed manifest;
+all signatures passed offline verification using current Arch master trust and
+revocation inputs, followed by an independent `gpgv` pass that agreed on every
+signer. The signature receipt digest is
+`468116fb5277d91a099d0d4adbc5ca6579a5962965b062c0b6a1f09db9e4ea84`.
+This completes acquisition and authenticity verification, not the base
+snapshot: bounded package metadata inspection and a separately reviewed
+disposable extraction/build stage remain required. No installation or host
+mutation is authorized by this evidence.
 
 - two Environments independently installing the same application;
 - deletion without residual application or user data;

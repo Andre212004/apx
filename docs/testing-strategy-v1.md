@@ -256,6 +256,10 @@ The fixed package acquisition reparses the authorized manifest before any
 effect, produces exactly package/signature pairs, refuses existing or non-`/tmp`
 roots, and blocks tampered evidence before network use. The real run stayed
 bounded and its independent reopen verified 276 expected regular files.
+Offline signature-verification fixtures reject cryptographic failure, missing
+valid results, insufficient current master certification, and disagreement
+between GnuPG and `gpgv`. The real run verified all 138 package/signature pairs
+twice and both paths agreed on 15 trusted primary signing identities.
 Complete-cleanup fixtures cover both user scopes, strong approval, exact
 resource sets and digests, identity disagreement, runtime/open-handle/mount/
 network and neighbor gates, `DELETED`, `<under deletion>`, `<stale>`, account

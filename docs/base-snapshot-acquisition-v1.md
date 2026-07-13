@@ -104,8 +104,11 @@ The separately authorized real closed acquisition is recorded in
 `package-acquisition-experiment-v1.md`. It published exactly the 138 package and
 138 detached-signature files, stayed below its combined authorization, and
 independently reproduced every package size/hash with no partial or unexpected
-entry. Detached-signature signer verification and the independent GnuPG pass
-remain required before snapshot evidence can be `verified`.
+entry. All 138 signatures subsequently passed offline GnuPG verification,
+current Arch master-trust and revocation policy, and a separate `gpgv` pass.
+Both passes agreed on every signer; the receipt records 15 trusted primary
+identities and digest
+`468116fb5277d91a099d0d4adbc5ca6579a5962965b062c0b6a1f09db9e4ea84`.
 
 ## Trust Inputs
 
