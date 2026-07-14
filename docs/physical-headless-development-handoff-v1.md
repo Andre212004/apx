@@ -40,9 +40,10 @@ must never be adapted to a different disk merely because `/dev/nvme0n1` exists.
 ## Before Rebooting Into the Installer
 
 1. Open a private/incognito browser window with no GitHub session and confirm
-   that `https://github.com/Andre212004/apx`, `master`, and this guide are
-   visible. The owner made the repository public for recovery before this handoff.
-   Do not continue if anonymous access stops working.
+   that `https://github.com/Andre212004/apx`, `master`, release tag
+   `physical-headless-pilot-v1`, and this guide are visible. The owner made the
+   repository public for recovery before this handoff. Do not continue if
+   anonymous access stops working.
 2. Open this guide from another computer or phone. Keep that device available
    for ChatGPT, GitHub, and the ArchWiki throughout installation.
 3. Prepare one current official Arch ISO USB and retain it as recovery media.
@@ -111,11 +112,11 @@ connectivity with `ping -c 1 archlinux.org`.
 
 ## Phase 2 — Acquire and Verify the Target-Bound Installer
 
-Download only the reviewed branch version:
+Download only the immutable reviewed pilot-tag version:
 
 ```bash
 curl --fail --location --output /root/install-apx-pilot.sh \
-  https://raw.githubusercontent.com/Andre212004/apx/refs/heads/master/scripts/physical-pilot/install-arch-headless-pilot.sh
+  https://raw.githubusercontent.com/Andre212004/apx/refs/tags/physical-headless-pilot-v1/scripts/physical-pilot/install-arch-headless-pilot.sh
 sha256sum /root/install-apx-pilot.sh
 ```
 
@@ -194,13 +195,18 @@ must be empty. If Wi-Fi is needed, use `iwctl` to connect and allow the enabled
 Clone the public recovery copy into temporary host staging:
 
 ```bash
-git clone --branch master --single-branch \
+git clone --branch physical-headless-pilot-v1 --single-branch \
   https://github.com/Andre212004/apx.git /root/apx-bootstrap
 cd /root/apx-bootstrap
 git status --short
 git log -1 --oneline
+git describe --exact-match --tags HEAD
 sha256sum scripts/physical-pilot/bootstrap-apx-headless-pilot.sh
 ```
+
+The exact tag must print `physical-headless-pilot-v1`. This temporary bootstrap
+checkout is deliberately frozen; the later Development checkout follows
+`master` for ongoing work.
 
 The bootstrap SHA-256 must be:
 

@@ -493,6 +493,9 @@ the pilot into a production release. The target is bound to Lenovo product
 
 `docs/physical-headless-development-handoff-v1.md` is the autonomous ChatGPT
 handoff from official Arch media to a headless Hub and separate Development.
+The destructive installer and temporary host bootstrap are frozen through the
+immutable `physical-headless-pilot-v1` Git tag; only the later Development
+checkout follows `master` for ongoing work.
 The two scripts under `scripts/physical-pilot/` are deliberately separate from
 the VM installer: one erases only the exact reviewed NVMe after repeating its
 model/serial/size checks and exact typed approval; the other admits only the
