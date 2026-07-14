@@ -6,7 +6,13 @@ The operating system remains Linux. APX is an orchestration layer that manages i
 
 ## Current System
 
-A read-only APX inspection and creation-planning prototype exists in this repository. No privileged creation or mutating APX runtime exists. Existing manually created users do not yet represent the intended APX storage model. Their homes remain ordinary directories under the existing `@home` subvolume rather than dedicated Btrfs home subvolumes.
+A read-only APX inspection and creation-planning prototype exists in this
+repository. A separate guarded mutating runtime exists only for the disposable
+QEMU/KVM laboratory and has passed the functional headless C0–C6 ladder; it is
+not installed on or admitted for the physical system. Existing manually created
+users do not yet represent the intended APX storage model. Their homes remain
+ordinary directories under the existing `@home` subvolume rather than
+dedicated Btrfs home subvolumes.
 
 Development currently takes place in the Development Environment named `apx-development`. SDDM currently manages graphical sessions. A 2026-07-13 read-only observation found active Development KDE on `tty4` and an inactive but live Hub KDE session on `tty1` through SDDM autologin; this is current state, not intended one-session APX behavior. Codex is a temporary development tool and is not part of APX.
 

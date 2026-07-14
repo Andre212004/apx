@@ -1,7 +1,9 @@
 # APX Disposable Clean-Install Rehearsal v1
 
-Status: closed repository-side rehearsal plan. No VM is created or modified by
-this document, and C0–C6 have not passed.
+Status: closed repository-side rehearsal plan. The experimental functional
+C0–C6 ladder passed in a disposable VM on 2026-07-13; results and limitations
+are recorded in `virtual-headless-c0-c6-result-2026-07-13.md`. The exhaustive
+formal interruption matrix and production-trust rehearsal have not passed.
 
 ## Goal
 
@@ -98,19 +100,19 @@ A failure never authorizes trying the same steps on the real computer. The
 repository contracts or implementation are corrected, tests rerun, and the VM
 starts again from the pristine checkpoint with a new run ID.
 
-## Entry Blockers
+## Remaining Formal Entry Blockers
 
-The rehearsal cannot start truthfully yet because these inputs are absent:
+The full production-shaped rehearsal cannot run truthfully yet because these
+inputs are absent:
 
-- selected hypervisor/UEFI profile and approved disposable VM identity;
-- exact verified Arch installation ISO;
-- clean frozen APX source revision carrying the accepted Apache-2.0 licence;
-- two matching isolated builds of the development package, followed later by a
-  reviewed functional bootstrap package;
+- a clean frozen functional runtime revision and reviewed bootstrap package;
 - implemented bounded archive reader, trusted catalogue, executor, broker,
   authentication, and real installation-effect adapters;
 - selected cryptographic profile, completed physical key rehearsal, and
   production public trust bundle/signatures;
-- fresh VM-bound dossier and explicit virtual-disk approval.
+- complete failure injection before and after every formal effect boundary;
+- fresh production-shaped VM dossier and explicit virtual-disk approval.
 
-This plan therefore prepares the experiment but does not claim it is runnable.
+The laboratory scripts now provide a guarded VM-only implementation for the
+functional ladder. They are not the production effect adapters named by this
+plan.

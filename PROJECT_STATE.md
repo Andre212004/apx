@@ -422,6 +422,16 @@ The retained sanitized evidence is in
 Development-environment evidence only; two separately created frozen builders
 remain required, and the package was not installed, trusted, or published.
 
+The independent follow-up is now positive. Two separate network-disabled Arch
+containers from one pinned builder image produced byte-identical 16,109-byte
+packages with SHA-256
+`9d6e53007bc56e8a9105f4ff65c14097dbec13aa8b0b4c7ddb70912b01b012fd`.
+A third disposable offline container installed the result; pacman reported zero
+altered entries and all three modules imported. The full frozen identities are
+appended to `docs/bootstrap-development-package-build-2026-07-13.md`. This
+closes the development contracts-package build proof, not the functional APX
+bootstrap or production trust.
+
 The production trust operational boundary and mandatory physical rehearsal are
 now defined in `docs/release-key-custody-and-ceremony-v1.md`. Root and release
 signer roles are separate and offline; private material may never enter the
@@ -437,9 +447,53 @@ The disposable C0–C6 proof is now specified in
 x86_64 UEFI VM, one new 64 GiB virtual disk, no host shares or secrets, retained
 text recovery, exact external evidence, checkpoints only for fault injection,
 power loss before/after every destructive/publication boundary, and the full
-Hub/Development/package-locality/lifecycle/offline-recovery ladder. No VM was
-created. Hypervisor/ISO identities, functional bootstrap implementation,
-production trust, and a VM-bound dossier still block execution.
+Hub/Development/package-locality/lifecycle/offline-recovery ladder.
+
+The experimental functional ladder passed on 2026-07-13 in a disposable QEMU/
+KVM VM backed only by one new sparse 64 GiB qcow2 disk. A guarded installer
+produced a minimal UEFI/systemd-boot/LUKS2/Btrfs Arch host without graphics.
+An experimental headless runtime then demonstrated immutable role releases,
+independent mutable roots and homes, private user and network namespaces,
+Environment-local pacman and npm installation, quotas, stop with zero runtime
+residue, snapshot, archive, restore to a new generation, destruction,
+conservative recovery, and a real cold boot with QEMU `-nic none`.
+
+The recreated `hub-headless-v3` contains only an unprivileged typed client. A
+host-owned Unix-socket executor accepts fixed operation schemas and authorizes
+the peer only when its host UID belongs to the active Hub's private 65,536-ID
+map. The Hub used it to create, start, stop, and destroy a fixture. Host root
+using the client was refused, and Development had neither the socket nor the
+`apx` command. The full result, identities, failure corrections, checkpoints,
+and limits are in `docs/virtual-headless-c0-c6-result-2026-07-13.md`.
+
+This closes the functional virtual milestone, not the production-shaped formal
+rehearsal. The signed functional bootstrap, production trust/custody,
+untrusted-archive reader, broker/PAM authentication, minimum-privilege service
+hardening, exhaustive before/after interruption matrix, hostile local-root
+containment, physical recovery/backup dossier, hardware validation, and H0
+remain required.
+
+The owner has accepted a separate hands-on physical development pilot because
+the current computer is dedicated to APX work and the GitHub repository is the
+required source recovery copy. This does not waive disk-identity checks or turn
+the pilot into a production release. The target is bound to Lenovo product
+`82JU`, board `LNVNB161216`, and the 512,110,190,592-byte Samsung NVMe
+`S4DYNX0R253702`. Any mismatch stops the run.
+
+`docs/physical-headless-development-handoff-v1.md` is the autonomous ChatGPT
+handoff from official Arch media to a headless Hub and separate Development.
+The two scripts under `scripts/physical-pilot/` are deliberately separate from
+the VM installer: one erases only the exact reviewed NVMe after repeating its
+model/serial/size checks and exact typed approval; the other admits only the
+installed physical marker and exact Lenovo DMI identity before installing the
+experimental runtime. Neither script has been executed on the physical target.
+
+This is an accepted development-method deviation, not a claim that the
+production blockers are closed. The initial host Git checkout and Git package
+are bounded bootstrap staging and must be removed only after Development has a
+persistent checkout, working GitHub authentication, and Codex. Ongoing source,
+build, GitHub, and Codex work remains Development-only. The Hub still receives
+only the typed client and no development tools.
 
 Forty-eight focused tests cover canonical round trips, direct-object bypass,
 duplicate/unknown/missing fields, commands and paths, wrong types, limits,
@@ -453,21 +507,25 @@ four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature
 verification, trusted catalogue, installer effect, disk operation, executor
-effect, or Hub creation is implemented.
+effect, or production Hub creation is implemented. The separate guarded
+VM-only runtime is experimental evidence and is not wired into the production
+CLI.
 
 The dated readiness audit is in
 `docs/clean-install-readiness-2026-07-13.md`. A destructive installation remains
 blocked by absent production trust keys/custody, bootstrap package, physical
 quarantine/archive-verification/catalogue/Hub-replacement machinery, privileged
-executor/broker/authentication, destructive effect adapters,
-disposable-machine C0–C6 rehearsal, and target-specific evidence. Installing
-minimal Arch now would not install functional APX and would leave the machine
-without the promised Hub.
+production executor/broker/authentication, reviewed physical effect adapters,
+the remaining formal interruption matrix, and target-specific evidence. The VM
+proves the functional architecture; it does not authorize running the
+laboratory installer on the physical computer.
 
 ## Implemented Today
 
-The repository contains documentation and a non-mutating Python prototype. It
-implements read-only candidate, account, home, filesystem, Btrfs, registration,
+The repository contains documentation, a non-mutating production-oriented
+Python prototype, and a clearly separated guarded disposable-VM laboratory. The
+main `src/` prototype implements read-only candidate, account, home, filesystem,
+Btrfs, registration,
 session, process, removal-blocker, host-readiness, and Brave-isolation
 inspection. It also implements deterministic dry-run creation and removal
 planning, formal registration parsing, consistency classification, rollback

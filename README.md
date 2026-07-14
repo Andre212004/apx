@@ -108,9 +108,19 @@ Only one graphical Environment should run at a time in the intended session mode
 
 ## Current Development Status
 
-APX is in the documentation and architecture foundation phase.
+APX has completed its first functional headless proof in a disposable VM. The
+physical-machine product remains in architecture, trust, hardening, and
+installation-readiness work.
 
-This repository contains architecture documentation and a read-only inspection and creation-planning prototype. No privileged creation or mutating APX runtime exists. Development currently takes place in the Development Environment named `apx-development`. Codex is a temporary development tool and is not part of APX.
+This repository contains architecture documentation, a read-only inspection and
+creation-planning prototype, and a separate guarded VM-only laboratory runtime.
+That runtime installed minimal Arch, created isolated headless Environments,
+kept packages and data local, exercised lifecycle and recovery, and exposed a
+typed APX client in a reproducible Hub. It is experimental evidence, not a
+production installer or authority for changing the physical computer.
+Development currently takes place in the Development Environment named
+`apx-development`. Codex is a temporary development tool and is not part of
+APX.
 
 The accepted primary delivery order is now a fresh minimal Arch installation,
 a verified APX bootstrap, a headless Hub managed through the bounded `apx` CLI,
@@ -165,7 +175,16 @@ results are recorded in
 
 SDDM remains the last confirmed current display manager. The future compositor-independent session-management direction is documented in [docs/session-management.md](docs/session-management.md). No display-manager replacement has been adopted or implemented.
 
-No package installation, system configuration, user creation, Btrfs changes, display-manager changes, or service changes should be performed from this repository at this stage.
+No package installation, system configuration, user creation, Btrfs change,
+display-manager change, or service change should be performed on the physical
+computer from this repository at this stage. The scripts under
+`scripts/virtual-lab/` are restricted to the unmistakably disposable reviewed
+QEMU/KVM guest. The complete result and remaining limitations are recorded in
+[the virtual C0–C6 evidence](docs/virtual-headless-c0-c6-result-2026-07-13.md).
+The separately accepted owner-controlled physical pilot is documented in
+[the physical headless handoff](docs/physical-headless-development-handoff-v1.md).
+Its scripts are target-bound to the reviewed Lenovo/NVMe identities and have not
+been executed on the physical computer.
 
 ## Repository Structure
 
@@ -202,6 +221,7 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── lifecycle-threat-model-review-v1.md
 │   ├── package-resolution-experiment-v1.md
 │   ├── package-acquisition-experiment-v1.md
+│   ├── physical-headless-development-handoff-v1.md
 │   ├── privileged-executor-protocol-v1.md
 │   ├── release-candidate-schema-v1.md
 │   ├── release-artifact-manifest-v1.md
@@ -212,7 +232,20 @@ No package installation, system configuration, user creation, Btrfs changes, dis
 │   ├── stage2-approval-dossier.md
 │   ├── system-container-experiment.md
 │   ├── testing-strategy-v1.md
-│   └── threat-model.md
+│   ├── threat-model.md
+│   └── virtual-headless-c0-c6-result-2026-07-13.md
+├── scripts/
+│   ├── physical-pilot/
+│   │   ├── README.md
+│   │   ├── bootstrap-apx-headless-pilot.sh
+│   │   └── install-arch-headless-pilot.sh
+│   └── virtual-lab/
+│       ├── README.md
+│       ├── apx-lab-client.py
+│       ├── apx-lab-executor.py
+│       ├── apx-lab-runtime.py
+│       ├── bootstrap-apx-headless-runtime.sh
+│       └── install-arch-c1-foundation.sh
 ├── src/
 │   ├── apx_cli.py
 │   ├── apx_acquisition.py
@@ -287,7 +320,8 @@ The deliberately unsigned, non-functional first package rehearsal is specified
 in
 [docs/bootstrap-development-package-v1.md](docs/bootstrap-development-package-v1.md).
 The first frozen-source build, detected path variance, corrected byte-identical
-same-environment result, and remaining independent-builder gate are recorded in
+result, independent network-disabled rebuild, and offline installation are
+recorded in
 [docs/bootstrap-development-package-build-2026-07-13.md](docs/bootstrap-development-package-build-2026-07-13.md).
 The offline production-key roles, custody, recovery, and mandatory rehearsal
 are defined in
@@ -295,6 +329,12 @@ are defined in
 The exact disposable-machine envelope and C0–C6 fault-injection run order are
 in
 [docs/disposable-clean-install-rehearsal-v1.md](docs/disposable-clean-install-rehearsal-v1.md).
+The completed functional VM ladder, exact identities, corrected failures, and
+remaining production limits are in
+[docs/virtual-headless-c0-c6-result-2026-07-13.md](docs/virtual-headless-c0-c6-result-2026-07-13.md).
+The target-bound hands-on route from the Arch ISO to Hub, Development, GitHub,
+and Codex is in
+[docs/physical-headless-development-handoff-v1.md](docs/physical-headless-development-handoff-v1.md).
 The isolated path for promoting Codex-assisted Development work into a verified
 replacement Hub is in
 [docs/development-to-hub-release-promotion-v1.md](docs/development-to-hub-release-promotion-v1.md).

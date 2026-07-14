@@ -15,8 +15,12 @@ implementation details merely because the project documentation is technical.
 ## Scope
 
 Work only inside this repository unless the user explicitly changes the scope.
+The target-bound physical pilot in
+`docs/physical-headless-development-handoff-v1.md` changes that scope only when
+the owner explicitly invokes that guide from the Arch installation medium. It
+is not standing authorization during ordinary repository work.
 
-Do not modify:
+During ordinary repository work, do not modify:
 
 - the operating system
 - `/etc`
@@ -34,9 +38,16 @@ Do not use `sudo`.
 
 ## Current Phase
 
-APX is in the documentation and architecture foundation phase.
+APX has passed the functional headless C0–C6 ladder in a disposable VM. The
+production system remains in architecture, trust, hardening, and physical-
+readiness work. A separately documented owner-controlled physical pilot is
+prepared but has not been executed.
 
-Do not write implementation code until the architecture, session model, lifecycle model, and storage model are documented clearly enough to guide implementation.
+Implementation may advance only within documented boundaries. VM laboratory
+code and exact target-bound physical-pilot adapters are experimental and must
+never be described as production. Any new production mechanism still requires
+its architecture, session, lifecycle, storage, risks, and recovery behavior to
+be documented first.
 
 ## Project Boundaries
 
@@ -86,8 +97,8 @@ Do not describe planned architecture as implemented reality. In particular:
 - current manually created users still have ordinary homes under the existing `@home` subvolume
 - `greetd` is a preferred candidate under evaluation, not adopted or implemented
 - SDDM currently manages graphical sessions
-- process isolation through namespaces is not implemented
-- per-Environment application installation is intended but not implemented
+- namespace process isolation and per-Environment package installation passed
+  in the disposable VM, but are not installed on the physical system
 
 ## Hub Rules
 

@@ -1,8 +1,13 @@
 # Development Principles
 
-APX is currently in the documentation and architecture foundation phase.
+The production APX system remains in the documentation, architecture, trust,
+and hardening phase. A separately guarded disposable-VM implementation may be
+used to validate architecture without changing the physical system.
 
-Implementation should not begin until the repository clearly documents the architecture, session model, lifecycle model, storage model, and unresolved risks.
+Production implementation should not advance beyond what the repository has
+documented for architecture, session, lifecycle, storage, and unresolved risk.
+Laboratory results must be identified as experimental and cannot be described
+as physical-machine readiness.
 
 ## Principles
 

@@ -25,3 +25,12 @@ Repeat the complete archive and build process, then compare the final package,
 
 No package output belongs in Git. Failed or differing builds remain untrusted
 evidence in their separate temporary build directories.
+
+`Containerfile.builder` pins the Arch base-image manifest and consumes one
+separately acquired, host-verified `fakeroot`, `mpdecimal`, and `python`
+packages under their generic build-context names; no compiler or mutable online
+transaction is required.
+Build that image with networking disabled, record its final image identity,
+then launch two separate containers from it with networking disabled.
+Mount separate fresh host directories at the same canonical internal build path;
+the image's non-root `builder` identity executes the fixed `makepkg` command.
