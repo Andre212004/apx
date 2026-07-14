@@ -335,6 +335,9 @@ remaining production limits are in
 The target-bound hands-on route from the Arch ISO to Hub, Development, GitHub,
 and Codex is in
 [docs/physical-headless-development-handoff-v1.md](docs/physical-headless-development-handoff-v1.md).
+The CPU-first, Environment-local Qwen/Ollama fallback that follows Codex in the
+physical pilot is bounded in
+[docs/local-development-agent-v1.md](docs/local-development-agent-v1.md).
 The isolated path for promoting Codex-assisted Development work into a verified
 replacement Hub is in
 [docs/development-to-hub-release-promotion-v1.md](docs/development-to-hub-release-promotion-v1.md).

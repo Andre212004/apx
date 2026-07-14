@@ -130,6 +130,17 @@ debugging tool. Codex must be treated separately from personal-assistant data
 and permissions. The Codex used to build APX today remains temporary development
 tooling and is not evidence that this future integration has been designed.
 
+For the accepted owner-controlled physical pilot, Development will also receive
+an optional local coding fallback after Codex is working. The initial selection
+is Qwen2.5-Coder 7B Instruct through an Environment-local CPU-first Ollama
+service and Qwen Code terminal agent. It complements Codex for bounded review,
+diagnosis, documentation, and small confirmed changes; it does not approve or
+promote its output. The service, model, configuration, indexes, conversations,
+and tools belong only to Development, listen on Environment loopback, and stop
+with that Environment. GPU acceleration and provisioning separate instances in
+other Environments remain gated future work. The complete pilot boundary is in
+`docs/local-development-agent-v1.md`.
+
 ## Confirmed Platform Boundaries
 
 - one physical Arch Linux host;
@@ -491,9 +502,10 @@ experimental runtime. Neither script has been executed on the physical target.
 This is an accepted development-method deviation, not a claim that the
 production blockers are closed. The initial host Git checkout and Git package
 are bounded bootstrap staging and must be removed only after Development has a
-persistent checkout, working GitHub authentication, and Codex. Ongoing source,
-build, GitHub, and Codex work remains Development-only. The Hub still receives
-only the typed client and no development tools.
+persistent checkout, working GitHub authentication, Codex, and the accepted
+local-agent checks. Ongoing source, build, GitHub, Codex, Ollama, model, and
+Qwen Code work remains Development-only. The Hub still receives only the typed
+client and no development tools or assistant endpoint.
 
 Forty-eight focused tests cover canonical round trips, direct-object bypass,
 duplicate/unknown/missing fields, commands and paths, wrong types, limits,

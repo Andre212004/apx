@@ -13,9 +13,10 @@ UEFI -> LUKS unlock -> minimal Arch host -> headless Hub -> Development
 ```
 
 The host has no KDE, Hyprland, display manager, browser, IDE, compiler, Codex,
-or permanent source checkout. Development has Git, build tools, Node.js, npm,
-Codex, and the APX repository. The Hub has only the bounded `apx` management
-client. Graphical work begins only after this headless state is reproduced.
+local model, or permanent source checkout. Development has Git, build tools,
+Node.js, npm, Codex, an optional CPU-first local coding fallback, and the APX
+repository. The Hub has only the bounded `apx` management client. Graphical
+work begins only after this headless state is reproduced.
 
 ## Fixed Target
 
@@ -39,11 +40,9 @@ must never be adapted to a different disk merely because `/dev/nvme0n1` exists.
 ## Before Rebooting Into the Installer
 
 1. Open a private/incognito browser window with no GitHub session and confirm
-   that `https://github.com/Andre212004/apx` and branch
-   `agent/physical-headless-handoff` are visible. At the time this guide was
-   prepared, anonymous access returned `404`; the owner must intentionally make
-   the repository public before erasing the machine. Do not continue while it
-   remains private.
+   that `https://github.com/Andre212004/apx`, `master`, and this guide are
+   visible. The owner made the repository public for recovery before this handoff.
+   Do not continue if anonymous access stops working.
 2. Open this guide from another computer or phone. Keep that device available
    for ChatGPT, GitHub, and the ArchWiki throughout installation.
 3. Prepare one current official Arch ISO USB and retain it as recovery media.
@@ -70,7 +69,7 @@ Send the following prompt to ChatGPT on the second device:
 
 ```text
 Guide me through the APX physical headless pilot at:
-https://github.com/Andre212004/apx/blob/agent/physical-headless-handoff/docs/physical-headless-development-handoff-v1.md
+https://github.com/Andre212004/apx/blob/master/docs/physical-headless-development-handoff-v1.md
 
 Rules:
 1. Read the complete guide and PROJECT_STATE.md first.
@@ -116,7 +115,7 @@ Download only the reviewed branch version:
 
 ```bash
 curl --fail --location --output /root/install-apx-pilot.sh \
-  https://raw.githubusercontent.com/Andre212004/apx/refs/heads/agent/physical-headless-handoff/scripts/physical-pilot/install-arch-headless-pilot.sh
+  https://raw.githubusercontent.com/Andre212004/apx/refs/heads/master/scripts/physical-pilot/install-arch-headless-pilot.sh
 sha256sum /root/install-apx-pilot.sh
 ```
 
@@ -195,7 +194,7 @@ must be empty. If Wi-Fi is needed, use `iwctl` to connect and allow the enabled
 Clone the public recovery copy into temporary host staging:
 
 ```bash
-git clone --branch agent/physical-headless-handoff --single-branch \
+git clone --branch master --single-branch \
   https://github.com/Andre212004/apx.git /root/apx-bootstrap
 cd /root/apx-bootstrap
 git status --short
@@ -286,7 +285,7 @@ working checkout owned by the internal `apx` user:
 ```bash
 pacman -Syu --noconfirm --needed github-cli
 install -d -o apx -g apx /home/apx/work
-su - apx -c 'git clone --branch agent/physical-headless-handoff --single-branch https://github.com/Andre212004/apx.git /home/apx/work/apx'
+su - apx -c 'git clone --branch master --single-branch https://github.com/Andre212004/apx.git /home/apx/work/apx'
 su - apx
 curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh
 sed -n '1,240p' /tmp/codex-install.sh
@@ -316,7 +315,75 @@ change the host or Hub directly. Keep source changes here, validate them, push
 them to GitHub, and use the documented promotion boundary for host updates.
 ```
 
-## Phase 9 — Remove Temporary Host Development State
+## Phase 9 — Add the Development-Local Offline Coding Fallback
+
+Do this only after Codex and GitHub work. Read
+`docs/local-development-agent-v1.md` completely before installing anything.
+This is a Development-local convenience, not a host service or Hub feature.
+
+First record the physical capacity from inside Development:
+
+```bash
+grep MemTotal /proc/meminfo
+free -h
+df -h / /home/apx
+```
+
+Send the output to ChatGPT. Do not continue with the 7B model if memory or disk
+pressure would make Development or the host unreliable. The reviewed smaller
+fallback is `qwen2.5-coder:3b`; a larger substitution is not approved.
+
+As Development root, install the signed Arch packages into Development's own
+package database:
+
+```bash
+pacman -Syu --noconfirm --needed ollama qwen-code
+systemctl enable --now ollama.service
+systemctl is-active ollama.service
+ss -ltnp | grep 11434
+```
+
+The listener must be only Environment loopback (`127.0.0.1` or `::1`). Stop if
+it binds an Environment-wide or externally reachable address. Do not install
+`ollama-cuda`: the first pilot has not admitted the NVIDIA device boundary.
+
+As the local `apx` user, pull and exercise the selected model:
+
+```bash
+su - apx
+ollama pull qwen2.5-coder:7b
+ollama list
+ollama run qwen2.5-coder:7b 'Reply with exactly: APX_LOCAL_MODEL_OK'
+qwen
+```
+
+In Qwen Code select a custom/local provider, point it only to
+`http://127.0.0.1:11434/v1`, and select `qwen2.5-coder:7b`. Keep the normal
+confirmation-based permission mode; never enable automatic or unrestricted
+approval. Its first task must be read-only:
+
+```text
+Read AGENTS.md and PROJECT_STATE.md. Review the repository status without
+changing files or running mutating commands. You are a local fallback inside
+Development, not an APX administrator. Never access the host, Hub, another
+Environment, credentials, or the APX executor. Ask before every command or
+file change.
+```
+
+Record the installed package versions and exact model shown by `ollama list`.
+Then exit Development, verify from the Hub/host that port 11434 is not reachable,
+stop Development, and prove that no Ollama/Qwen process or listener survives.
+Restart Development and verify its own model state remains available. These
+observations are required evidence; the commands depend on the final runtime
+network identities and must be generated from observed state, not guessed.
+
+The server may run in the background while Development is active. The coding
+agent itself is invoked on demand so it does not make unsolicited changes or
+waste resources. Codex remains the primary agent; the local model is intended
+for bounded review, error explanation, documentation, and small confirmed
+implementations when Codex is unavailable.
+
+## Phase 10 — Remove Temporary Host Development State
 
 Do this only after all of these are proven:
 
@@ -324,7 +391,9 @@ Do this only after all of these are proven:
 - its repository has the expected branch and remote;
 - GitHub push authentication works;
 - Codex starts inside Development;
-- Hub still has no Git, compiler, Node.js, npm, Codex, or source checkout.
+- the optional local model passes its Development-local lifecycle checks;
+- Hub still has no Git, compiler, Node.js, npm, Codex, Ollama, Qwen Code, model,
+  assistant endpoint, or source checkout.
 
 Exit Development, stop it through APX, and remove only the temporary host
 checkout and Git package:
@@ -351,6 +420,8 @@ The `rm` target must be exactly `/root/apx-bootstrap`. Do not generalize it.
   bootstrap/recovery surface.
 - Host updates require a reviewed manual staging step; Development must never
   mount or edit the live Hub or `/var/lib/apx` directly.
+- The local coding fallback is CPU-first and may be slow. CUDA and assistant
+  instances in other Environments remain unimplemented policy/device work.
 
 These limitations are acceptable only for this owner-controlled development
 machine. They must not be described as a production release.
