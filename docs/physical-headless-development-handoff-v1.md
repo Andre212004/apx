@@ -327,6 +327,72 @@ Do this only after Codex and GitHub work. Read
 `docs/local-development-agent-v1.md` completely before installing anything.
 This is a Development-local convenience, not a host service or Hub feature.
 
+### One-time quota recovery for the existing physical Development
+
+The original pilot runtime assigned every role a 4 GiB root and 2 GiB home.
+That is insufficient for the documented roughly 4.7 GB model plus packages and
+working space. Do not destroy or restore Development: its root contains its
+packages and partial Ollama state, and its home contains the repository,
+credentials, Codex state, and user tools.
+
+Use immutable tag `physical-headless-quota-v1`. From Development, first ensure
+the working tree is clean and fetch the reviewed tag, then leave the container:
+
+```bash
+cd /home/apx/work/apx
+git status --short
+git fetch origin tag physical-headless-quota-v1
+test "$(git cat-file -t physical-headless-quota-v1)" = tag
+git rev-parse physical-headless-quota-v1^{}
+exit
+exit
+```
+
+At the existing physical host root console, stop Development and use the
+retained bootstrap checkout. The printed script digest must equal the digest
+published with this recovery release before it is run:
+
+```text
+ca3a7abadf5389caa2c37b4e696e528644b854d831d7e0b37e117ba420b6edff  scripts/physical-pilot/recover-development-quota-v1.sh
+```
+
+```bash
+apx environment stop development
+cd /root/apx-bootstrap
+git fetch origin tag physical-headless-quota-v1
+git checkout --detach physical-headless-quota-v1
+test "$(git cat-file -t physical-headless-quota-v1)" = tag
+git rev-parse physical-headless-quota-v1^{}
+sha256sum scripts/physical-pilot/recover-development-quota-v1.sh
+bash scripts/physical-pilot/recover-development-quota-v1.sh
+```
+
+The script independently requires the fixed Lenovo pilot identity, healthy
+traditional Btrfs quota accounting, the stopped registered Development
+generation, two distinct expected subvolumes, the old exact 4/2 GiB limits,
+the matching role-aware runtime digest, and the exact typed approval. It raises
+only those qgroups to 16/8 GiB, verifies both referenced and exclusive limits,
+installs the matching runtime for later create/restore operations, and rolls
+the limits back if any later step fails. It never rewrites or copies either
+subvolume.
+
+After the completion marker, start Development and confirm its retained state:
+
+```bash
+apx environment start development
+apx environment shell development
+su - apx -c 'cd /home/apx/work/apx && git status --short --branch'
+su - apx -c 'gh auth status'
+su - apx -c 'codex login status'
+pacman -Q git github-cli nodejs npm ollama 2>/dev/null || true
+find /var/lib/ollama /home/apx -maxdepth 2 -xdev -printf '%y %p\n' 2>/dev/null | sed -n '1,120p'
+df -h / /home/apx
+```
+
+Do not print credential files or tokens. A missing optional package or partial
+Ollama directory may be resumed normally after the identity and capacity checks
+pass; it is not a reason to recreate Development.
+
 First record the physical capacity from inside Development:
 
 ```bash

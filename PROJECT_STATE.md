@@ -335,6 +335,21 @@ only after source/history, remote or separately reachable copy, reproducible
 build/test instructions, and Codex-independent CLI/graphical operation are
 verified. Removing or destroying Development must not alter Hub or host state.
 
+The physical headless pilot quota policy is now role-aware. Hub and Minimal
+retain the experimental 4 GiB root and 2 GiB home limits; Development receives
+a bounded 16 GiB root and 8 GiB home so its accepted roughly 4.7 GB local model,
+Environment-local packages, Codex state, repository, credentials, and working
+space can coexist. These are pilot limits, not production defaults. The first
+physical Development was created under the earlier fixed 4/2 GiB policy, so
+`scripts/physical-pilot/recover-development-quota-v1.sh` provides a guarded,
+in-place migration. It requires the exact physical identity, stopped
+Development registration, healthy traditional qgroups, expected subvolume
+identities and old limits, then raises only those two limits and installs the
+matching role-aware runtime. It preserves Development root/home content and
+rolls limits back if final verification or runtime installation fails. Owner
+execution and post-recovery physical validation remain required; repository
+tests do not claim the recovery has run on the machine.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned

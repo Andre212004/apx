@@ -34,6 +34,11 @@ RELEASE_IDS = {
     "development": "development-headless-v1",
     "minimal": "minimal-headless-v1",
 }
+QUOTA_LIMITS = {
+    "hub": {"root": "4G", "home": "2G"},
+    "minimal": {"root": "4G", "home": "2G"},
+    "development": {"root": "16G", "home": "8G"},
+}
 EFFECTS = {
     "create": ("root", "home", "configure", "publish"),
     "destroy": ("stop", "unpublish", "remove-home", "remove-root"),
@@ -231,7 +236,7 @@ def create(plan_identity: str, approval: str) -> None:
         home = target / "home"
         append_event(operation, "create", "home", "started", name=name)
         run(["btrfs", "subvolume", "create", str(home)])
-        apply_limits(name)
+        apply_limits(name, role)
         append_event(operation, "create", "home", "complete", name=name)
         fault("home")
 
@@ -266,8 +271,9 @@ def fault(effect: str) -> None:
         os._exit(86)
 
 
-def apply_limits(name: str) -> None:
-    for label, limit in (("root", "4G"), ("home", "2G")):
+def apply_limits(name: str, role: str) -> None:
+    limits = QUOTA_LIMITS[validate_role(role)]
+    for label, limit in limits.items():
         path = environment_dir(name) / label
         identity = run(["btrfs", "inspect-internal", "rootid", str(path)], capture=True).stdout.strip()
         if not identity.isdigit():
@@ -480,7 +486,7 @@ def restore(archive_identity: str, name: str, approval: str) -> None:
             if stream_result != 0 or receiver.returncode != 0:
                 raise Refusal(f"restore receive failed: {receiver.stderr.strip()}")
             run(["btrfs", "property", "set", "-f", "-ts", str(target / label), "ro", "false"])
-        apply_limits(name)
+        apply_limits(name, str(manifest["role"]))
         root = target / "root"
         (root / "etc" / "hostname").write_text(machine(name) + "\n")
         (root / "etc" / "machine-id").write_text("")

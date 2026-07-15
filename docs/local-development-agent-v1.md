@@ -42,6 +42,15 @@ NVIDIA devices, host driver interfaces, or CUDA userspace into Development.
 Installing `ollama-cuda` before that boundary has been designed and tested would
 turn an assistant convenience into an undocumented device-isolation exception.
 
+The physical headless pilot now assigns quotas by role. Hub and Minimal retain
+small 4 GiB root and 2 GiB home limits. Development receives a bounded 16 GiB
+root and 8 GiB home. The model and Ollama package/service state live in the
+Development root; Codex state, credentials, repository, and user tooling live
+in its home. These limits allow the roughly 4.7 GB model plus packages,
+downloads, caches, and working space without turning the approximately 471 GiB
+of currently free host capacity into an unbounded Environment allocation.
+They are experimental pilot limits, not production defaults.
+
 ## Environment Boundary
 
 The initial instance belongs only to Development:
