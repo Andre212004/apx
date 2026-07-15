@@ -9,12 +9,15 @@ readonly STATE=/var/lib/apx
 readonly RUNTIME_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-runtime.py
 readonly CLIENT_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-client.py
 readonly EXECUTOR_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-executor.py
+readonly INCOMPLETE_DEVELOPMENT_RELEASE=$STATE/releases/development-headless-v1
+readonly RECOVERY_APPROVAL='DELETE-INCOMPLETE-development-headless-v1'
 
 fail() {
   printf 'APX physical bootstrap refused: %s\n' "$*" >&2
   exit 1
 }
 
+verify_physical_target() {
 [[ $(id -u) == 0 ]] || fail 'host root is required'
 [[ $(systemd-detect-virt) == none ]] || fail 'physical-machine pilot required'
 [[ $(< /etc/hostname) == apx-host ]] || fail 'wrong host identity'
@@ -25,6 +28,76 @@ fail() {
 [[ $(findmnt -n -o FSTYPE "$STATE") == btrfs ]] || fail 'APX state is not Btrfs'
 [[ -f $RUNTIME_SOURCE && -f $CLIENT_SOURCE && -f $EXECUTOR_SOURCE ]] \
   || fail 'runtime source set is incomplete'
+}
+
+release_complete() {
+  local role=$1
+  local release=$2
+  local root="$release/root"
+  [[ -d $root && -f $release/manifest.json ]] || return 1
+  python - "$release/manifest.json" "$role" <<'PY' || return 1
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    manifest = json.load(stream)
+if (
+    manifest.get("backend") != "systemd-nspawn-headless-physical-pilot-v1"
+    or manifest.get("role") != sys.argv[2]
+    or manifest.get("schema") != 1
+):
+    raise SystemExit(1)
+PY
+  local property
+  property=$(btrfs property get -ts "$root" ro) || return 1
+  [[ $property == *'ro=true'* ]]
+}
+
+assert_release_absent_or_complete() {
+  local role=$1
+  local release=$2
+  [[ ! -e $release ]] && return 0
+  release_complete "$role" "$release" && return 0
+  fail "${release#$STATE/releases/} exists but is incomplete; preserve completed releases and run the documented targeted recovery if this is the known interrupted Development release"
+}
+
+recover_incomplete_development_release() {
+  assert_release_absent_or_complete hub "$STATE/releases/hub-headless-v1"
+  assert_release_absent_or_complete minimal "$STATE/releases/minimal-headless-v1"
+  [[ -d $INCOMPLETE_DEVELOPMENT_RELEASE ]] \
+    || fail 'known incomplete development-headless-v1 release is absent'
+  if release_complete development "$INCOMPLETE_DEVELOPMENT_RELEASE"; then
+    fail 'development-headless-v1 is complete and must not be deleted'
+  fi
+  [[ ! -e $INCOMPLETE_DEVELOPMENT_RELEASE/manifest.json ]] \
+    || fail 'development-headless-v1 has a manifest and is not the known no-manifest partial state'
+  printf 'Targeted destructive recovery:\n'
+  printf '  path: %s\n' "$INCOMPLETE_DEVELOPMENT_RELEASE"
+  printf '  reason: interrupted release creation left no manifest, so normal bootstrap must not skip it\n'
+  printf '  preserved: completed Hub release and any other complete release\n'
+  read -r -p "Type ${RECOVERY_APPROVAL}: " entered_approval
+  [[ $entered_approval == "$RECOVERY_APPROVAL" ]] \
+    || fail 'exact recovery approval was not entered'
+  if [[ -d $INCOMPLETE_DEVELOPMENT_RELEASE/root ]]; then
+    btrfs subvolume delete -R "$INCOMPLETE_DEVELOPMENT_RELEASE/root"
+  fi
+  rmdir "$INCOMPLETE_DEVELOPMENT_RELEASE"
+  printf 'APX_INCOMPLETE_DEVELOPMENT_RELEASE_REMOVED\n'
+}
+
+verify_physical_target
+
+case "${1:-}" in
+  '')
+    ;;
+  --recover-incomplete-development-release)
+    recover_incomplete_development_release
+    exit 0
+    ;;
+  *)
+    fail 'unknown bootstrap argument'
+    ;;
+esac
 
 install -Dm0755 "$RUNTIME_SOURCE" /usr/lib/apx/apx-lab-runtime.py
 install -Dm0755 "$CLIENT_SOURCE" /usr/lib/apx/apx-lab-client.py
@@ -47,7 +120,12 @@ create_release() {
   local role=$1
   local release="$STATE/releases/${role}-headless-v1"
   local root="$release/root"
-  [[ ! -e $release ]] || return 0
+  if [[ -e $release ]]; then
+    if release_complete "$role" "$release"; then
+      return 0
+    fi
+    fail "${role}-headless-v1 exists but is incomplete; do not skip or overwrite it without the documented targeted recovery"
+  fi
   mkdir -p "$release"
   btrfs subvolume create "$root"
   pacstrap -c "$root" base systemd python
@@ -75,7 +153,7 @@ EOF
       install -Dm0755 /usr/lib/apx/apx-lab-runtime.py "$root/usr/bin/apx"
       ;;
     development)
-      systemd-nspawn -q --resolv-conf=copy-host -D "$root" \
+      systemd-nspawn -q --resolv-conf=replace-uplink -D "$root" \
         pacman -Syu --noconfirm --needed git base-devel nodejs npm
       ;;
     minimal) ;;
@@ -95,7 +173,10 @@ create_release hub
 create_release development
 create_release minimal
 
-if [[ ! -e $STATE/releases/hub-headless-v3 ]]; then
+if [[ -e $STATE/releases/hub-headless-v3 ]]; then
+  release_complete hub "$STATE/releases/hub-headless-v3" \
+    || fail 'hub-headless-v3 exists but is incomplete; preserve it for manual inspection'
+else
   mkdir -p "$STATE/releases/hub-headless-v3"
   btrfs subvolume snapshot \
     "$STATE/releases/hub-headless-v1/root" \

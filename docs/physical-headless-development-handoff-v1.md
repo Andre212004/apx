@@ -41,9 +41,9 @@ must never be adapted to a different disk merely because `/dev/nvme0n1` exists.
 
 1. Open a private/incognito browser window with no GitHub session and confirm
    that `https://github.com/Andre212004/apx`, `master`, release tag
-   `physical-headless-pilot-v1`, and this guide are visible. The owner made the
-   repository public for recovery before this handoff. Do not continue if
-   anonymous access stops working.
+   `physical-headless-pilot-recovery-v1`, and this guide are visible. The owner
+   made the repository public for recovery before this handoff. Do not continue
+   if anonymous access stops working.
 2. Open this guide from another computer or phone. Keep that device available
    for ChatGPT, GitHub, and the ArchWiki throughout installation.
 3. Prepare one current official Arch ISO USB and retain it as recovery media.
@@ -116,7 +116,7 @@ Download only the immutable reviewed pilot-tag version:
 
 ```bash
 curl --fail --location --output /root/install-apx-pilot.sh \
-  https://raw.githubusercontent.com/Andre212004/apx/refs/tags/physical-headless-pilot-v1/scripts/physical-pilot/install-arch-headless-pilot.sh
+  https://raw.githubusercontent.com/Andre212004/apx/refs/tags/physical-headless-pilot-recovery-v1/scripts/physical-pilot/install-arch-headless-pilot.sh
 sha256sum /root/install-apx-pilot.sh
 ```
 
@@ -195,7 +195,7 @@ must be empty. If Wi-Fi is needed, use `iwctl` to connect and allow the enabled
 Clone the public recovery copy into temporary host staging:
 
 ```bash
-git clone --branch physical-headless-pilot-v1 --single-branch \
+git clone --branch physical-headless-pilot-recovery-v1 --single-branch \
   https://github.com/Andre212004/apx.git /root/apx-bootstrap
 cd /root/apx-bootstrap
 git status --short
@@ -204,14 +204,14 @@ git describe --exact-match --tags HEAD
 sha256sum scripts/physical-pilot/bootstrap-apx-headless-pilot.sh
 ```
 
-The exact tag must print `physical-headless-pilot-v1`. This temporary bootstrap
-checkout is deliberately frozen; the later Development checkout follows
+The exact tag must print `physical-headless-pilot-recovery-v1`. This temporary
+bootstrap checkout is deliberately frozen; the later Development checkout follows
 `master` for ongoing work.
 
 The bootstrap SHA-256 must be:
 
 ```text
-9c4c957f5bcc66ea15899a24a9f1444892f0a512a1ebb166555a1d3c0a162a4d
+66cc3e877f29a96b97bea66a8ac400d6e8a421f908c3fb331d8e8b70fd2ef48e
 ```
 
 Review it, then run:
@@ -227,6 +227,77 @@ and Minimal releases, and removes `arch-install-scripts` if it installed that
 temporary package.
 
 Successful completion prints `APX_PHYSICAL_HEADLESS_BOOTSTRAP_COMPLETE`.
+
+### Recovery From the Interrupted Development Release
+
+Use this subsection only for the observed interrupted state where:
+
+- Phases 1-4 completed and the host boots;
+- `hub-headless-v1` has `manifest.json`;
+- `development-headless-v1` exists without `manifest.json`;
+- `minimal-headless-v1` has not been created;
+- `machinectl list` shows no running machines.
+
+Do not rerun the old `physical-headless-pilot-v1` bootstrap. Fetch the immutable
+recovery tag instead:
+
+```bash
+test ! -e /root/apx-bootstrap-recovery
+git clone --branch physical-headless-pilot-recovery-v1 --single-branch \
+  https://github.com/Andre212004/apx.git /root/apx-bootstrap-recovery
+cd /root/apx-bootstrap-recovery
+git status --short
+git log -1 --oneline
+git describe --exact-match --tags HEAD
+sha256sum scripts/physical-pilot/bootstrap-apx-headless-pilot.sh
+```
+
+The exact tag must print `physical-headless-pilot-recovery-v1`. The bootstrap
+SHA-256 must be:
+
+```text
+66cc3e877f29a96b97bea66a8ac400d6e8a421f908c3fb331d8e8b70fd2ef48e
+```
+
+Confirm the partial state before recovery:
+
+```bash
+machinectl list
+test -f /var/lib/apx/releases/hub-headless-v1/manifest.json
+test -d /var/lib/apx/releases/development-headless-v1/root
+test ! -e /var/lib/apx/releases/development-headless-v1/manifest.json
+test ! -e /var/lib/apx/releases/minimal-headless-v1
+```
+
+Then run the targeted recovery mode:
+
+```bash
+bash scripts/physical-pilot/bootstrap-apx-headless-pilot.sh \
+  --recover-incomplete-development-release
+```
+
+It repeats the physical host guards and then asks for this exact approval:
+
+```text
+DELETE-INCOMPLETE-development-headless-v1
+```
+
+This destructive action deletes only
+`/var/lib/apx/releases/development-headless-v1`, and only when that release is
+incomplete and has no manifest. It preserves the completed Hub release and
+refuses to delete a completed Development release.
+
+After it prints `APX_INCOMPLETE_DEVELOPMENT_RELEASE_REMOVED`, rerun the patched
+bootstrap from the same recovery-tag checkout:
+
+```bash
+bash scripts/physical-pilot/bootstrap-apx-headless-pilot.sh
+```
+
+The patched bootstrap preserves completed releases, refuses ambiguous partial
+release directories, creates the missing Development and Minimal releases, and
+uses the host systemd-resolved uplink resolver for build-time nspawn package
+installation instead of copying the host `127.0.0.53` stub.
 
 ## Phase 6 — Create and Verify the Hub
 
