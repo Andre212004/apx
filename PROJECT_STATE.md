@@ -358,6 +358,16 @@ and supports both known field-name/value formats. It still requires enabled
 traditional qgroups and consistent accounting, rejects duplicate or malformed
 safety fields, and continues to reject limit override or active rescan evidence.
 
+The second quota recovery release reached the installed status parser but
+queried qgroups through the `/var/lib/apx` `@apx` subvolume mount, which exposed
+only qgroup `0/256` rather than the nested Development root/home qgroups on this
+physical layout. The v3 recovery resolves the Btrfs filesystem UUID from the
+fixed APX state path, creates a private temporary mount of that exact
+filesystem's top-level subvolume ID 5, independently verifies filesystem UUID,
+type, and root ID, and uses only that scope for quota status, discovery, limit,
+verification, and rollback operations. The mount is removed on every exit.
+This does not expose the top level to an Environment or make it persistent.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned

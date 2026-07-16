@@ -92,6 +92,21 @@ class PhysicalRecoveryTests(unittest.TestCase):
             with self.subTest(output=output):
                 self.assertNotEqual(self.validate_quota_status(output).returncode, 0)
 
+    def test_recovery_uses_verified_private_btrfs_top_level_for_every_qgroup_operation(self) -> None:
+        source = RECOVERY_PATH.read_text()
+        for required in (
+            'filesystem_uuid=$(findmnt -n -o UUID -T "$STATE")',
+            'mount -t btrfs -o subvolid=5 "UUID=$filesystem_uuid" "$TOP_LEVEL"',
+            '[[ $(findmnt -n -o UUID -T "$TOP_LEVEL") == "$filesystem_uuid" ]]',
+            '[[ $(btrfs inspect-internal rootid "$TOP_LEVEL") == 5 ]]',
+            'trap cleanup_top_level EXIT',
+        ):
+            self.assertIn(required, source)
+        qgroup_lines = [line for line in source.splitlines() if "btrfs qgroup" in line]
+        self.assertGreaterEqual(len(qgroup_lines), 10)
+        self.assertTrue(all('"$TOP_LEVEL"' in line for line in qgroup_lines))
+        self.assertNotIn('btrfs qgroup show --raw -reF "$STATE"', source)
+
 
 if __name__ == "__main__":
     unittest.main()

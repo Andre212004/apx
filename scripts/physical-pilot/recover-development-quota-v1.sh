@@ -18,6 +18,7 @@ readonly NEW_HOME_LIMIT=8G
 readonly NEW_ROOT_BYTES=17179869184
 readonly NEW_HOME_BYTES=8589934592
 readonly APPROVAL='RESIZE development FROM 4G+2G TO 16G+8G'
+TOP_LEVEL=
 
 fail() {
   printf 'APX Development quota recovery refused: %s\n' "$*" >&2
@@ -59,6 +60,15 @@ if [[ ${1-} == --validate-quota-status ]]; then
 fi
 [[ $# == 0 ]] || fail 'arguments are not accepted'
 
+cleanup_top_level() {
+  if [[ -n $TOP_LEVEL ]]; then
+    if mountpoint -q "$TOP_LEVEL"; then
+      umount "$TOP_LEVEL"
+    fi
+    rmdir "$TOP_LEVEL"
+  fi
+}
+
 [[ $(id -u) == 0 ]] || fail 'host root is required'
 [[ $(systemd-detect-virt) == none ]] || fail 'physical-machine pilot required'
 [[ $(< /etc/hostname) == apx-host ]] || fail 'wrong host identity'
@@ -69,6 +79,23 @@ grep -qx 'profile=apx-physical-headless-pilot-v1' /etc/apx-physical-pilot \
 [[ $(< /sys/class/dmi/id/product_name) == 82JU ]] || fail 'wrong product identity'
 [[ $(< /sys/class/dmi/id/board_name) == LNVNB161216 ]] || fail 'wrong board identity'
 [[ $(findmnt -n -o FSTYPE "$STATE") == btrfs ]] || fail 'APX state is not Btrfs'
+filesystem_uuid=$(findmnt -n -o UUID -T "$STATE")
+[[ $filesystem_uuid =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] \
+  || fail 'APX Btrfs filesystem UUID is unavailable or malformed'
+[[ $(findmnt -rn -t btrfs -o UUID | awk -v wanted="$filesystem_uuid" '$1 == wanted { count++ } END { print count+0 }') -ge 1 ]] \
+  || fail 'APX Btrfs filesystem identity is not mounted'
+TOP_LEVEL=/run/apx-quota-recovery-v3
+[[ ! -e $TOP_LEVEL ]] || fail 'private top-level recovery mount path already exists'
+install -d -m0700 "$TOP_LEVEL"
+trap cleanup_top_level EXIT
+mount -t btrfs -o subvolid=5 "UUID=$filesystem_uuid" "$TOP_LEVEL" \
+  || fail 'could not create the private Btrfs top-level recovery mount'
+[[ $(findmnt -n -o FSTYPE -T "$TOP_LEVEL") == btrfs ]] \
+  || fail 'private recovery mount is not Btrfs'
+[[ $(findmnt -n -o UUID -T "$TOP_LEVEL") == "$filesystem_uuid" ]] \
+  || fail 'private recovery mount has the wrong filesystem identity'
+[[ $(btrfs inspect-internal rootid "$TOP_LEVEL") == 5 ]] \
+  || fail 'private recovery mount is not Btrfs subvolume ID 5'
 [[ -f $RUNTIME_SOURCE && ! -L $RUNTIME_SOURCE ]] || fail 'reviewed runtime source is absent or unsafe'
 [[ $(sha256sum "$RUNTIME_SOURCE" | awk '{print $1}') == "$RUNTIME_SHA256" ]] \
   || fail 'runtime source identity does not match this recovery release'
@@ -98,7 +125,7 @@ for label in root home; do
   btrfs subvolume show "$path" >/dev/null || fail "$label is not a Btrfs subvolume"
 done
 
-quota_status=$(btrfs quota status "$STATE") || fail 'quota status is unavailable'
+quota_status=$(btrfs quota status "$TOP_LEVEL") || fail 'quota status is unavailable'
 validate_quota_status <<<"$quota_status" \
   || fail 'quota accounting is disabled, non-qgroup, inconsistent, overridden, rescanning, or malformed'
 
@@ -107,7 +134,7 @@ home_id=$(btrfs inspect-internal rootid "$ENVIRONMENT/home")
 [[ $root_id =~ ^[0-9]+$ && $home_id =~ ^[0-9]+$ && $root_id != "$home_id" ]] \
   || fail 'could not resolve distinct Development qgroups'
 
-qgroups=$(btrfs qgroup show --raw -reF "$STATE") || fail 'qgroup limits are unavailable'
+qgroups=$(btrfs qgroup show --raw -reF "$TOP_LEVEL") || fail 'qgroup limits are unavailable'
 limit_for() {
   local identity=$1
   awk -v wanted="0/$identity" '$1 == wanted { print $(NF-1), $NF; found=1 } END { if (!found) exit 1 }' \
@@ -128,18 +155,18 @@ read -r -p "Type ${APPROVAL}: " entered
 [[ $entered == "$APPROVAL" ]] || fail 'exact approval was not entered'
 
 rollback() {
-  btrfs qgroup limit "$OLD_ROOT_BYTES" "0/$root_id" "$STATE" || true
-  btrfs qgroup limit -e "$OLD_ROOT_BYTES" "0/$root_id" "$STATE" || true
-  btrfs qgroup limit "$OLD_HOME_BYTES" "0/$home_id" "$STATE" || true
-  btrfs qgroup limit -e "$OLD_HOME_BYTES" "0/$home_id" "$STATE" || true
+  btrfs qgroup limit "$OLD_ROOT_BYTES" "0/$root_id" "$TOP_LEVEL" || true
+  btrfs qgroup limit -e "$OLD_ROOT_BYTES" "0/$root_id" "$TOP_LEVEL" || true
+  btrfs qgroup limit "$OLD_HOME_BYTES" "0/$home_id" "$TOP_LEVEL" || true
+  btrfs qgroup limit -e "$OLD_HOME_BYTES" "0/$home_id" "$TOP_LEVEL" || true
 }
 trap rollback ERR
-btrfs qgroup limit "$NEW_ROOT_LIMIT" "0/$root_id" "$STATE"
-btrfs qgroup limit -e "$NEW_ROOT_LIMIT" "0/$root_id" "$STATE"
-btrfs qgroup limit "$NEW_HOME_LIMIT" "0/$home_id" "$STATE"
-btrfs qgroup limit -e "$NEW_HOME_LIMIT" "0/$home_id" "$STATE"
+btrfs qgroup limit "$NEW_ROOT_LIMIT" "0/$root_id" "$TOP_LEVEL"
+btrfs qgroup limit -e "$NEW_ROOT_LIMIT" "0/$root_id" "$TOP_LEVEL"
+btrfs qgroup limit "$NEW_HOME_LIMIT" "0/$home_id" "$TOP_LEVEL"
+btrfs qgroup limit -e "$NEW_HOME_LIMIT" "0/$home_id" "$TOP_LEVEL"
 
-qgroups=$(btrfs qgroup show --raw -reF "$STATE")
+qgroups=$(btrfs qgroup show --raw -reF "$TOP_LEVEL")
 read -r root_referenced root_exclusive < <(limit_for "$root_id")
 read -r home_referenced home_exclusive < <(limit_for "$home_id")
 [[ $root_referenced == "$NEW_ROOT_BYTES" && $root_exclusive == "$NEW_ROOT_BYTES" ]]
