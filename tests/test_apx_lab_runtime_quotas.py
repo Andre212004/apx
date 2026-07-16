@@ -1,8 +1,10 @@
 import importlib.util
 import hashlib
+import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -44,12 +46,28 @@ class RuntimeQuotaTests(unittest.TestCase):
 
 
 class PhysicalRecoveryTests(unittest.TestCase):
+    def recovery_env(self) -> dict[str, str]:
+        return {
+            **os.environ,
+            "PATH": f"{Path(sys.executable).parent}:{os.environ.get('PATH', '')}",
+        }
+
     def validate_quota_status(self, output: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["bash", str(RECOVERY_PATH), "--validate-quota-status"],
             input=output,
             text=True,
             capture_output=True,
+            env=self.recovery_env(),
+        )
+
+    def limit_for_qgroup(self, identity: int, output: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(RECOVERY_PATH), "--limit-for-qgroup", str(identity)],
+            input=output,
+            text=True,
+            capture_output=True,
+            env=self.recovery_env(),
         )
 
     def test_recovery_script_is_valid_and_bound_to_matching_runtime(self) -> None:
@@ -106,6 +124,32 @@ class PhysicalRecoveryTests(unittest.TestCase):
         self.assertGreaterEqual(len(qgroup_lines), 10)
         self.assertTrue(all('"$TOP_LEVEL"' in line for line in qgroup_lines))
         self.assertNotIn('btrfs qgroup show --raw -reF "$STATE"', source)
+        self.assertNotIn('btrfs qgroup show --raw -reF "$TOP_LEVEL"', source)
+        self.assertIn('btrfs qgroup show --raw -re "$TOP_LEVEL"', source)
+
+    def test_qgroup_filter_regression_for_top_level_mount(self) -> None:
+        filtered_output = (
+            "qgroupid         rfer         excl     max_rfer     max_excl path\n"
+            "0/5                 0            0         none         none <toplevel>\n"
+        )
+        unfiltered_output = (
+            "qgroupid         rfer         excl     max_rfer     max_excl path\n"
+            "0/5                 0            0         none         none <toplevel>\n"
+            "0/279      2147483648   2147483648   4294967296   4294967296 @apx/environments/development/root\n"
+            "0/280      1073741824   1073741824   2147483648   2147483648 @apx/environments/development/home\n"
+        )
+
+        self.assertNotEqual(self.limit_for_qgroup(279, filtered_output).returncode, 0)
+        root = self.limit_for_qgroup(279, unfiltered_output)
+        home = self.limit_for_qgroup(280, unfiltered_output)
+        self.assertEqual((root.returncode, root.stdout.strip()), (0, "4294967296 4294967296"))
+        self.assertEqual((home.returncode, home.stdout.strip()), (0, "2147483648 2147483648"))
+        self.assertNotEqual(self.limit_for_qgroup(281, unfiltered_output).returncode, 0)
+
+        duplicate_output = unfiltered_output + (
+            "0/279      2147483648   2147483648   4294967296   4294967296 @duplicate/root\n"
+        )
+        self.assertNotEqual(self.limit_for_qgroup(279, duplicate_output).returncode, 0)
 
 
 if __name__ == "__main__":

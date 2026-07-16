@@ -368,6 +368,13 @@ type, and root ID, and uses only that scope for quota status, discovery, limit,
 verification, and rollback operations. The mount is removed on every exit.
 This does not expose the top level to an Environment or make it persistent.
 
+The third quota recovery release correctly mounted the Btrfs top level but used
+`btrfs qgroup show -F`, which filtered the listing to qgroup `0/5` and hid the
+observed Development root/home qgroups `0/279` and `0/280`. The v4 recovery
+keeps the top-level mount and all identity, stopped-state, old-limit, approval,
+rollback, runtime-checksum, and cleanup guards, but removes only that qgroup
+listing filter and explicitly refuses absent or duplicate qgroup identities.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned

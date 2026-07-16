@@ -53,9 +53,42 @@ if fields.get("override limits") == "yes" or fields.get("rescan status") == "run
 '
 }
 
+limit_for_qgroup() {
+  local identity=$1
+  awk -v wanted="0/$identity" '
+    $1 == wanted {
+      count++
+      previous = ""
+      current = ""
+      for (field = 2; field <= NF; field++) {
+        if ($field ~ /^[0-9]+$/) {
+          previous = current
+          current = $field
+        }
+      }
+      if (previous == "" || current == "") {
+        malformed = 1
+      }
+      referenced = previous
+      exclusive = current
+    }
+    END {
+      if (count != 1 || malformed) {
+        exit 1
+      }
+      print referenced, exclusive
+    }
+  '
+}
+
 if [[ ${1-} == --validate-quota-status ]]; then
   [[ $# == 1 ]] || exit 2
   validate_quota_status
+  exit
+fi
+if [[ ${1-} == --limit-for-qgroup ]]; then
+  [[ $# == 2 && $2 =~ ^[0-9]+$ ]] || exit 2
+  limit_for_qgroup "$2"
   exit
 fi
 [[ $# == 0 ]] || fail 'arguments are not accepted'
@@ -134,11 +167,10 @@ home_id=$(btrfs inspect-internal rootid "$ENVIRONMENT/home")
 [[ $root_id =~ ^[0-9]+$ && $home_id =~ ^[0-9]+$ && $root_id != "$home_id" ]] \
   || fail 'could not resolve distinct Development qgroups'
 
-qgroups=$(btrfs qgroup show --raw -reF "$TOP_LEVEL") || fail 'qgroup limits are unavailable'
+qgroups=$(btrfs qgroup show --raw -re "$TOP_LEVEL") || fail 'qgroup limits are unavailable'
 limit_for() {
   local identity=$1
-  awk -v wanted="0/$identity" '$1 == wanted { print $(NF-1), $NF; found=1 } END { if (!found) exit 1 }' \
-    <<<"$qgroups"
+  limit_for_qgroup "$identity" <<<"$qgroups"
 }
 read -r root_referenced root_exclusive < <(limit_for "$root_id") \
   || fail 'Development root qgroup is absent'
@@ -166,7 +198,7 @@ btrfs qgroup limit -e "$NEW_ROOT_LIMIT" "0/$root_id" "$TOP_LEVEL"
 btrfs qgroup limit "$NEW_HOME_LIMIT" "0/$home_id" "$TOP_LEVEL"
 btrfs qgroup limit -e "$NEW_HOME_LIMIT" "0/$home_id" "$TOP_LEVEL"
 
-qgroups=$(btrfs qgroup show --raw -reF "$TOP_LEVEL")
+qgroups=$(btrfs qgroup show --raw -re "$TOP_LEVEL")
 read -r root_referenced root_exclusive < <(limit_for "$root_id")
 read -r home_referenced home_exclusive < <(limit_for "$home_id")
 [[ $root_referenced == "$NEW_ROOT_BYTES" && $root_exclusive == "$NEW_ROOT_BYTES" ]]
