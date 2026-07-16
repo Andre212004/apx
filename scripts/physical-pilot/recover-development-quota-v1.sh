@@ -24,6 +24,41 @@ fail() {
   exit 1
 }
 
+validate_quota_status() {
+  python -c '
+import sys
+
+fields = {}
+for raw_line in sys.stdin:
+    if ":" not in raw_line:
+        continue
+    key, value = raw_line.split(":", 1)
+    key = " ".join(key.strip().lower().split())
+    value = " ".join(value.strip().lower().split())
+    if key in {"enabled", "status", "mode", "inconsistent", "override limits", "rescan status"}:
+        if key in fields:
+            raise SystemExit(1)
+        fields[key] = value
+
+enabled_values = [fields[key] for key in ("enabled", "status") if key in fields]
+if len(enabled_values) != 1 or enabled_values[0] not in {"yes", "enabled"}:
+    raise SystemExit(1)
+if fields.get("mode") not in {"qgroup", "qgroup (full accounting)"}:
+    raise SystemExit(1)
+if fields.get("inconsistent") != "no":
+    raise SystemExit(1)
+if fields.get("override limits") == "yes" or fields.get("rescan status") == "running":
+    raise SystemExit(1)
+'
+}
+
+if [[ ${1-} == --validate-quota-status ]]; then
+  [[ $# == 1 ]] || exit 2
+  validate_quota_status
+  exit
+fi
+[[ $# == 0 ]] || fail 'arguments are not accepted'
+
 [[ $(id -u) == 0 ]] || fail 'host root is required'
 [[ $(systemd-detect-virt) == none ]] || fail 'physical-machine pilot required'
 [[ $(< /etc/hostname) == apx-host ]] || fail 'wrong host identity'
@@ -64,15 +99,8 @@ for label in root home; do
 done
 
 quota_status=$(btrfs quota status "$STATE") || fail 'quota status is unavailable'
-grep -Eq '^Status:.*enabled|^Enabled:.*yes' <<<"$quota_status" \
-  || fail 'quota accounting is disabled'
-grep -Eq '^Mode:.*qgroup|^Simple quotas:.*no' <<<"$quota_status" \
-  || fail 'traditional qgroup mode is not confirmed'
-grep -Eq '^Inconsistent:.*no' <<<"$quota_status" \
-  || fail 'quota accounting is inconsistent'
-if grep -Eq '^Override limits:.*yes|^Rescan status:.*running' <<<"$quota_status"; then
-  fail 'quota limits are overridden or a rescan is running'
-fi
+validate_quota_status <<<"$quota_status" \
+  || fail 'quota accounting is disabled, non-qgroup, inconsistent, overridden, rescanning, or malformed'
 
 root_id=$(btrfs inspect-internal rootid "$ENVIRONMENT/root")
 home_id=$(btrfs inspect-internal rootid "$ENVIRONMENT/home")

@@ -335,15 +335,15 @@ working space. Do not destroy or restore Development: its root contains its
 packages and partial Ollama state, and its home contains the repository,
 credentials, Codex state, and user tools.
 
-Use immutable tag `physical-headless-quota-v1`. From Development, first ensure
+Use immutable tag `physical-headless-quota-v2`. From Development, first ensure
 the working tree is clean and fetch the reviewed tag, then leave the container:
 
 ```bash
 cd /home/apx/work/apx
 git status --short
-git fetch origin tag physical-headless-quota-v1
-test "$(git cat-file -t physical-headless-quota-v1)" = tag
-git rev-parse physical-headless-quota-v1^{}
+git fetch origin tag physical-headless-quota-v2
+test "$(git cat-file -t physical-headless-quota-v2)" = tag
+git rev-parse physical-headless-quota-v2^{}
 exit
 exit
 ```
@@ -353,16 +353,16 @@ retained bootstrap checkout. The printed script digest must equal the digest
 published with this recovery release before it is run:
 
 ```text
-ca3a7abadf5389caa2c37b4e696e528644b854d831d7e0b37e117ba420b6edff  scripts/physical-pilot/recover-development-quota-v1.sh
+d7365c456c79f45032a6c0883d851055296236a3f9ee874bc194b76e3678f60f  scripts/physical-pilot/recover-development-quota-v1.sh
 ```
 
 ```bash
 apx environment stop development
 cd /root/apx-bootstrap
-git fetch origin tag physical-headless-quota-v1
-git checkout --detach physical-headless-quota-v1
-test "$(git cat-file -t physical-headless-quota-v1)" = tag
-git rev-parse physical-headless-quota-v1^{}
+git fetch origin tag physical-headless-quota-v2
+git checkout --detach physical-headless-quota-v2
+test "$(git cat-file -t physical-headless-quota-v2)" = tag
+git rev-parse physical-headless-quota-v2^{}
 sha256sum scripts/physical-pilot/recover-development-quota-v1.sh
 bash scripts/physical-pilot/recover-development-quota-v1.sh
 ```

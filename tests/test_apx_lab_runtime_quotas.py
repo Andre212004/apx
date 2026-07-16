@@ -44,6 +44,14 @@ class RuntimeQuotaTests(unittest.TestCase):
 
 
 class PhysicalRecoveryTests(unittest.TestCase):
+    def validate_quota_status(self, output: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(RECOVERY_PATH), "--validate-quota-status"],
+            input=output,
+            text=True,
+            capture_output=True,
+        )
+
     def test_recovery_script_is_valid_and_bound_to_matching_runtime(self) -> None:
         subprocess.run(["bash", "-n", str(RECOVERY_PATH)], check=True)
         source = RECOVERY_PATH.read_text()
@@ -64,6 +72,25 @@ class PhysicalRecoveryTests(unittest.TestCase):
             "trap rollback ERR",
         ):
             self.assertIn(required, source)
+
+    def test_quota_status_accepts_both_supported_btrfs_formats(self) -> None:
+        outputs = (
+            "Status: enabled\nMode: qgroup\nInconsistent: no\n",
+            "Quotas on /var/lib/apx:\n  Enabled: yes\n  Mode: qgroup (full accounting)\n  Inconsistent: no\n  Override limits: no\n",
+        )
+        for output in outputs:
+            with self.subTest(output=output):
+                self.assertEqual(self.validate_quota_status(output).returncode, 0)
+
+    def test_quota_status_refuses_disabled_non_qgroup_and_inconsistent(self) -> None:
+        outputs = (
+            "Enabled: no\nMode: qgroup (full accounting)\nInconsistent: no\n",
+            "Enabled: yes\nMode: squota (simple accounting)\nInconsistent: no\n",
+            "Enabled: yes\nMode: qgroup (full accounting)\nInconsistent: yes\n",
+        )
+        for output in outputs:
+            with self.subTest(output=output):
+                self.assertNotEqual(self.validate_quota_status(output).returncode, 0)
 
 
 if __name__ == "__main__":

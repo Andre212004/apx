@@ -350,6 +350,14 @@ rolls limits back if final verification or runtime installation fails. Owner
 execution and post-recovery physical validation remain required; repository
 tests do not claim the recovery has run on the machine.
 
+The first quota recovery release falsely rejected the installed `btrfs-progs`
+status layout because its anchored shell expressions did not admit the leading
+indentation used by `Enabled: yes`, `Mode: qgroup (full accounting)`, and
+`Inconsistent: no`. The corrected parser normalizes only surrounding whitespace
+and supports both known field-name/value formats. It still requires enabled
+traditional qgroups and consistent accounting, rejects duplicate or malformed
+safety fields, and continues to reject limit override or active rescan evidence.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned
