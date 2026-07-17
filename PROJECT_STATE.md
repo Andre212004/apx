@@ -400,6 +400,20 @@ It has no formatting, unlock, mount, attachment, download, or cleanup function;
 the physical evidence, adapter design, failure fixtures, denial tests, and
 target-bound destructive dossier remain required.
 
+The same module now implements the closed `ModelArtifactManifest`. It binds a
+served tag to its reviewed source, licence, Ollama version, measured size,
+manifest digest, unique ordered blob digests, and explicit absence of partial
+downloads, credentials, and conversation state. This closes only the pure
+model-record contract; physical Ollama path observation and model acquisition
+remain pending.
+
+The external-store module also produces a deterministic attach preview only
+from complete ready evidence. It fixes a private runtime path, the candidate
+Development Ollama data path, ordered effect names, and a generation-bound
+operation identity while carrying no command or execution function. The audit
+must confirm the real installed Ollama path; detach transitions, interruption
+recovery, the runtime adapter, and physical approval remain open.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned
@@ -591,7 +605,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 587 tests: 583 pass and
+package rebuild evidence. The complete suite now runs 593 tests: 589 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

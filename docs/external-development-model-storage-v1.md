@@ -121,6 +121,13 @@ An Ollama tag alone is not a durable integrity identity. The eventual adapter
 must capture the immutable manifest and referenced blob identities after the
 exact installed Ollama behavior is observed.
 
+`ModelArtifactManifest` in `src/apx_external_model_storage.py` now implements
+this pure record. It requires one reviewed source vocabulary, Ollama tool
+identity, a positive measured size, one exact manifest digest, a unique sorted
+blob set, and explicit absence of partial downloads, credentials, and
+conversations. Its canonical digest can be bound into `AttachmentEvidence`.
+It reads supplied metadata only and cannot inspect or download a model.
+
 ## Disconnect and Failure Rules
 
 Removing the cable while Development is active is a failure, not a normal
@@ -163,7 +170,9 @@ External model storage remains blocked until the repository contains and tests:
    `AttachmentEvidence` contract in `src/apx_external_model_storage.py`);
 2. a pure validator that rejects identity, ownership, capacity, state, and
    model-manifest mismatches (now implemented without any effect adapter);
-3. a no-effect attach/detach plan with exact paths and operation identity;
+3. a no-effect attach/detach plan with exact paths and operation identity (the
+   deterministic attach preview is now implemented; detach and interruption
+   transitions remain pending);
 4. a minimum-privilege runtime adapter design;
 5. stopped-state, disconnect, partial-download, full-disk, corruption, and
    changed-device fixtures;
@@ -178,3 +187,11 @@ The implemented validator can classify evidence only as `blocked` or
 `ready-for-separate-design-review`. It cannot format, unlock, mount, attach,
 detach, download, admit, or remove anything, and even a ready result still
 requires the remaining gates and a separate destructive dossier.
+
+`build_attach_preview` now turns only complete ready evidence into a
+deterministic `preview-only` record. It fixes the private host location under
+`/run/apx/model-stores/<attachment-id>`, the candidate Development service path
+`/var/lib/ollama`, the ordered effect names, and a generation-bound operation
+identity. These are review inputs, not shell commands or execution authority.
+Tomorrow's audit must confirm that `/var/lib/ollama` is the installed package's
+real service-data path before this candidate path can be accepted.

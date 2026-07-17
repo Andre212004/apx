@@ -45,6 +45,14 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "UNEXPECTED_EXECUTOR_SOCKET",
         ):
             self.assertIn(required, AUDIT)
+        for required in (
+            "pacman -Q ollama qwen-code",
+            "systemctl is-enabled ollama.service",
+            "ollama list",
+            "Known Ollama data locations",
+            "Do not use `ollama pull`",
+        ):
+            self.assertIn(required, AUDIT)
 
     def test_external_storage_remains_a_non_implemented_proposal(self) -> None:
         self.assertIn("No external disk", EXTERNAL_STORAGE)

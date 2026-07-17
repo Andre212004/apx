@@ -48,7 +48,92 @@ def evidence() -> storage.AttachmentEvidence:
     )
 
 
+def model_manifest() -> storage.ModelArtifactManifest:
+    return storage.ModelArtifactManifest(
+        1,
+        "qwen2.5-coder-7b-instruct",
+        "qwen2.5-coder:7b",
+        "ollama-library",
+        "apache-2.0",
+        "ollama",
+        "0.12.1",
+        4_700_000_000,
+        "6" * 64,
+        ("7" * 64, "8" * 64),
+        True,
+        True,
+        True,
+    )
+
+
 class ExternalModelStorageTests(unittest.TestCase):
+    def test_attach_preview_is_exact_deterministic_and_nonexecuting(self) -> None:
+        readiness = storage.assess_attachment(evidence())
+        first = storage.build_attach_preview(readiness)
+        second = storage.build_attach_preview(readiness)
+        self.assertEqual(first, second)
+        self.assertEqual(first.classification, "preview-only")
+        self.assertEqual(first.host_private_mount, f"/run/apx/model-stores/{evidence().attachment_id}")
+        self.assertEqual(first.development_model_path, "/var/lib/ollama")
+        self.assertTrue(first.separate_implementation_and_approval_required)
+        self.assertNotIn("mount ", " ".join(first.effects))
+
+    def test_blocked_or_forged_readiness_cannot_produce_preview(self) -> None:
+        blocked = storage.assess_attachment(replace(evidence(), hub_visibility_absent=False))
+        with self.assertRaises(storage.ExternalModelStorageError):
+            storage.build_attach_preview(blocked)
+        ready = storage.assess_attachment(evidence())
+        for forged in (
+            replace(ready, classification="preview-only"),
+            replace(ready, blockers=("ignored",)),
+            replace(ready, evidence_digest="short"),
+            replace(ready, separate_destructive_dossier_required=False),
+        ):
+            with self.subTest(forged=forged):
+                with self.assertRaises(storage.ExternalModelStorageError):
+                    storage.build_attach_preview(forged)
+
+    def test_attach_preview_identity_changes_with_bound_evidence(self) -> None:
+        initial = storage.build_attach_preview(storage.assess_attachment(evidence()))
+        changed = storage.build_attach_preview(
+            storage.assess_attachment(replace(evidence(), device_identity_digest="a" * 64))
+        )
+        self.assertNotEqual(initial.operation_id, changed.operation_id)
+        self.assertNotEqual(initial.preview_digest, changed.preview_digest)
+
+    def test_model_manifest_is_canonical_and_digest_bound(self) -> None:
+        digest = storage.validate_model_manifest(model_manifest())
+        self.assertEqual(len(digest), 64)
+        changed = storage.validate_model_manifest(replace(model_manifest(), total_bytes=4_700_000_001))
+        self.assertNotEqual(digest, changed)
+
+    def test_model_manifest_json_is_closed_duplicate_safe_and_round_trips(self) -> None:
+        payload = asdict(model_manifest())
+        self.assertEqual(storage.parse_model_manifest_json(json.dumps(payload)), model_manifest())
+        payload["command"] = "ollama pull"
+        with self.assertRaises(storage.ExternalModelStorageError):
+            storage.parse_model_manifest_json(json.dumps(payload))
+        canonical = json.dumps(asdict(model_manifest()), separators=(",", ":"))
+        duplicate = canonical[:-1] + ',"schema_version":1}'
+        with self.assertRaises(storage.ExternalModelStorageError):
+            storage.parse_model_manifest_json(duplicate)
+
+    def test_model_manifest_rejects_partial_secret_mutable_and_bad_blob_state(self) -> None:
+        cases = (
+            ("partial_download_absent", False),
+            ("credentials_absent", False),
+            ("conversations_absent", False),
+            ("blob_sha256", ("8" * 64, "7" * 64)),
+            ("blob_sha256", ("7" * 64, "7" * 64)),
+            ("blob_sha256", ()),
+            ("source", "https://example.invalid/model"),
+            ("tool", "curl"),
+        )
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                with self.assertRaises(storage.ExternalModelStorageError):
+                    storage.validate_model_manifest(replace(model_manifest(), **{field: value}))
+
     def test_complete_evidence_reaches_only_separate_design_review(self) -> None:
         result = storage.assess_attachment(evidence())
         self.assertEqual(result.classification, "ready-for-separate-design-review")

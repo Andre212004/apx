@@ -227,6 +227,39 @@ Authentication status is suitable; token or credential contents are not.
 Multiple clones, package build trees, large downloads, tool caches, and model
 directories are review candidates, not automatic deletion targets.
 
+Collect the reported package-only Ollama state explicitly. These commands do
+not start the service or download a model:
+
+```bash
+machinectl shell root@apx-development /bin/bash -lc '
+printf "[Ollama and Qwen packages]\n"
+pacman -Q ollama qwen-code 2>&1 || true
+printf "[Ollama command and account]\n"
+command -v ollama || true
+getent passwd ollama || true
+printf "[Ollama service state]\n"
+systemctl is-enabled ollama.service 2>&1 || true
+systemctl is-active ollama.service 2>&1 || true
+systemctl show ollama.service -p FragmentPath -p User -p Group -p ExecStart -p Environment --no-pager 2>&1 || true
+printf "[Ollama listeners]\n"
+ss -ltnp | awk '\''NR == 1 || /:11434([[:space:]]|$)/'\''
+printf "[Ollama model list]\n"
+ollama list 2>&1 || true
+printf "[Known Ollama data locations: metadata only]\n"
+for path in /var/lib/ollama /usr/share/ollama /home/apx/.ollama /root/.ollama; do
+  if test -e "$path"; then
+    find "$path" -xdev -mindepth 0 -maxdepth 3 -printf "%y %m %u:%g %s %TY-%Tm-%TdT%TH:%TM %p\n" 2>/dev/null | sort
+    du -x -h -d 3 "$path" 2>/dev/null | sort -h
+  fi
+done
+'
+```
+
+Do not use `ollama pull`, `ollama run`, `systemctl start`, or `systemctl enable`
+during the audit. `Environment=` output must be checked before sharing; redact
+any value if it unexpectedly contains a token or credential. Ordinary listener
+and model-directory settings may remain visible.
+
 ## Step 6 — Phase 9 and Phase 10 Readiness
 
 Record the current partial Phase 9 state without attempting to complete it:
