@@ -411,8 +411,17 @@ The external-store module also produces a deterministic attach preview only
 from complete ready evidence. It fixes a private runtime path, the candidate
 Development Ollama data path, ordered effect names, and a generation-bound
 operation identity while carrying no command or execution function. The audit
-must confirm the real installed Ollama path; detach transitions, interruption
-recovery, the runtime adapter, and physical approval remain open.
+must confirm the real installed Ollama path; physical detach evidence, the
+runtime adapter, interruption experiments, and physical approval remain open.
+
+The pure attach/detach journal is now implemented in
+`src/apx_external_model_lifecycle.py`. It binds one preview to ordered attach
+evidence, permits activation only from verified attached-stopped state,
+requires separate detach approval, records ordered detach evidence, and treats
+prepared, partial, disconnected, or otherwise uncertain state as preserve and
+inspect. Its fixture store rejects replay, stale writers, and transition jumps.
+It performs no disk, encryption, mount, service, Environment, or cleanup effect;
+physical source adapters and interruption fixtures remain required.
 
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
@@ -605,7 +614,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 593 tests: 589 pass and
+package rebuild evidence. The complete suite now runs 601 tests: 597 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

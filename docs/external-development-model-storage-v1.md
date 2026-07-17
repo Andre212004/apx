@@ -68,6 +68,13 @@ Proposed lifecycle states are `absent`, `locked`, `verified-detached`,
 and `failed`. Only a verified stopped Development may move between detached and
 attached states. Activation requires the exact attachment already verified.
 
+The repository now implements the safe operational subset in
+`src/apx_external_model_lifecycle.py`. Its journal begins from one exact attach
+preview, prepares and records each attach step separately, permits Development
+activation only after complete attach evidence, requires a separate detach
+approval, and records each detach step before reaching verified detached state.
+It is an in-memory/pure contract with no host adapter.
+
 ## Visibility and Mount Direction
 
 The runtime does not currently implement external attachments. A later adapter
@@ -150,6 +157,12 @@ download, digest mismatch, or uncertain teardown, preserve data and block
 activation. Repair and destructive cleanup require separate procedures and
 approval.
 
+The pure recovery assessment now distinguishes no recorded effect, partial
+attach, attached-stopped, active, partial detach, verified detached, and an
+effect whose outcome is unknown. Unknown or partial outcomes always block
+Development activation and automatic cleanup. A test-only compare-and-swap
+store rejects stale writers, replay, and multi-step jumps.
+
 ## Required Physical Evidence
 
 Before implementation, the owner-run read-only audit must capture the external
@@ -171,8 +184,8 @@ External model storage remains blocked until the repository contains and tests:
 2. a pure validator that rejects identity, ownership, capacity, state, and
    model-manifest mismatches (now implemented without any effect adapter);
 3. a no-effect attach/detach plan with exact paths and operation identity (the
-   deterministic attach preview is now implemented; detach and interruption
-   transitions remain pending);
+   deterministic attach preview and pure ordered attach/detach lifecycle are
+   now implemented; physical adapters remain pending);
 4. a minimum-privilege runtime adapter design;
 5. stopped-state, disconnect, partial-download, full-disk, corruption, and
    changed-device fixtures;
@@ -195,3 +208,8 @@ deterministic `preview-only` record. It fixes the private host location under
 identity. These are review inputs, not shell commands or execution authority.
 Tomorrow's audit must confirm that `/var/lib/ollama` is the installed package's
 real service-data path before this candidate path can be accepted.
+
+The lifecycle module cannot call `cryptsetup`, `mount`, `umount`, `systemd`,
+APX, Ollama, or a disk API. Its effect names describe what a future independently
+reviewed adapter would have to prove. Completing the pure journal is therefore
+not evidence that an SSD was attached or that the physical feature is ready.
