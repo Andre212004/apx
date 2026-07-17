@@ -9,6 +9,7 @@ AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_te
 EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").read_text()
 CURRENT_HANDOFF = (ROOT / "CURRENT_HANDOFF.md").read_text()
 UPDATE_CONTRACT = (ROOT / "docs" / "physical-pilot-update-contract-v1.md").read_text()
+H0_CONTRACT = (ROOT / "docs" / "hyprland-h0-clean-host-v1.md").read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -80,6 +81,20 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "The current audit has not run",
         ):
             self.assertIn(required, compact_update)
+
+    def test_h0_contract_is_clean_host_amd_only_and_recovery_first(self) -> None:
+        compact_h0_contract = " ".join(H0_CONTRACT.split())
+        for required in (
+            "ready-for-separate-physical-approval",
+            "AMD integrated GPU only",
+            "built-in keyboard and touchpad only",
+            "no NVIDIA GPU",
+            "independent text recovery console",
+            "never triggers an automatic graphical restart",
+            "Only the final state may claim that the Hub path is restored",
+            "Do not install Hyprland on the Host",
+        ):
+            self.assertIn(required, compact_h0_contract)
 
 
 if __name__ == "__main__":

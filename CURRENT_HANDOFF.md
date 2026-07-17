@@ -63,7 +63,9 @@ The repository currently has:
 - a pure physical-pilot update candidate and installed-evidence validator;
 - a separate-import/separate-activation update preview;
 - an ordered update journal that retains the previous version for rollback;
-- 617 tests in the current milestone: 613 passing and four expected skips.
+- a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
+  contract;
+- 633 tests in the current milestone: 629 passing and four expected skips.
 
 The external-model-store code cannot format, unlock, mount, bind, download,
 start, stop, detach, or remove anything. Physical adapters remain blocked on
@@ -101,6 +103,13 @@ No real host update is authorized by this milestone. The next repository work
 may define the exact update member manifest and minimum-privilege adapter
 boundaries, but physical adapter code and a release tag remain blocked until
 the audit is reviewed.
+
+The independent graphical milestone is now the H0 clean-host contract in
+`src/apx_hyprland_h0.py`, `src/apx_hyprland_h0_journal.py`, and
+`docs/hyprland-h0-clean-host-v1.md`. It is pure only: no graphics or devices are
+changed. After the audit, the next graphical work is an H0-specific read-only
+capture of AMD connector/card/render identities, built-in input identities,
+VTs, and the installed graphical-role gap.
 
 ## Hard Stops
 

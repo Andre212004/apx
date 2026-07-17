@@ -469,6 +469,24 @@ touchpad to one disposable Hyprland Environment. G2 remains the separate
 secondary gate for migrating a live KDE/SDDM machine. G2 evidence is preserved,
 but it no longer blocks the headless C0–C6 ladder or H0 design.
 
+The first closed H0 repository contract is now implemented in
+`src/apx_hyprland_h0.py` and documented in
+`docs/hyprland-h0-clean-host-v1.md`. It binds reconciled audit, no-display-
+manager/session/lease evidence, independent recovery VT, healthy APX state,
+exact target AMD identities, explicit NVIDIA exclusion, exactly mediated
+built-in keyboard/touchpad, forbidden audio/camera/microphone/broad-input/Host/
+executor access, graphical release/config/control identities, watchdog,
+timeout, and teardown observer into a no-effect preview. Complete evidence
+reaches only `ready-for-separate-physical-approval`.
+
+`src/apx_hyprland_h0_journal.py` now fixes ordered recovery-VT verification,
+Hub/Development stop, lease reservation, AMD/input grants, Hyprland launch,
+Wayland/control/watchdog verification, teardown, device revocation, zero
+residue, and restored headless operation. Every partial or uncertain state
+blocks automatic graphical restart and requires recovery-VT inspection. No
+physical graphical adapter, package installation, VT switch, device grant,
+compositor launch, or cleanup is implemented.
+
 ## Accepted First Clean-Install Foundation
 
 `docs/clean-install-foundation-v1.md` fixes the first experimental C0–C6 target:
@@ -636,7 +654,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 617 tests: 613 pass and
+package rebuild evidence. The complete suite now runs 633 tests: 629 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

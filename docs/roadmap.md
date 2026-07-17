@@ -225,6 +225,12 @@ H0 begins with no display manager or graphical owner and retains the independent
 text recovery surface. It reuses G2 device/readiness/teardown lessons without
 requiring KDE logout or SDDM quiescence.
 
+The pure H0 clean-host evidence, preview, ordered experiment journal, and
+conservative recovery model are now implemented. They select no physical
+adapter and perform no device or session effect. Reconciled physical audit,
+H0-specific device/VT observations, backend selection, mediation, watchdog,
+teardown observers, failure fixtures, and explicit approval remain required.
+
 The proposed `environment-local-administration-v1.md` now defines how local
 `sudo`, package managers, installers, services, updates, devices, limits, and
 recovery remain confined to one Environment. Its confirmation mechanism and
