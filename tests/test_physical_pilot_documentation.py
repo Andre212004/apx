@@ -7,6 +7,8 @@ STATE = (ROOT / "PROJECT_STATE.md").read_text()
 HANDOFF = (ROOT / "docs" / "physical-headless-development-handoff-v1.md").read_text()
 AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_text()
 EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").read_text()
+CURRENT_HANDOFF = (ROOT / "CURRENT_HANDOFF.md").read_text()
+UPDATE_CONTRACT = (ROOT / "docs" / "physical-pilot-update-contract-v1.md").read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -59,6 +61,25 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertIn("no shared writable host or Hub path", STATE)
         self.assertIn("External model storage remains blocked", EXTERNAL_STORAGE)
         self.assertIn("target-bound destructive formatting dossier", EXTERNAL_STORAGE)
+
+    def test_current_handoff_and_update_contract_preserve_all_safety_blocks(self) -> None:
+        for required in (
+            "Owner-Reported Physical State",
+            "Next Owner Action",
+            "Current Repository Milestones",
+            "Hard Stops",
+            "Do not implement an external-SSD mount adapter",
+        ):
+            self.assertIn(required, CURRENT_HANDOFF)
+        compact_update = " ".join(UPDATE_CONTRACT.split())
+        for required in (
+            "ready-for-separate-import-approval",
+            "a second activation approval is required",
+            "Rollback retirement is never included",
+            "never automatically installs, rolls back, cleans, or deletes",
+            "The current audit has not run",
+        ):
+            self.assertIn(required, compact_update)
 
 
 if __name__ == "__main__":

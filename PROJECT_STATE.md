@@ -5,6 +5,28 @@ before proposing or making changes. Any change to the product objective,
 development method, confirmed architecture, or accepted deviation must update
 this file in the same change.
 
+`CURRENT_HANDOFF.md` is now the concise companion for cross-chat continuity.
+It records the latest owner-reported physical checkpoint, next expected audit,
+active safety blocks, and immediate repository milestone. `AGENTS.md` requires
+future sessions to read both files. The handoff never overrides this canonical
+state; disagreement must be resolved explicitly.
+
+The first pure already-installed physical-pilot update contract is now
+implemented in `src/apx_physical_update.py` and documented in
+`docs/physical-pilot-update-contract-v1.md`. It binds one untrusted bounded
+candidate to the exact expected installed revision, component set, tests,
+compatibility, rollback, documentation, reconciled audit, machine, Hub,
+Development, recovery, journal-health, and capacity evidence. A valid result
+reaches only `ready-for-separate-import-approval`; activation requires another
+approval and rollback retirement remains a later decision.
+
+`src/apx_physical_update_journal.py` now fixes the ordered staging,
+verification, activation, replacement, final verification, publication, and
+rollback-retention record. Prepared or partial effects preserve state and block
+automatic rollback or cleanup. The implementation contains no artifact reader,
+transport, installer, service control, physical rollback, or cleanup adapter.
+The physical audit and target-bound release remain mandatory gates.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of
@@ -614,7 +636,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 601 tests: 597 pass and
+package rebuild evidence. The complete suite now runs 617 tests: 613 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

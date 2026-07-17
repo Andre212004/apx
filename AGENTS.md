@@ -126,6 +126,13 @@ Read `PROJECT_STATE.md` before planning or editing. Update it in the same change
 whenever the product objective, development method, confirmed architecture, or
 an accepted deviation changes.
 
+Also read `CURRENT_HANDOFF.md` before planning or editing. It is the concise
+current-session bridge: it records the latest owner-reported physical state,
+the next external evidence expected, active safety blocks, and the immediate
+repository milestone. Update it whenever those facts change. It does not
+override `PROJECT_STATE.md`; disagreement must be resolved explicitly rather
+than guessed.
+
 ## Git Rules
 
 Do not commit or push unless the user explicitly asks for it.
