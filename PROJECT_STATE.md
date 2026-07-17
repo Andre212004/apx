@@ -368,6 +368,23 @@ type, and root ID, and uses only that scope for quota status, discovery, limit,
 verification, and rollback operations. The mount is removed on every exit.
 This does not expose the top level to an Environment or make it persistent.
 
+The same quota-status correction is now also present in both original bootstrap
+sources: the VM laboratory bootstrap and its target-bound physical-pilot
+counterpart. They accept the two observed `btrfs-progs` field layouts, enable
+quotas only when explicitly reported disabled, reject ambiguous or unhealthy
+accounting, and verify healthy traditional qgroups after enablement. This is a
+repository correction only; it does not change the already frozen initial
+physical-pilot tag or claim that either bootstrap was rerun.
+
+The owner has deferred Phase 9 local AI until an external SSD is available and
+may then select a larger model. The repository now proposes the external model
+storage boundary in `docs/external-development-model-storage-v1.md`: one exact
+encrypted device and attachment identity, visible only to one Development
+generation, with bounded capacity, immutable model evidence, fail-closed
+disconnect behavior, and no shared writable host or Hub path. This is a
+proposal only. No disk, mount, runtime adapter, model relocation, or larger
+model is implemented or authorized.
+
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
 builder may produce only an untrusted immutable candidate. A closed host-owned
@@ -529,17 +546,24 @@ handoff from official Arch media to a headless Hub and separate Development.
 The destructive installer and temporary host bootstrap are frozen through the
 immutable `physical-headless-pilot-v1` Git tag; only the later Development
 checkout follows `master` for ongoing work.
-The two scripts under `scripts/physical-pilot/` are deliberately separate from
+The two initial scripts under `scripts/physical-pilot/` are deliberately separate from
 the VM installer: one erases only the exact reviewed NVMe after repeating its
 model/serial/size checks and exact typed approval; the other admits only the
 installed physical marker and exact Lenovo DMI identity before installing the
-experimental runtime. Neither script has been executed on the physical target.
+experimental runtime. On 2026-07-17 the owner reported that Phases 1 through 8
+of the physical handoff had been completed on the target, including the initial
+installation, Hub, Development, GitHub, and Codex setup. Phase 9 local AI, its
+quota recovery, and every later cleanup phase remain pending. This is an owner
+progress report, not independently captured repository evidence; the read-only
+physical state and cleanup audit must reconcile the machine before cleanup or
+a later host update.
 
 This is an accepted development-method deviation, not a claim that the
 production blockers are closed. The initial host Git checkout and Git package
 are bounded bootstrap staging and must be removed only after Development has a
-persistent checkout, working GitHub authentication, Codex, and the accepted
-local-agent checks. Ongoing source, build, GitHub, Codex, Ollama, model, and
+persistent checkout, working GitHub authentication, Codex, the accepted
+local-agent checks, and the separately reviewed physical audit. Ongoing source,
+build, GitHub, Codex, Ollama, model, and
 Qwen Code work remains Development-only. The Hub still receives only the typed
 client and no development tools or assistant endpoint.
 
@@ -550,7 +574,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 566 tests: 562 pass and
+package rebuild evidence. The complete suite now runs 581 tests: 577 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

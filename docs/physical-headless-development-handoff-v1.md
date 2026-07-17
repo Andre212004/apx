@@ -4,6 +4,19 @@ Status: target-bound, hands-on experimental pilot. This guide is written for
 the owner's current Lenovo Legion 5 and reaches a headless Hub plus a separate
 Development Environment. It is not a production APX installer.
 
+Owner-reported progress on 2026-07-17: Phases 1 through 8 have been completed
+on the target. Phase 9 and every later phase remain pending. This progress is
+not repository-verified evidence; the read-only audit in
+`physical-pilot-state-and-cleanup-audit-v1.md` must confirm it before cleanup
+or a later host update.
+
+Phases 1 through 8 now describe the historical installed pilot and must not be
+replayed on the current machine. The frozen `physical-headless-pilot-v1`
+bootstrap predates the newer fail-closed quota-status parser now present in both
+repository bootstrap sources. A fresh installation or reinstall must wait for
+a separately reviewed immutable release, updated digests, and a new explicit
+owner decision; do not substitute `master` for the frozen tag.
+
 ## Outcome
 
 The intended end state is:
@@ -327,6 +340,13 @@ Do this only after Codex and GitHub work. Read
 `docs/local-development-agent-v1.md` completely before installing anything.
 This is a Development-local convenience, not a host service or Hub feature.
 
+The owner has intentionally deferred this phase until an external SSD is
+available. Do not install a larger model merely because the external SSD adds
+capacity: external model storage, its mount lifetime, ownership, encryption,
+disconnect behavior, quota accounting, and Environment-only visibility need a
+separate reviewed design first. Until then, preserve the existing Development
+Environment and continue repository work with Codex. Phase 10 remains pending.
+
 ### One-time quota recovery for the existing physical Development
 
 The original pilot runtime assigned every role a 4 GiB root and 2 GiB home.
@@ -459,18 +479,35 @@ implementations when Codex is unavailable.
 
 ## Phase 10 — Remove Temporary Host Development State
 
-Do this only after all of these are proven:
+Do not begin with `rm` or package removal. First complete the read-only
+inventory and classification in
+`docs/physical-pilot-state-and-cleanup-audit-v1.md`. Do this only after all of
+these are proven:
 
+- the Phase 9 quota recovery completed and Development has the intended 16 GiB
+  root and 8 GiB home limits;
 - Development restarts with its home intact;
 - its repository has the expected branch and remote;
 - GitHub push authentication works;
 - Codex starts inside Development;
-- the optional local model passes its Development-local lifecycle checks;
+- the local model passes its Development-local listener, persistence, stop,
+  and restart checks;
+- stopping Development leaves no Development machine, unit, process, mount,
+  listener, or executor access behind;
 - Hub still has no Git, compiler, Node.js, npm, Codex, Ollama, Qwen Code, model,
-  assistant endpoint, or source checkout.
+  assistant endpoint, source checkout, credential, or Development-only cache;
+- the host audit identifies `/root/apx-bootstrap` and host Git as the exact
+  temporary bootstrap objects, and no recovery process still depends on them;
+- all proposed removals have been reviewed individually and separately
+  approved by the owner.
 
-Exit Development, stop it through APX, and remove only the temporary host
-checkout and Git package:
+The audit may find additional candidates, but this phase does not authorize
+their removal. Unknown files, packages, users, services, subvolumes, qgroups,
+snapshots, archives, boot files, logs, or caches are preserved until their
+origin and recovery value are established.
+
+Only after that separate review, exit Development, stop it through APX, and
+remove only the two already documented bootstrap objects:
 
 ```bash
 exit
@@ -481,6 +518,8 @@ apx environment start development
 ```
 
 The `rm` target must be exactly `/root/apx-bootstrap`. Do not generalize it.
+After restarting Development, repeat the post-cleanup section of the audit and
+record the result in the repository before treating Phase 10 as complete.
 
 ## Expected Pilot Limitations
 

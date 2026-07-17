@@ -9,6 +9,8 @@ from unittest.mock import patch
 
 RUNTIME_PATH = Path(__file__).parents[1] / "scripts" / "virtual-lab" / "apx-lab-runtime.py"
 RECOVERY_PATH = Path(__file__).parents[1] / "scripts" / "physical-pilot" / "recover-development-quota-v1.sh"
+PHYSICAL_BOOTSTRAP_PATH = Path(__file__).parents[1] / "scripts" / "physical-pilot" / "bootstrap-apx-headless-pilot.sh"
+VM_BOOTSTRAP_PATH = Path(__file__).parents[1] / "scripts" / "virtual-lab" / "bootstrap-apx-headless-runtime.sh"
 SPEC = importlib.util.spec_from_file_location("apx_lab_runtime", RUNTIME_PATH)
 assert SPEC and SPEC.loader
 runtime = importlib.util.module_from_spec(SPEC)
@@ -106,6 +108,29 @@ class PhysicalRecoveryTests(unittest.TestCase):
         self.assertGreaterEqual(len(qgroup_lines), 10)
         self.assertTrue(all('"$TOP_LEVEL"' in line for line in qgroup_lines))
         self.assertNotIn('btrfs qgroup show --raw -reF "$STATE"', source)
+
+
+class BootstrapQuotaTests(unittest.TestCase):
+    def test_bootstrap_sources_are_valid_and_do_not_use_the_obsolete_grep(self) -> None:
+        for path in (PHYSICAL_BOOTSTRAP_PATH, VM_BOOTSTRAP_PATH):
+            with self.subTest(path=path):
+                subprocess.run(["bash", "-n", str(path)], check=True)
+                source = path.read_text()
+                self.assertNotIn("grep -q 'Enabled:.*no'", source)
+                self.assertIn("quota_state", source)
+
+    def test_bootstrap_sources_fail_closed_and_recheck_after_enabling_quotas(self) -> None:
+        for path in (PHYSICAL_BOOTSTRAP_PATH, VM_BOOTSTRAP_PATH):
+            with self.subTest(path=path):
+                source = path.read_text()
+                for required in (
+                    'fields.get("mode") in {"qgroup", "qgroup (full accounting)"}',
+                    'fields.get("inconsistent") == "no"',
+                    'fields.get("override limits") != "yes"',
+                    'fields.get("rescan status") != "running"',
+                    "Btrfs quota accounting is not healthy after enablement",
+                ):
+                    self.assertIn(required, source)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,41 @@ readonly SOURCE=/root/apx-lab-runtime.py
 readonly CLIENT_SOURCE=/root/apx-lab-client.py
 readonly EXECUTOR_SOURCE=/root/apx-lab-executor.py
 
+quota_state() {
+  python -c '
+import sys
+
+fields = {}
+for raw_line in sys.stdin:
+    if ":" not in raw_line:
+        continue
+    key, value = raw_line.split(":", 1)
+    key = " ".join(key.strip().lower().split())
+    value = " ".join(value.strip().lower().split())
+    if key in {"enabled", "status", "mode", "inconsistent", "override limits", "rescan status"}:
+        if key in fields:
+            raise SystemExit(1)
+        fields[key] = value
+
+enabled_values = [fields[key] for key in ("enabled", "status") if key in fields]
+if len(enabled_values) != 1:
+    raise SystemExit(1)
+enabled = enabled_values[0]
+if enabled in {"no", "disabled"}:
+    print("disabled")
+elif (
+    enabled in {"yes", "enabled"}
+    and fields.get("mode") in {"qgroup", "qgroup (full accounting)"}
+    and fields.get("inconsistent") == "no"
+    and fields.get("override limits") != "yes"
+    and fields.get("rescan status") != "running"
+):
+    print("healthy")
+else:
+    raise SystemExit(1)
+'
+}
+
 [[ $(id -u) == 0 ]] || { echo 'APX bootstrap refused: host root required' >&2; exit 1; }
 [[ $(systemd-detect-virt) == kvm ]] || { echo 'APX bootstrap refused: not the reviewed KVM guest' >&2; exit 1; }
 [[ $(< /etc/hostname) == apx-virtual ]] || { echo 'APX bootstrap refused: wrong guest' >&2; exit 1; }
@@ -22,9 +57,17 @@ install -Dm0755 "$EXECUTOR_SOURCE" /usr/lib/apx/apx-lab-executor.py
 ln -sfn /usr/lib/apx/apx-lab-runtime.py /usr/bin/apx
 mkdir -p "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
 chmod 0700 "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
-if btrfs quota status "$STATE" | grep -q 'Enabled:.*no'; then
+quota_status=$(btrfs quota status "$STATE") \
+  || { echo 'APX bootstrap refused: Btrfs quota status is unavailable' >&2; exit 1; }
+state=$(quota_state <<<"$quota_status") \
+  || { echo 'APX bootstrap refused: Btrfs quota status is malformed, unsupported, or unhealthy' >&2; exit 1; }
+if [[ $state == disabled ]]; then
   btrfs quota enable "$STATE"
   btrfs quota rescan -w "$STATE"
+  quota_status=$(btrfs quota status "$STATE") \
+    || { echo 'APX bootstrap refused: Btrfs quota status is unavailable after enablement' >&2; exit 1; }
+  [[ $(quota_state <<<"$quota_status") == healthy ]] \
+    || { echo 'APX bootstrap refused: Btrfs quota accounting is not healthy after enablement' >&2; exit 1; }
 fi
 
 if ! command -v pacstrap >/dev/null; then

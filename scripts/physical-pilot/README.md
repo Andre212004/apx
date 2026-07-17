@@ -8,6 +8,11 @@ Do not run either file independently from memory or adapt away its identity
 guards. Follow `docs/physical-headless-development-handoff-v1.md` from a second
 device with the complete output reviewed after every phase.
 
+For an already installed pilot, use
+`docs/physical-pilot-state-and-cleanup-audit-v1.md` to inventory the host, Hub,
+and Development before proposing any cleanup. The audit is read-only; it does
+not make unknown files or packages safe to remove.
+
 `install-arch-headless-pilot.sh` is intentionally destructive. It may run only
 from official Arch installation media booted physically in UEFI mode and only
 after its fixed disk path, byte size, model, serial, and mount checks pass.

@@ -1,0 +1,52 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).parents[1]
+STATE = (ROOT / "PROJECT_STATE.md").read_text()
+HANDOFF = (ROOT / "docs" / "physical-headless-development-handoff-v1.md").read_text()
+AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_text()
+EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").read_text()
+
+
+class PhysicalPilotDocumentationTests(unittest.TestCase):
+    def test_owner_report_and_pending_phases_are_consistent(self) -> None:
+        for source in (STATE, HANDOFF, AUDIT):
+            self.assertIn("Phases 1 through 8", source)
+            self.assertIn("Phase 9", source)
+        self.assertNotIn("Neither script has been executed on the physical target", STATE)
+
+    def test_handoff_blocks_replay_and_cleanup_before_audit(self) -> None:
+        compact = " ".join(HANDOFF.split())
+        self.assertIn("historical installed pilot", compact)
+        self.assertIn("replayed on the current machine", compact)
+        self.assertIn("do not substitute `master` for the frozen tag", compact)
+        self.assertIn("Do not begin with `rm` or package removal", compact)
+        self.assertIn("separately approved by the owner", compact)
+
+    def test_audit_is_read_only_and_separates_cleanup(self) -> None:
+        self.assertIn("Never combine those sessions", AUDIT)
+        self.assertIn("Unknown means preserve", AUDIT)
+        self.assertIn("Separately Approved Cleanup Session", AUDIT)
+        self.assertIn("This section is not standing authorization", AUDIT)
+
+    def test_audit_covers_host_hub_development_and_sensitive_boundaries(self) -> None:
+        for required in (
+            "Establish the Host Context",
+            "Inventory APX Host-Owned State",
+            "Inspect Hub",
+            "Inspect Development",
+            "Phase 9 and Phase 10 Readiness",
+            "UNEXPECTED_EXECUTOR_SOCKET",
+        ):
+            self.assertIn(required, AUDIT)
+
+    def test_external_storage_remains_a_non_implemented_proposal(self) -> None:
+        self.assertIn("No external disk", EXTERNAL_STORAGE)
+        self.assertIn("no shared writable host or Hub path", STATE)
+        self.assertIn("External model storage remains blocked", EXTERNAL_STORAGE)
+        self.assertIn("target-bound destructive formatting dossier", EXTERNAL_STORAGE)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -37,6 +37,12 @@ preflight measuring sufficient system memory and disk space. If the 7B model
 cannot run reliably with the measured memory ceiling, the admitted fallback is
 `qwen2.5-coder:3b`; silently substituting a larger model is not allowed.
 
+The owner has deferred this installation until an external SSD is available
+and may later prefer a larger model. Extra capacity does not approve that model
+or its storage path. `external-development-model-storage-v1.md` defines the
+identity, encryption, visibility, integrity, disconnect, and recovery gates
+that must pass before external model storage is implemented.
+
 The first run is deliberately CPU-first. The headless APX pilot has not admitted
 NVIDIA devices, host driver interfaces, or CUDA userspace into Development.
 Installing `ollama-cuda` before that boundary has been designed and tested would

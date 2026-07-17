@@ -15,6 +15,41 @@ fail() {
   exit 1
 }
 
+quota_state() {
+  python -c '
+import sys
+
+fields = {}
+for raw_line in sys.stdin:
+    if ":" not in raw_line:
+        continue
+    key, value = raw_line.split(":", 1)
+    key = " ".join(key.strip().lower().split())
+    value = " ".join(value.strip().lower().split())
+    if key in {"enabled", "status", "mode", "inconsistent", "override limits", "rescan status"}:
+        if key in fields:
+            raise SystemExit(1)
+        fields[key] = value
+
+enabled_values = [fields[key] for key in ("enabled", "status") if key in fields]
+if len(enabled_values) != 1:
+    raise SystemExit(1)
+enabled = enabled_values[0]
+if enabled in {"no", "disabled"}:
+    print("disabled")
+elif (
+    enabled in {"yes", "enabled"}
+    and fields.get("mode") in {"qgroup", "qgroup (full accounting)"}
+    and fields.get("inconsistent") == "no"
+    and fields.get("override limits") != "yes"
+    and fields.get("rescan status") != "running"
+):
+    print("healthy")
+else:
+    raise SystemExit(1)
+'
+}
+
 [[ $(id -u) == 0 ]] || fail 'host root is required'
 [[ $(systemd-detect-virt) == none ]] || fail 'physical-machine pilot required'
 [[ $(< /etc/hostname) == apx-host ]] || fail 'wrong host identity'
@@ -32,9 +67,17 @@ install -Dm0755 "$EXECUTOR_SOURCE" /usr/lib/apx/apx-lab-executor.py
 ln -sfn /usr/lib/apx/apx-lab-runtime.py /usr/bin/apx
 mkdir -p "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
 chmod 0700 "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
-if btrfs quota status "$STATE" | grep -q 'Enabled:.*no'; then
+quota_status=$(btrfs quota status "$STATE") \
+  || fail 'Btrfs quota status is unavailable'
+state=$(quota_state <<<"$quota_status") \
+  || fail 'Btrfs quota status is malformed, unsupported, or unhealthy'
+if [[ $state == disabled ]]; then
   btrfs quota enable "$STATE"
   btrfs quota rescan -w "$STATE"
+  quota_status=$(btrfs quota status "$STATE") \
+    || fail 'Btrfs quota status is unavailable after enablement'
+  [[ $(quota_state <<<"$quota_status") == healthy ]] \
+    || fail 'Btrfs quota accounting is not healthy after enablement'
 fi
 
 remove_arch_install_scripts=no
