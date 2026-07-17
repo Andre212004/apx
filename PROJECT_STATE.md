@@ -376,14 +376,29 @@ accounting, and verify healthy traditional qgroups after enablement. This is a
 repository correction only; it does not change the already frozen initial
 physical-pilot tag or claim that either bootstrap was rerun.
 
-The owner has deferred Phase 9 local AI until an external SSD is available and
-may then select a larger model. The repository now proposes the external model
+The owner reports that the Ollama package is installed inside physical
+Development but no local model has been downloaded. Service, listener,
+data-directory, Qwen Code, partial-download, quota-recovery, and lifecycle
+facts remain unverified. Model installation is deliberately deferred until an
+external SSD is available and the owner may then select a larger model. This
+package-only state does not require keeping temporary Host bootstrap material
+after every other Phase 10 audit gate passes. The repository now proposes the external model
 storage boundary in `docs/external-development-model-storage-v1.md`: one exact
 encrypted device and attachment identity, visible only to one Development
 generation, with bounded capacity, immutable model evidence, fail-closed
 disconnect behavior, and no shared writable host or Hub path. This is a
 proposal only. No disk, mount, runtime adapter, model relocation, or larger
 model is implemented or authorized.
+
+The first external-model-store repository contract is now implemented in
+`src/apx_external_model_storage.py`. It parses one closed, duplicate-safe
+evidence schema and fails closed on changed device, Development generation,
+LUKS/filesystem identity, visibility, ownership, capacity reserve, partial
+download, disconnect, recovery, or model-manifest facts. It produces only
+`blocked` or `ready-for-separate-design-review` plus a no-effect plan digest.
+It has no formatting, unlock, mount, attachment, download, or cleanup function;
+the physical evidence, adapter design, failure fixtures, denial tests, and
+target-bound destructive dossier remain required.
 
 The logical Development-to-Hub promotion boundary is now proposed in
 `docs/development-to-hub-release-promotion-v1.md`. Codex and the Development
@@ -552,8 +567,10 @@ model/serial/size checks and exact typed approval; the other admits only the
 installed physical marker and exact Lenovo DMI identity before installing the
 experimental runtime. On 2026-07-17 the owner reported that Phases 1 through 8
 of the physical handoff had been completed on the target, including the initial
-installation, Hub, Development, GitHub, and Codex setup. Phase 9 local AI, its
-quota recovery, and every later cleanup phase remain pending. This is an owner
+installation, Hub, Development, GitHub, and Codex setup. Phase 9 is partial:
+Ollama is reported installed inside Development without a downloaded model;
+quota recovery and the remaining local-agent evidence are pending. Phase 10 is
+pending. This is an owner
 progress report, not independently captured repository evidence; the read-only
 physical state and cleanup audit must reconcile the machine before cleanup or
 a later host update.
@@ -574,7 +591,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 581 tests: 577 pass and
+package rebuild evidence. The complete suite now runs 587 tests: 583 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature

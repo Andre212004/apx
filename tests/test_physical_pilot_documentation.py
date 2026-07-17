@@ -15,6 +15,8 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             self.assertIn("Phases 1 through 8", source)
             self.assertIn("Phase 9", source)
         self.assertNotIn("Neither script has been executed on the physical target", STATE)
+        self.assertIn("Ollama package is installed", STATE)
+        self.assertIn("no local model has been downloaded", STATE)
 
     def test_handoff_blocks_replay_and_cleanup_before_audit(self) -> None:
         compact = " ".join(HANDOFF.split())
@@ -23,12 +25,15 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertIn("do not substitute `master` for the frozen tag", compact)
         self.assertIn("Do not begin with `rm` or package removal", compact)
         self.assertIn("separately approved by the owner", compact)
+        self.assertIn("Installing a local model is not a prerequisite", compact)
 
     def test_audit_is_read_only_and_separates_cleanup(self) -> None:
+        compact = " ".join(AUDIT.split())
         self.assertIn("Never combine those sessions", AUDIT)
         self.assertIn("Unknown means preserve", AUDIT)
         self.assertIn("Separately Approved Cleanup Session", AUDIT)
         self.assertIn("This section is not standing authorization", AUDIT)
+        self.assertIn("Do not download a model to make the audit complete", compact)
 
     def test_audit_covers_host_hub_development_and_sensitive_boundaries(self) -> None:
         for required in (

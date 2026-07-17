@@ -159,9 +159,10 @@ choice. A target-bound private dossier may retain them when needed for safety.
 
 External model storage remains blocked until the repository contains and tests:
 
-1. a closed attachment and evidence schema;
+1. a closed attachment and evidence schema (now implemented as the pure
+   `AttachmentEvidence` contract in `src/apx_external_model_storage.py`);
 2. a pure validator that rejects identity, ownership, capacity, state, and
-   model-manifest mismatches;
+   model-manifest mismatches (now implemented without any effect adapter);
 3. a no-effect attach/detach plan with exact paths and operation identity;
 4. a minimum-privilege runtime adapter design;
 5. stopped-state, disconnect, partial-download, full-disk, corruption, and
@@ -172,3 +173,8 @@ External model storage remains blocked until the repository contains and tests:
 
 Only after those gates pass may the physical handoff replace the internal 7B
 example with an explicitly admitted larger model and external-store procedure.
+
+The implemented validator can classify evidence only as `blocked` or
+`ready-for-separate-design-review`. It cannot format, unlock, mount, attach,
+detach, download, admit, or remove anything, and even a ready result still
+requires the remaining gates and a separate destructive dossier.

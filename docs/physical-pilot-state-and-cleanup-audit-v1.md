@@ -8,8 +8,9 @@ changes, quota changes, or an APX host update.
 ## Purpose and Current Checkpoint
 
 The owner reported on 2026-07-17 that Phases 1 through 8 of
-`physical-headless-development-handoff-v1.md` are complete. Phase 9 local AI
-and every later phase are pending. This audit turns that report into reviewable
+`physical-headless-development-handoff-v1.md` are complete and that Ollama was
+installed inside Development without downloading a local model. The rest of
+Phase 9 and Phase 10 are pending. This audit turns that report into reviewable
 evidence and finds temporary installation material, duplicate clones, downloads,
 caches, unexpected packages, services, listeners, and APX state that may need
 later review.
@@ -109,7 +110,8 @@ find /root -xdev -type f \( -name '*.iso' -o -name '*.img' -o -name '*.qcow2' -o
 
 Do not display dotfile or authentication-directory contents. Expected temporary
 candidates may include `/root/apx-bootstrap` and the host `git` package, but
-neither is removable until Phase 9 and all Phase 10 gates pass.
+neither is removable until the applicable Phase 9 facts and all Phase 10 gates
+pass. A deliberately deferred model is not itself a cleanup blocker.
 
 Check temporary and cache locations without traversing pseudo-filesystems:
 
@@ -227,18 +229,25 @@ directories are review candidates, not automatic deletion targets.
 
 ## Step 6 — Phase 9 and Phase 10 Readiness
 
-Before local AI installation, record these as pending if they have not occurred:
+Record the current partial Phase 9 state without attempting to complete it:
 
 - v3 quota recovery completion and verified 16/8 GiB Development limits;
 - external-SSD storage design if model data will live there;
-- Ollama and Qwen Code installed only inside Development;
-- exact model identity and measured size;
-- listener bound only to Development loopback;
-- Hub and host unable to reach that listener;
-- no Ollama/Qwen process or listener after Development stops;
-- Development restart preserving only its own expected model state.
+- exact Ollama package version, service enablement/activity, listener, service
+  user, configured model directory, and directory size inside Development;
+- `ollama list` output proving whether zero models or exact admitted models are
+  present;
+- partial manifests, blobs, or downloads reported as metadata only;
+- Qwen Code presence or absence;
+- any listener bound only to Development loopback;
+- Hub and host unable to reach any Development Ollama listener.
 
-After Phase 9, but before Phase 10 cleanup, additionally prove:
+If no model is installed, model response, persistence, and model stop/restart
+checks are `not-applicable`, not failed. The service/process teardown check
+still applies if Ollama is enabled or running. Do not download a model to make
+the audit complete.
+
+Before Phase 10 cleanup, additionally prove:
 
 - Development repository, GitHub authentication, and Codex survive a full
   stop/start cycle;

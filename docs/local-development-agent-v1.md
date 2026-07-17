@@ -37,8 +37,12 @@ preflight measuring sufficient system memory and disk space. If the 7B model
 cannot run reliably with the measured memory ceiling, the admitted fallback is
 `qwen2.5-coder:3b`; silently substituting a larger model is not allowed.
 
-The owner has deferred this installation until an external SSD is available
-and may later prefer a larger model. Extra capacity does not approve that model
+The owner has installed the Ollama package inside Development but deferred the
+model download and remaining admission checks until an external SSD is
+available, and may later prefer a larger model. Package presence is not model
+admission, and the service, listener, data directory, partial-download state,
+and Development-only boundary still require the read-only audit. Extra
+capacity does not approve that model
 or its storage path. `external-development-model-storage-v1.md` defines the
 identity, encryption, visibility, integrity, disconnect, and recovery gates
 that must pass before external model storage is implemented.

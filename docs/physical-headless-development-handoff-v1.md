@@ -5,8 +5,10 @@ the owner's current Lenovo Legion 5 and reaches a headless Hub plus a separate
 Development Environment. It is not a production APX installer.
 
 Owner-reported progress on 2026-07-17: Phases 1 through 8 have been completed
-on the target. Phase 9 and every later phase remain pending. This progress is
-not repository-verified evidence; the read-only audit in
+on the target. Phase 9 is partial: the Ollama package was installed inside
+Development, but no local model was downloaded; quota recovery, service state,
+Qwen Code, and lifecycle evidence remain to be confirmed. Phase 10 remains
+pending. This progress is not repository-verified evidence; the read-only audit in
 `physical-pilot-state-and-cleanup-audit-v1.md` must confirm it before cleanup
 or a later host update.
 
@@ -340,12 +342,16 @@ Do this only after Codex and GitHub work. Read
 `docs/local-development-agent-v1.md` completely before installing anything.
 This is a Development-local convenience, not a host service or Hub feature.
 
-The owner has intentionally deferred this phase until an external SSD is
-available. Do not install a larger model merely because the external SSD adds
+The owner installed Ollama inside Development but intentionally stopped before
+downloading a model and deferred the remaining local-AI work until an external
+SSD is available. Do not reinstall Ollama merely to normalize the sequence.
+The audit must first record its exact package, service, listener, data-directory,
+and partial-download state without exposing credentials. Do not install a
+larger model merely because the external SSD adds
 capacity: external model storage, its mount lifetime, ownership, encryption,
 disconnect behavior, quota accounting, and Environment-only visibility need a
-separate reviewed design first. Until then, preserve the existing Development
-Environment and continue repository work with Codex. Phase 10 remains pending.
+separate reviewed design first. Until then, downloading no model is a valid
+intentional state and repository work may continue with Codex.
 
 ### One-time quota recovery for the existing physical Development
 
@@ -490,8 +496,11 @@ these are proven:
 - its repository has the expected branch and remote;
 - GitHub push authentication works;
 - Codex starts inside Development;
-- the local model passes its Development-local listener, persistence, stop,
-  and restart checks;
+- if a model has been installed, it passes its Development-local listener,
+  persistence, stop, and restart checks;
+- if model installation remains deliberately deferred, `ollama list` confirms
+  no model, the audit records any Ollama service/listener and partial data, and
+  no Host or Hub dependency exists;
 - stopping Development leaves no Development machine, unit, process, mount,
   listener, or executor access behind;
 - Hub still has no Git, compiler, Node.js, npm, Codex, Ollama, Qwen Code, model,
@@ -505,6 +514,11 @@ The audit may find additional candidates, but this phase does not authorize
 their removal. Unknown files, packages, users, services, subvolumes, qgroups,
 snapshots, archives, boot files, logs, or caches are preserved until their
 origin and recovery value are established.
+
+Installing a local model is not a prerequisite for removing temporary Host
+bootstrap state. A deliberately deferred model is `not-applicable` to the model
+lifecycle checks, provided the audit proves the package-only Ollama state is
+confined to Development and every other Phase 10 gate passes.
 
 Only after that separate review, exit Development, stop it through APX, and
 remove only the two already documented bootstrap objects:
