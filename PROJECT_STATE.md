@@ -169,6 +169,17 @@ change is not installed on the Host yet and no Environment was created. The
 fixed first name and update-before-create sequence are documented in
 `docs/hyprland-h0-environment-creation-v1.md`.
 
+An exact Host-runtime-only candidate for that committed change was built twice
+outside Git and both 30,720-byte USTAR artifacts were identical. Its artifact
+digest is `a1b55982d14fb0bdf7afa8f1dd7991caf9d3a7ad5e24b321510763ad5b675a66`
+and the closed reader accepted only candidate runtime digest
+`0d7cc0c0c0631b65f68639f8b4994e3e3441a817604487256a30edd82f96da9f`.
+Fresh observation then found a post-reboot mismatch: Hub and Development have
+no running machine or current unit, but both registrations still claim
+`running`. The shutdown journal shows a clean controlled stop during the
+recovery reboot. Physical update preview/import remains blocked until those two
+registrations are reconciled through a separately authorized exact action.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

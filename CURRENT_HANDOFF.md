@@ -187,6 +187,18 @@ exact runtime update through the retained rollback contract, reconcile the
 Host, and only then preview/create the stopped disposable Environment. Physical
 graphics still require the separate AMD/input/VT/watchdog adapter.
 
+The exact runtime candidate was subsequently rebuilt twice and passed the
+closed artifact reader: 30,720 bytes, artifact digest
+`a1b55982d14fb0bdf7afa8f1dd7991caf9d3a7ad5e24b321510763ad5b675a66`,
+candidate runtime digest
+`0d7cc0c0c0631b65f68639f8b4994e3e3441a817604487256a30edd82f96da9f`.
+It remains untrusted in temporary storage and was not imported. Fresh Host
+observation found Hub and Development absent from `machinectl` and without
+current units, although both registrations still claim `running`; the journal
+shows they shut down cleanly for the recovery reboot. Reconciliation of those
+two registrations is the immediate physical blocker and requires a fresh exact
+owner instruction because it directly changes Hub and Development state.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
