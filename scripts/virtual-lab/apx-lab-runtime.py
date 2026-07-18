@@ -241,6 +241,10 @@ def create(plan_identity: str, approval: str) -> None:
         append_event(operation, "create", "home", "started", name=name)
         run(["btrfs", "subvolume", "create", str(home)])
         apply_limits(name, role)
+        if role == "graphical-h0":
+            graphical_home = home / "apx"
+            graphical_home.mkdir(mode=0o700)
+            os.chown(graphical_home, 1000, 1000)
         append_event(operation, "create", "home", "complete", name=name)
         fault("home")
 

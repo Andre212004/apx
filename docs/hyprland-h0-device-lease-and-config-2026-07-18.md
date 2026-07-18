@@ -162,3 +162,10 @@ The separate home subvolume lacks `/home/apx`, so shader-cache creation was
 disabled. Neither prevented the 45-second Hyprland process pass, but both must
 be resolved before calling the Environment daily-usable. Visual output and
 input behavior still require the physically present owner's report.
+
+The current Environment-local home gap is now resolved: `/home/apx` and its
+cache directory exist inside only the separate home subvolume as mode 0700,
+UID/GID 1000, under the retained 8 GiB quota. The repository runtime now creates
+that fixed internal home automatically for every future `graphical-h0`
+Environment. This source correction is not yet installed into the Host runtime;
+the current Environment was corrected directly and reverified stopped/healthy.

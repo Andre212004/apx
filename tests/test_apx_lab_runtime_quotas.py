@@ -29,6 +29,13 @@ class RuntimeQuotaTests(unittest.TestCase):
         self.assertIn("graphical-h0", runtime.ROLES)
         self.assertNotIn("graphical-h0", runtime.HEADLESS_START_ROLES)
 
+    def test_graphical_creation_populates_only_the_fixed_internal_home(self) -> None:
+        source = RUNTIME_PATH.read_text()
+        self.assertIn('if role == "graphical-h0":', source)
+        self.assertIn('graphical_home = home / "apx"', source)
+        self.assertIn('graphical_home.mkdir(mode=0o700)', source)
+        self.assertIn('os.chown(graphical_home, 1000, 1000)', source)
+
     def test_apply_limits_uses_role_policy_for_both_qgroup_limits(self) -> None:
         completed = type("Result", (), {"stdout": "300\n"})()
         with patch.object(runtime, "environment_dir", return_value=Path("/state/development")), \

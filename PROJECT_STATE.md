@@ -244,6 +244,13 @@ claim visual/input acceptance: owner observation is pending. Aquamarine's
 blocked absent-card1 enumeration and the missing separate-home `/home/apx`
 directory are follow-up gaps before daily usability.
 
+The current missing-home gap is resolved. The disposable graphical Environment
+now has mode-0700 UID/GID-1000 `/home/apx` and `.cache` inside only its separate
+8 GiB home subvolume. Repository runtime creation now performs the same fixed
+home initialization for future `graphical-h0` Environments. That new runtime
+source hash is not installed yet; the existing Environment is already corrected
+and remains stopped/healthy.
+
 The exact physical executor is now implemented and bounded to 45 seconds of
 observation inside the independent 120-second expiry window. It rechecks the
 real connector, amdgpu driver, tty1, display-manager absence, asset identities,

@@ -277,6 +277,13 @@ input acceptance until the owner reports what appeared. Follow up the blocked
 absent-card1 enumeration and create the missing Environment-local `/home/apx`
 before daily-use work.
 
+The current home gap is fixed: Environment-local `/home/apx` and `.cache` are
+mode 0700, UID/GID 1000, inside the separate 8 GiB home. Runtime source now
+creates this automatically for future graphical Environments; this latest
+runtime source is not installed yet. APX remains healthy/stopped. Visual/input
+owner observation from v3 is still required before claiming graphical H0 user
+acceptance.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -309,7 +316,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 714-test suite succeeds in the root-host checkout with eight expected
+- the 715-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.
