@@ -20,6 +20,17 @@ The target-bound physical pilot in
 the owner explicitly invokes that guide from the Arch installation medium. It
 is not standing authorization during ordinary repository work.
 
+The temporary root-host development mode in
+`docs/temporary-root-host-development-mode-v1.md` is a second, narrower
+exception. It changes scope only when the owner explicitly invokes that guide
+as `root@apx-host` on the already installed, identity-matched disposable
+physical pilot. While that mode is active, Codex may inspect and change the
+Host, Hub, Development, and APX test Environments for repository development
+and validation. It may create and destroy only clearly named disposable test
+Environments itself. Destroying Hub or Development, changing disks, reinstalling
+Arch, or broad cleanup still requires a fresh explicit owner instruction. This
+exception is experimental, temporary, and never a production permission.
+
 During ordinary repository work, do not modify:
 
 - the operating system

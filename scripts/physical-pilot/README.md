@@ -30,3 +30,12 @@ approval it raises those two limits in place and installs the matching
 role-aware runtime. It does not recreate, snapshot, copy, or delete Development
 content. Follow the recovery section in the physical handoff; do not adapt the
 script to a different Environment.
+
+`prepare-root-host-development-mode-v1.sh` prepares the owner-approved,
+temporary exception that runs Codex, Git, and GitHub CLI directly as root on
+the disposable physical pilot. It refuses a different host identity, records a
+baseline, installs only missing Git/GitHub CLI packages, fetches the official
+Codex installer for visible review, and requires a second confirmation before
+running it. It does not authenticate accounts, alter APX lifecycle state,
+remove anything, or perform the eventual cleanup. Follow
+`docs/temporary-root-host-development-mode-v1.md` exactly.

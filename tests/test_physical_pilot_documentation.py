@@ -10,6 +10,10 @@ EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").
 CURRENT_HANDOFF = (ROOT / "CURRENT_HANDOFF.md").read_text()
 UPDATE_CONTRACT = (ROOT / "docs" / "physical-pilot-update-contract-v1.md").read_text()
 H0_CONTRACT = (ROOT / "docs" / "hyprland-h0-clean-host-v1.md").read_text()
+ROOT_HOST_MODE = (ROOT / "docs" / "temporary-root-host-development-mode-v1.md").read_text()
+ROOT_HOST_PREPARE = (
+    ROOT / "scripts" / "physical-pilot" / "prepare-root-host-development-mode-v1.sh"
+).read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -95,6 +99,38 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "Do not install Hyprland on the Host",
         ):
             self.assertIn(required, compact_h0_contract)
+
+    def test_temporary_root_host_mode_is_explicit_and_bounded(self) -> None:
+        compact = " ".join(ROOT_HOST_MODE.split())
+        for required in (
+            "temporary root-host development mode",
+            "not the APX production design",
+            "disposable test Environments that it created",
+            "changing or destroying Hub or Development requires fresh owner approval",
+            "Do not clean anything yet",
+            "Exit and complete removal",
+            "reinstall Arch",
+        ):
+            self.assertIn(required, compact)
+
+    def test_root_host_prepare_is_identity_bound_and_has_no_cleanup(self) -> None:
+        for required in (
+            'EXPECTED_HOSTNAME="apx-host"',
+            'EXPECTED_VENDOR="LENOVO"',
+            'EXPECTED_PRODUCT="82JU"',
+            'EXPECTED_BOARD="LNVNB161216"',
+            'EXPECTED_PROFILE="profile=apx-physical-headless-pilot-v1"',
+            "ENABLE TEMPORARY ROOT CODEX ON APX-HOST",
+            "https://chatgpt.com/codex/install.sh",
+            "codex login --device-auth",
+        ):
+            self.assertIn(required, ROOT_HOST_PREPARE)
+        for forbidden in (
+            "pacman -R",
+            "btrfs subvolume delete",
+            "apx environment destroy",
+        ):
+            self.assertNotIn(forbidden, ROOT_HOST_PREPARE)
 
 
 if __name__ == "__main__":

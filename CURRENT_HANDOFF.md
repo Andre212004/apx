@@ -1,6 +1,7 @@
 # APX Current Handoff
 
-Last updated: 2026-07-17 through the pure physical-update contract milestone.
+Last updated: 2026-07-17 through preparation of the temporary root-host
+development mode.
 
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
@@ -24,7 +25,24 @@ evidence.
 
 ## Next Owner Action
 
-The owner intends to run the read-only audit on 2026-07-18 with another ChatGPT:
+The owner has chosen to temporarily install and run Codex, Git, and GitHub CLI
+as `root@apx-host` on the disposable physical pilot so physical APX tests can be
+automated. The repository-only preparation is documented in:
+
+`docs/temporary-root-host-development-mode-v1.md`
+
+This decision supersedes the earlier immediate plan to perform the audit first,
+but it does not convert the existing evidence into verified canonical state and
+does not authorize cleanup. Before enabling the mode, publish the repository
+change so the physical host can obtain the exact reviewed guide and helper.
+
+Once the temporary mode is active, the first Codex task is to reconcile the
+existing read-only evidence and automate the remaining Phase 9 and Phase 10
+gates. Codex may create and destroy its own clearly named disposable test
+Environments. Hub, Development, disks, reinstall, and broad cleanup still need
+fresh owner approval.
+
+The prior read-only audit procedure remains:
 
 `docs/physical-pilot-state-and-cleanup-audit-v1.md`
 
@@ -65,7 +83,7 @@ The repository currently has:
 - an ordered update journal that retains the previous version for rollback;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- 633 tests in the current milestone: 629 passing and four expected skips.
+- 635 tests in the current milestone: 631 passing and four expected skips.
 
 The external-model-store code cannot format, unlock, mount, bind, download,
 start, stop, detach, or remove anything. Physical adapters remain blocked on
@@ -118,6 +136,9 @@ VTs, and the installed graphical-role gap.
 - Local model installation is deliberately deferred.
 - The external SSD has not been selected, inspected, formatted, or attached.
 - Do not use `sudo` or modify the host from an ordinary repository session.
+- Root-host modification is allowed only after the owner explicitly invokes
+  `docs/temporary-root-host-development-mode-v1.md` on the identity-matched
+  physical pilot; it is not standing permission in Development or other chats.
 - Do not commit or push unless the owner explicitly asks; the owner has asked
   the current development sequence to be published, but future sessions must
   evaluate their own request context.

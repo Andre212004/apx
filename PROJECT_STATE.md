@@ -11,6 +11,21 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+The owner has now accepted a temporary development-method deviation for the
+disposable Lenovo physical pilot: Codex, Git, and GitHub CLI may run directly as
+`root@apx-host` so repository changes and physical lifecycle tests can be
+automated. This grants the temporary agent host-wide technical access, but not
+standing authority to destroy Hub or Development, change disks, reinstall Arch,
+or perform broad cleanup. It may create and destroy only clearly named test
+Environments that it created itself. The target-bound entry, prompt, evidence,
+and exit boundaries are documented in
+`docs/temporary-root-host-development-mode-v1.md`; the preparation helper is
+`scripts/physical-pilot/prepare-root-host-development-mode-v1.sh`. This is an
+experimental development exception, not APX architecture or production state.
+The mode is not active until the owner explicitly runs the guide on the exact
+physical host, and its later removal requires a fresh inventory and exact
+cleanup approval.
+
 The first pure already-installed physical-pilot update contract is now
 implemented in `src/apx_physical_update.py` and documented in
 `docs/physical-pilot-update-contract-v1.md`. It binds one untrusted bounded
@@ -654,7 +669,7 @@ deterministic plans, security-relevant digest changes, stale writers, forged
 initial state, multi-step jumps, approval separation, every fake install effect,
 interruption recovery, archive member policy, link containment, candidate/tree
 binding, exact release rebuild comparison, closed package contents, and exact
-package rebuild evidence. The complete suite now runs 633 tests: 629 pass and
+package rebuild evidence. The complete suite now runs 635 tests: 631 pass and
 four external-fixture checks are explicitly skipped because reboot removed
 their bound `/tmp` evidence. There are no test failures or errors. No physical
 candidate import, archive extraction, signature
