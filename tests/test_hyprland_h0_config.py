@@ -15,11 +15,19 @@ class HyprlandH0ConfigTests(unittest.TestCase):
     def test_config_has_no_program_network_audio_or_host_integration(self) -> None:
         source = CONFIG.read_text()
         for forbidden in (
-            "exec", "workspace", "socket", "portal", "pipewire", "audio",
-            "network", "/home", "/run/user", "waybar", "fuzzel", "foot",
+            "workspace", "socket", "portal", "pipewire", "audio",
+            "network", "/home", "/run/user", "waybar", "fuzzel",
         ):
             self.assertNotIn(forbidden, source.lower())
         self.assertLess(len(source.encode()), 4096)
+
+    def test_only_fixed_local_visual_marker_is_started(self) -> None:
+        source = CONFIG.read_text()
+        lines = [line.strip() for line in source.splitlines() if line.strip().startswith("exec-once")]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("/usr/bin/foot --title=APX-H0", lines[0])
+        self.assertIn("APX H0 - HYPRLAND ENVIRONMENT", lines[0])
+        self.assertIn("sleep 40", lines[0])
 
     def test_visual_effects_are_minimized_for_first_kms_gate(self) -> None:
         source = CONFIG.read_text()
