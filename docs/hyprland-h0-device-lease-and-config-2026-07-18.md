@@ -101,7 +101,7 @@ observation to an exact nspawn `--machine=...` argument rather than weakening
 the residue gate. The repeated rehearsal then returned
 `h0-watchdog: tty1-restored zero-residue`; APX remained healthy and stopped.
 
-The pure two-unit Host launch plan is now closed with digest
+The first pure two-unit Host launch plan was closed with digest
 `b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
 It binds three fixed assets by SHA-256 and mode, creates an independent
 120-second expiry timer, requires that timer to be observed active, and only
@@ -129,3 +129,13 @@ The mode-0400 staging result binds the experiment and Environment generation
 and explicitly records `graphical_activation=false`. Final rehash passed. APX
 remained healthy and stopped, systemd had zero failed units, and tty1 remained
 active. No timer, unit, device, session, or compositor was started.
+
+Final launch review found that the Host, not internal seatd, must own the
+tty1/tty2 transition. The reviewed runner v2 therefore fixes
+`SEATD_VTBOUND=0`; it does not broaden any device or privilege. Its SHA-256 is
+`db099965ab22ba322f2d113365af6e561c612c92bd660a3205d6023072ed743c`.
+The v1 staging directory remains immutable historical evidence. The new v2
+experiment directory is distinct, and the current launch-plan digest is
+`9c5342a5859a93a09dcafefe8b6d53d370a2028e712d3321ee61d15d93cf9305`.
+The exact final executor is implemented with a 45-second bounded observation
+inside the independent 120-second watchdog window; it has not yet run.

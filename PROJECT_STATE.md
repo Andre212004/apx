@@ -221,7 +221,9 @@ binds the three fixed asset identities/modes, arms and verifies an independent
 120-second expiry timer before any device grant, then describes only the fixed
 generation-bound nspawn unit with closed device policy and resource/network
 limits. Its plan digest is
-`b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
+`9c5342a5859a93a09dcafefe8b6d53d370a2028e712d3321ee61d15d93cf9305`
+after final review assigned VT switching exclusively to the Host and fixed
+internal seatd to `SEATD_VTBOUND=0`.
 The module is pure; asset staging, launch, readiness observation, interruption
 execution, and physical display activation have not occurred.
 
@@ -231,6 +233,13 @@ Their 0400/0500 modes and SHA-256 identities reverified, and the result records
 `graphical_activation=false`. APX remained healthy/stopped with tty1 active and
 zero failed units. Timer arming, device grants, nspawn launch, and Hyprland
 execution still have not occurred.
+
+The exact physical executor is now implemented and bounded to 45 seconds of
+observation inside the independent 120-second expiry window. It rechecks the
+real connector, amdgpu driver, tty1, display-manager absence, asset identities,
+generation, devices, failed units, and zero old machine/unit state before
+arming. Its unconditional finalizer invokes the staged watchdog and stops the
+expiry timer only after that recovery attempt. It has not yet run.
 
 ## Human Objective
 

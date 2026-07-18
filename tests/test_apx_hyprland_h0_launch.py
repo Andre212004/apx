@@ -1,0 +1,31 @@
+from pathlib import Path
+import sys
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+import apx_hyprland_h0_launch as subject
+
+
+class H0PhysicalLaunchTests(unittest.TestCase):
+    def test_adapter_is_exact_bounded_and_always_invokes_watchdog(self) -> None:
+        source = Path(subject.__file__).read_text()
+        self.assertEqual(subject.OBSERVE_SECONDS, 45)
+        self.assertIn('timer_started = _run(["systemctl", "is-active"', source)
+        self.assertIn('finally:', source)
+        self.assertIn('_run([str(STATE / "watchdog"), "--expire"]', source)
+        self.assertIn('"/usr/bin/chvt", "2"', source)
+
+    def test_adapter_has_no_delete_broad_kill_hub_or_development_effect(self) -> None:
+        source = Path(subject.__file__).read_text()
+        for forbidden in ("rmtree", "unlink(", "btrfs subvolume delete", "pkill", "killall", "apx-hub", "apx-development", "systemctl reboot", "poweroff"):
+            self.assertNotIn(forbidden, source)
+
+    def test_result_requires_timer_machine_hyprland_and_complete_recovery(self) -> None:
+        source = Path(subject.__file__).read_text()
+        for required in ("timer_started", "machine_observed", "hyprland_observed", "tty1", "machine_absent", "unit_inactive"):
+            self.assertIn(required, source)
+
+
+if __name__ == "__main__":
+    unittest.main()

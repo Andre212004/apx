@@ -10,7 +10,7 @@ import re
 from apx_hyprland_h0_device_lease import H0DeviceLeasePlan
 
 
-EXPERIMENT = "h0-3ef21d19a2518d4fcea9d51513cc1eee"
+EXPERIMENT = "h0-3ef21d19a2518d4fcea9d51513cc1eee-v2"
 ENVIRONMENT = "codex-test-hyprland-h0-v1"
 GENERATION = "c4fc5c49-4106-4a56-b1f0-13bffa41a0c1"
 LEASE_PLAN_DIGEST = "3ef21d19a2518d4fcea9d51513cc1eee63f6ff593d4470bcc10955b06e3059cb"
@@ -22,7 +22,7 @@ HOME = f"/var/lib/apx/environments/{ENVIRONMENT}/home"
 MACHINE = f"apx-{ENVIRONMENT}"
 ASSETS = (
     ("hyprland.conf", "cf7aae5f7ebbee9d9128d0bd1dc8b762a77cf44202498e940e6cc9a42fccc54c", 0o400),
-    ("session", "8612d2b6370371679a595421186114e19591b9accdefae0ef03054ffc8137235", 0o500),
+    ("session", "db099965ab22ba322f2d113365af6e561c612c92bd660a3205d6023072ed743c", 0o500),
     ("watchdog", "5c7d63bb2dd505f7f1c916fa1d3dd3083c4f8e591e11d2514424e2e2af7402e9", 0o500),
 )
 _SHA = re.compile(r"[0-9a-f]{64}")

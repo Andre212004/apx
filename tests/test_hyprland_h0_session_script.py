@@ -10,7 +10,7 @@ class HyprlandH0SessionScriptTests(unittest.TestCase):
     def test_script_is_valid_and_drops_root_before_hyprland(self) -> None:
         subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
         source = SCRIPT.read_text()
-        self.assertIn("/usr/bin/seatd -u apx", source)
+        self.assertIn("SEATD_VTBOUND=0 /usr/bin/seatd -u apx", source)
         self.assertIn("--reuid=1000 --regid=1000 --groups=5,983,987,992", source)
         self.assertIn("--bounding-set=-all", source)
         self.assertIn("/usr/bin/Hyprland --config", source)

@@ -26,7 +26,7 @@ trap cleanup EXIT HUP INT TERM
 
 install -d -m 0700 -o 1000 -g 1000 "$RUNTIME"
 rm -f -- "$SEATD_SOCKET"
-/usr/bin/seatd -u apx -l info &
+SEATD_VTBOUND=0 /usr/bin/seatd -u apx -l info &
 seatd_pid=$!
 
 for _ in {1..100}; do

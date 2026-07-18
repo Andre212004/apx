@@ -239,7 +239,9 @@ cannot start/restart, delete, broadly kill, or touch Hub/Development. Next work
 is only the independent timer arming plus graphical-unit launch/observer path.
 
 The pure independent-timer plus graphical-unit launch plan is complete with
-digest `b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
+digest `9c5342a5859a93a09dcafefe8b6d53d370a2028e712d3321ee61d15d93cf9305`
+after final review fixed internal seatd to `SEATD_VTBOUND=0` so only the Host
+controls tty1/tty2.
 It binds the exact config/session/watchdog files, requires the 120-second timer
 active before any grant, and contains only the closed five-device nspawn unit
 with private networking and resource limits. It remains non-executing. Next
@@ -252,6 +254,12 @@ with exact 0400/0500 modes and reviewed hashes; the result explicitly records
 no graphical activation. APX is healthy/stopped, tty1 remains active, and no
 timer, graphical unit, device grant, or Hyprland process exists. The remaining
 physical boundary is the not-yet-implemented launch/readiness/teardown adapter.
+
+That exact adapter is now implemented with 45-second observation inside the
+independent 120-second watchdog. It revalidates real connector/driver/tty1,
+display-manager absence, assets, generation, devices, failed units, and old
+residue, then always invokes recovery in a `finally` path. The v2 assets still
+need exact staging before the first physical run.
 
 When the owner returns with results:
 
@@ -285,7 +293,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 711-test suite succeeds in the root-host checkout with eight expected
+- the 714-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.
