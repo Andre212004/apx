@@ -22,6 +22,12 @@ class RuntimeQuotaTests(unittest.TestCase):
         self.assertEqual(runtime.QUOTA_LIMITS["hub"], {"root": "4G", "home": "2G"})
         self.assertEqual(runtime.QUOTA_LIMITS["minimal"], {"root": "4G", "home": "2G"})
         self.assertEqual(runtime.QUOTA_LIMITS["development"], {"root": "16G", "home": "8G"})
+        self.assertEqual(runtime.QUOTA_LIMITS["graphical-h0"], {"root": "16G", "home": "8G"})
+
+    def test_hyprland_role_maps_only_to_promoted_release(self) -> None:
+        self.assertEqual(runtime.RELEASE_IDS["graphical-h0"], "hyprland-h0-v1")
+        self.assertIn("graphical-h0", runtime.ROLES)
+        self.assertNotIn("graphical-h0", runtime.HEADLESS_START_ROLES)
 
     def test_apply_limits_uses_role_policy_for_both_qgroup_limits(self) -> None:
         completed = type("Result", (), {"stdout": "300\n"})()
@@ -43,6 +49,18 @@ class RuntimeQuotaTests(unittest.TestCase):
     def test_unknown_role_is_refused(self) -> None:
         with self.assertRaises(runtime.Refusal):
             runtime.apply_limits("development", "unknown")
+
+    def test_generic_start_refuses_graphical_role_before_any_effect(self) -> None:
+        with patch.object(runtime, "require_root"), \
+             patch.object(runtime, "registration", return_value={"role": "graphical-h0"}), \
+             patch.object(runtime, "machine_running") as machine_running, \
+             patch.object(runtime, "append_event") as append_event, \
+             patch.object(runtime, "run") as run:
+            with self.assertRaisesRegex(runtime.Refusal, "separate H0"):
+                runtime.start("codex-test-hyprland-h0-v1")
+        machine_running.assert_not_called()
+        append_event.assert_not_called()
+        run.assert_not_called()
 
 
 class RuntimeDestroyGenerationTests(unittest.TestCase):

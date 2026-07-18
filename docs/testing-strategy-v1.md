@@ -119,11 +119,14 @@ stopped and revised. “Mostly isolated” is not accepted.
 
 ## Level 5: Graphical and Daily-Use Tests
 
-Status: exact first Hyprland role resolved and built into a stopped disposable
-root; G0 completed as a bounded negative result, G1 passed nested rendering,
-and G2 has a design contract but no executable preview or authorization. This
-evidence is reusable, but the preferred clean-install route reaches physical
-graphics through H0 only after C0–C6 pass.
+Status: exact first Hyprland role resolved, built, finalized, and promoted into
+the immutable `hyprland-h0-v1` release. Repository lifecycle support now admits
+creation of a stopped `graphical-h0` Environment but deliberately refuses its
+generic start. The changed runtime is not installed and no physical graphical
+Environment exists yet. G0 completed as a bounded negative result, G1 passed
+nested rendering, and G2 has a design contract but no executable preview or
+authorization. This evidence is reusable, but the preferred clean-install
+route reaches physical graphics through H0 only after C0–C6 pass.
 
 Only after headless separation works do we add, one at a time:
 

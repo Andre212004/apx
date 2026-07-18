@@ -178,6 +178,15 @@ hold, source, and APX health remained unchanged. There is still no graphical
 Environment or Hyprland session. Next work is exact Environment creation plus
 GPU/input/VT/watchdog contracts, each separately bounded before physical H0.
 
+Repository runtime support for the next boundary now exists: `graphical-h0`
+maps only to `hyprland-h0-v1`, has 16 GiB root and 8 GiB home limits, and is
+refused by the generic headless start before any effect. The intended first
+stopped Environment is `codex-test-hyprland-h0-v1`. The changed runtime is not
+installed on the Host and that Environment does not exist yet. First publish an
+exact runtime update through the retained rollback contract, reconcile the
+Host, and only then preview/create the stopped disposable Environment. Physical
+graphics still require the separate AMD/input/VT/watchdog adapter.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -210,8 +219,9 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 635-test suite succeeds in the root-host checkout with ten expected
-  external-fixture skips. One test fixture was corrected so subordinate-UID
+- the 682-test suite succeeds in the root-host checkout with eight expected
+  external-fixture or privilege-context skips. One test fixture was corrected
+  so subordinate-UID
   behavior no longer depends on the UID running the suite.
 
 The external-model-store code cannot format, unlock, mount, bind, download,

@@ -28,16 +28,19 @@ JOURNAL = STATE / "journal" / "operations.jsonl"
 SNAPSHOTS = STATE / "snapshots"
 ARCHIVES = STATE / "archives"
 NAME_RE = re.compile(r"[a-z][a-z0-9-]{0,31}")
-ROLES = {"hub", "development", "minimal"}
+ROLES = {"hub", "development", "minimal", "graphical-h0"}
+HEADLESS_START_ROLES = {"hub", "development", "minimal"}
 RELEASE_IDS = {
     "hub": "hub-headless-v3",
     "development": "development-headless-v1",
     "minimal": "minimal-headless-v1",
+    "graphical-h0": "hyprland-h0-v1",
 }
 QUOTA_LIMITS = {
     "hub": {"root": "4G", "home": "2G"},
     "minimal": {"root": "4G", "home": "2G"},
     "development": {"root": "16G", "home": "8G"},
+    "graphical-h0": {"root": "16G", "home": "8G"},
 }
 EFFECTS = {
     "create": ("root", "home", "configure", "publish"),
@@ -286,6 +289,8 @@ def apply_limits(name: str, role: str) -> None:
 def start(name: str) -> None:
     require_root()
     record = registration(name)
+    if record.get("role") not in HEADLESS_START_ROLES:
+        raise Refusal("graphical Environment activation requires the separate H0 device and recovery adapter")
     if machine_running(name):
         print(f"{name}: already running")
         return

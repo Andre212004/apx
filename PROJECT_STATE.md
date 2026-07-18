@@ -160,6 +160,15 @@ The source, Hub, Development, disposable hold, and APX uncertainty state are
 unchanged. No graphical Environment or session exists yet; device mediation,
 watchdog, Environment creation, and physical H0 approval remain separate.
 
+The repository lifecycle runtime now recognizes the closed `graphical-h0` role,
+maps it only to the promoted `hyprland-h0-v1` release, and assigns bounded 16
+GiB root and 8 GiB home quotas. Its generic headless start path deliberately
+refuses this role before any runtime effect, so creation cannot accidentally
+grant graphics or bypass the future AMD/input/VT/watchdog adapter. This source
+change is not installed on the Host yet and no Environment was created. The
+fixed first name and update-before-create sequence are documented in
+`docs/hyprland-h0-environment-creation-v1.md`.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of
