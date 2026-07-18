@@ -208,6 +208,14 @@ only transient seatd, drops Hyprland to UID/GID 1000 with four exact auxiliary
 groups and no capabilities, and traps mediator cleanup. Both remain unexecuted;
 an independent Host launcher and hostile interruption tests are still required.
 
+The Host expiry adapter now exists and was rehearsed with no graphical unit or
+device grant. It revalidates the fixed generation, stops only the exact H0 unit,
+activates tty1, and measures exact nspawn, mount, and unit residue. An initial
+false-positive from the outer test command was corrected by matching only an
+exact nspawn machine argument; the repeated rehearsal proved tty1 restored and
+zero residue. It cannot start/restart graphics, broadly kill, delete, or affect
+Hub/Development. The independent arming/launch adapter remains pending.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

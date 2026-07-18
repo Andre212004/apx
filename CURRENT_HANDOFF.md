@@ -231,6 +231,13 @@ physically executed. Next create the independent Host launcher so watchdog
 arming cannot die with the graphical unit, then test interruption without
 granting physical devices.
 
+The fixed Host expiry script is now implemented and zero-effect rehearsed. It
+stops only `apx-h0-graphical-c4fc5c49.service`, activates tty1, and requires the
+exact nspawn machine, Environment mounts, and unit activity all to disappear.
+The final rehearsal returned `tty1-restored zero-residue` with APX healthy. It
+cannot start/restart, delete, broadly kill, or touch Hub/Development. Next work
+is only the independent timer arming plus graphical-unit launch/observer path.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -263,7 +270,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 701-test suite succeeds in the root-host checkout with eight expected
+- the 704-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.

@@ -87,3 +87,16 @@ All inherited/ambient/bounding capabilities are removed from Hyprland. A shell
 trap terminates and waits for seatd after normal exit, failure, or signal. The
 runner contains no NVIDIA, other input, audio, camera, package, network, or tty1
 path. It has not been physically executed.
+
+The Host expiry adapter is now implemented and rehearsed without a graphical
+unit or device grant. It accepts only `--expire`, revalidates the exact
+Environment generation/role/release, stops only the fixed H0 unit, activates
+tty1, and observes the exact nspawn machine argument, Environment mounts, and
+unit state. It contains no start, restart, broad kill, deletion, Hub, or
+Development action.
+
+The first zero-effect rehearsal correctly refused a false success because the
+outer test command itself contained the machine name. Review narrowed process
+observation to an exact nspawn `--machine=...` argument rather than weakening
+the residue gate. The repeated rehearsal then returned
+`h0-watchdog: tty1-restored zero-residue`; APX remained healthy and stopped.
