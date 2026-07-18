@@ -24,10 +24,12 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertNotIn("Neither script has been executed on the physical target", STATE)
         self.assertIn("complete stop and destroy", STATE)
         self.assertIn("empty home", STATE)
-        self.assertIn("Phase 10 cleanup", STATE)
-        self.assertIn("are blocked", STATE)
-        self.assertIn("Verified Critical Drift", CURRENT_HANDOFF)
+        self.assertIn("delays Phase 10 removal", STATE)
+        self.assertIn("does not block repository development", STATE)
+        self.assertIn("Owner-Confirmed Lifecycle Test", CURRENT_HANDOFF)
         self.assertIn("No registered APX snapshot", CURRENT_HANDOFF)
+        self.assertIn("intentional lifecycle test", STATE)
+        self.assertIn("codex-test-*", CURRENT_HANDOFF)
 
     def test_handoff_blocks_replay_and_cleanup_before_audit(self) -> None:
         compact = " ".join(HANDOFF.split())

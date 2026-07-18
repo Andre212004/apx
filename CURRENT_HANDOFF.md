@@ -32,7 +32,7 @@ The owner renamed the GitHub account from `Andre212004` to
 instructions use `https://github.com/andrepereira2004/apx.git`; the dated audit
 retains the old URL as historical evidence.
 
-## Verified Critical Drift
+## Owner-Confirmed Lifecycle Test
 
 Read-only root-host reconciliation on 2026-07-18 found that the Development
 audited on 2026-07-17 was subsequently destroyed and replaced. The APX journal
@@ -44,17 +44,22 @@ records complete stop and destroy of generation
 The replacement is running but has an empty home, approximately 8 KiB of APX
 Environment state, and no GitHub CLI, Ollama, Qwen Code, Codex, or Development
 repository. No registered APX snapshot, archive, quarantine, or catalogue
-object contains the prior generation. The journal records effects, not who
-requested them; do not attribute the destruction without independent evidence.
+object contains the prior generation. The owner confirmed that they intentionally
+performed this lifecycle test. Treat it as owner-confirmed test history, not an
+unexplained security incident or executor malfunction.
 
 Consequences:
 
 - the 2026-07-17 audit is historical, not current Development evidence;
-- Phase 10 cleanup is blocked;
+- Phase 10 removal of temporary root-host development state is deferred while
+  root-host development continues;
 - the old in-place quota-recovery procedure must not run against the replacement;
 - all root-host bootstrap, recovery, and temporary-development checkouts must
   remain preserved;
-- changing Development requires a fresh exact owner approval.
+- the replacement remains an intentionally simple Development fixture;
+- repository development and tests with new `codex-test-*` disposable
+  Environments may continue;
+- changing Hub or Development still requires fresh exact owner approval.
 
 ## Pinned Local-Model Decision
 
@@ -63,12 +68,11 @@ currently worthwhile because the wanted model consumes too much storage. It is
 a future milestone, not a prerequisite for Phase 10.
 
 - Do not download a smaller substitute merely to complete Phase 9.
-- Preserve the observed package-only, zero-model state as intentional.
-- Treat model response, persistence, and model restart tests as
+- Preserve the current no-Ollama, zero-model state as intentional.
+- Treat Ollama and model response, persistence, and restart tests as
   `not-applicable` while the decision remains pinned.
-- Continue to require quota recovery, Development stop/start persistence,
-  Ollama service/listener inventory and teardown, Host/Hub isolation, repository
-  recovery, and every other Phase 10 gate.
+- Continue to require APX storage/quota health, lifecycle teardown, Host/Hub
+  isolation, repository recovery, and every applicable non-model gate.
 - Reopening model installation or external storage requires a separate owner
   decision and the already documented design/approval gates.
 
@@ -80,15 +84,14 @@ automated. The repository-only preparation is documented in:
 
 `docs/temporary-root-host-development-mode-v1.md`
 
-The temporary root-host mode is active. Stop Phase 10 cleanup work and design
-the smallest generation-bound Development reprovision plan. It must preserve
-Hub, host, APX recovery records, and all root-host checkouts; obtain source and
-tools only through reviewed current inputs; restore an authenticated
-Development checkout without copying root-host credentials; keep local-model
-installation deferred; define quota behavior for the new generation; and
-include isolation, stop/start, and recovery evidence. Do not execute the plan
-or change Development until the owner gives fresh explicit approval for its
-exact effects.
+The temporary root-host mode is active and is the accepted development location
+for now. Keep the replacement Development simple and do not install Ollama,
+Codex, GitHub CLI, or a repository there. Continue repository implementation
+and physical validation through reviewed `codex-test-*` disposable
+Environments. Preserve Hub, Development, APX recovery records, and all root-host
+checkouts. Do not begin Phase 10 root-host cleanup while this mode remains in
+use. Changing Hub or Development still requires fresh explicit approval for
+the exact effects.
 
 The prior read-only audit procedure remains:
 

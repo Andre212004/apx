@@ -428,29 +428,29 @@ records a complete stop and destroy of generation
 empty home, about 8 KiB of APX Environment state, and no GitHub CLI, Ollama,
 Qwen Code, Codex, or repository. No registered APX snapshot, archive,
 quarantine object, or catalogue object preserves the prior generation. The
-journal does not identify who requested destruction, so no attribution is
-recorded.
+journal does not identify who requested destruction. The owner subsequently
+confirmed that this was their intentional lifecycle test, so it is not treated
+as an unexplained security incident or executor malfunction.
 
-This is critical physical-state drift. Phase 10 cleanup and the old in-place
-quota-recovery route are blocked. Before changing Development, the repository
-must define a generation-bound reprovision plan that preserves Hub and host,
-uses the published GitHub source, recreates only Development-local tools and
-state, keeps model installation deferred, and requires fresh owner approval
-for the exact Development changes. The temporary root-host checkout must
-remain until the replacement Development checkout and recovery path are
-independently verified.
+The owner accepts the replacement as an intentionally simple Development
+fixture and prefers not to reprovision its former toolchain now. The old
+in-place quota-recovery route remains inapplicable to this generation. The
+temporary root-host mode and checkout remain the explicitly bounded development
+location while this work continues. This delays Phase 10 removal of root-host
+development state but does not block repository development or physical tests
+using newly created `codex-test-*` disposable Environments. Changing Hub or
+Development still requires fresh exact approval.
 
 **Pinned owner decision — 2026-07-18:** local-model acquisition and execution
 are deferred to a future milestone because the wanted model's storage cost is
 not currently worthwhile. No Phase 9 or Phase 10 procedure may download a
-smaller substitute merely to close the checklist. The package-only state and
-zero-model result are valid deliberate outcomes. Model lifecycle tests are
-`not-applicable` until this decision is separately reopened, while quota
-recovery, Development stop/start persistence, listener confinement and
-teardown, Hub/Host isolation, repository recovery, and every other Phase 10
-gate remain required. Once Development is reprovisioned, a verified
-package-only state does not by itself require keeping temporary Host bootstrap
-material after every other Phase 10 audit gate passes. The repository now proposes the external model
+smaller substitute merely to close the checklist. The current replacement has
+neither Ollama nor a model; that minimal state is a valid deliberate outcome.
+All Ollama/model lifecycle checks are `not-applicable` until this decision is
+separately reopened. Host/Hub isolation, APX lifecycle, storage, quota,
+recovery, and all non-model gates remain required. A future verified
+package-only state would not by itself require keeping temporary Host bootstrap
+material after every other applicable Phase 10 audit gate passes. The repository now proposes the external model
 storage boundary in `docs/external-development-model-storage-v1.md`: one exact
 encrypted device and attachment identity, visible only to one Development
 generation, with bounded capacity, immutable model evidence, fail-closed
