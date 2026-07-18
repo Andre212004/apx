@@ -180,6 +180,16 @@ no running machine or current unit, but both registrations still claim
 recovery reboot. Physical update preview/import remains blocked until those two
 registrations are reconciled through a separately authorized exact action.
 
+The owner authorized that exact reconciliation; Hub and Development now
+truthfully remain stopped with unchanged generations. The fixed runtime update
+adapter retained the previous runtime and installed the verified candidate.
+APX then created the first real stopped graphical Environment,
+`codex-test-hyprland-h0-v1`, generation
+`c4fc5c49-4106-4a56-b1f0-13bffa41a0c1`, from `hyprland-h0-v1`, with 16 GiB
+root and 8 GiB separate-home qgroup limits. An intentional generic-start test
+refused before any machine or graphical effect. GPU/input/VT/watchdog mediation
+and physical Hyprland activation remain unimplemented and separate.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

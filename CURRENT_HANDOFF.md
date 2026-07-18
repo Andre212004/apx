@@ -199,6 +199,16 @@ shows they shut down cleanly for the recovery reboot. Reconciliation of those
 two registrations is the immediate physical blocker and requires a fresh exact
 owner instruction because it directly changes Hub and Development state.
 
+The owner supplied that exact authorization. Reconciliation completed with
+unchanged generations, and update `update-a1b55982d14fb0bdf7afa8f1dd7991ca`
+installed the verified runtime while retaining the previous bytes for rollback.
+The real stopped Environment `codex-test-hyprland-h0-v1` now exists as
+generation `c4fc5c49-4106-4a56-b1f0-13bffa41a0c1`, sourced from
+`hyprland-h0-v1`, with 16 GiB root and 8 GiB home limits. Generic activation
+was tested and refused before creating a machine. The immediate milestone is
+now the exact AMD/input/tty2/watchdog activation and recovery adapter; no
+physical Hyprland session has run.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -231,7 +241,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 682-test suite succeeds in the root-host checkout with eight expected
+- the 685-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.

@@ -1,7 +1,7 @@
 # APX Hyprland H0 Environment Creation Contract v1
 
-Status: repository runtime support implemented and tested; physical runtime
-update and Environment creation have not run.
+Status: repository runtime support, physical runtime update, and stopped
+Environment creation completed on 2026-07-18. Graphical activation has not run.
 
 ## Practical meaning
 

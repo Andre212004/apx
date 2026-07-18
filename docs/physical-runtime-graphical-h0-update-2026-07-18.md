@@ -1,8 +1,8 @@
 # Physical Runtime Graphical-H0 Update Candidate — 2026-07-18
 
-Status: exact candidate built twice and verified; physical preview is blocked
-by stale post-reboot Hub and Development registration state. Nothing was
-imported, installed, started, stopped, or deleted.
+Status: exact candidate built twice, verified, and installed after separately
+authorized registration reconciliation. The previous runtime is retained for
+rollback; no graphical activation or cleanup occurred.
 
 ## Purpose
 
@@ -64,3 +64,10 @@ Environment is running. A truthful physical update preview must remain blocked
 until the owner separately authorizes reconciliation of the Hub and
 Development registrations to stopped, or separately directs their activation.
 The candidate must not be imported or activated on unreconciled evidence.
+
+The owner then authorized that exact reconciliation. Both registrations now
+truthfully say stopped with unchanged generations. The fixed update adapter
+passed all preflight gates, installed candidate runtime digest
+`0d7cc0c0c0631b65f68639f8b4994e3e3441a817604487256a30edd82f96da9f`,
+and retained the exact previous runtime. The installed CLI admits
+`graphical-h0`; final APX and Host checks passed.
