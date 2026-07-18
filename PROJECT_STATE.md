@@ -133,6 +133,19 @@ with all secret/runtime counters zero. It remains temporary evidence, not an
 APX release; reproducibility, promotion, mediation, watchdog, and H0 approval
 remain required.
 
+The pure H0 release-promotion contract now fixes the next boundary: only
+`hyprland-h0-v1`, sourced from the exact finalized tree, may target
+`/var/lib/apx/releases/hyprland-h0-v1/root`; its internal account is fixed to
+Environment-local `apx` UID/GID 1000 and no caller path, command, package,
+service, device, or configuration is accepted. A real read-only evidence
+capture reverified the tree, absent destination, healthy Btrfs quotas, more
+than 470 GiB free, exact generations, disposable hold, and zero uncertainty.
+The preview is `ready-for-separate-promotion-approval` with zero blockers and
+plan digest
+`dc15038fa6147f6f2ba098e90f880898ff4523586117bc0a338f9ea6e067146d`.
+Promotion remains unexecuted; even promotion would not create an Environment
+or authorize GPU/input/VT access or Hyprland activation.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

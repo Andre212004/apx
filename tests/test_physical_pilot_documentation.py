@@ -7,6 +7,7 @@ ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import apx_recovery_console as recovery
+import apx_hyprland_release_promotion as h0_promotion
 
 
 STATE = (ROOT / "PROJECT_STATE.md").read_text()
@@ -28,6 +29,12 @@ RECOVERY_RECEIPT = (
 ).read_text()
 H0_OBSERVATION = (
     ROOT / "docs" / "hyprland-h0-read-only-observation-2026-07-18.md"
+).read_text()
+H0_PROMOTION_CONTRACT = (
+    ROOT / "docs" / "hyprland-h0-release-promotion-v1.md"
+).read_text()
+H0_PROMOTION_EVIDENCE = (
+    ROOT / "docs" / "hyprland-h0-release-promotion-preview-2026-07-18.json"
 ).read_text()
 
 
@@ -210,6 +217,21 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "must not be copied into `/var/lib/apx`",
         ):
             self.assertIn(required, compact)
+
+    def test_h0_release_promotion_preview_is_ready_but_grants_no_graphics(self) -> None:
+        evidence = h0_promotion.parse_promotion_evidence_json(H0_PROMOTION_EVIDENCE)
+        preview = h0_promotion.build_promotion_preview(evidence)
+        self.assertEqual(preview.classification, "ready-for-separate-promotion-approval")
+        self.assertEqual(preview.blockers, ())
+        self.assertEqual(
+            preview.plan_digest,
+            "dc15038fa6147f6f2ba098e90f880898ff4523586117bc0a338f9ea6e067146d",
+        )
+        self.assertTrue(preview.environment_creation_not_authorized)
+        self.assertTrue(preview.graphical_activation_not_authorized)
+        compact = " ".join(H0_PROMOTION_CONTRACT.split())
+        self.assertIn("No promotion ran", " ".join(CURRENT_HANDOFF.split()))
+        self.assertIn("not standing permission to execute promotion", compact)
 
 
 if __name__ == "__main__":

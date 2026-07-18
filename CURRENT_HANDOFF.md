@@ -162,6 +162,14 @@ Nothing was promoted or launched. Next: independent reproduction, immutable
 release promotion contract, exact input/GPU mediation, watchdog, then a
 separately approved physical H0 run.
 
+The immutable-release promotion preview is complete and has zero blockers. It
+binds only `hyprland-h0-v1`, the exact normalized tree and current reconciled
+machine/APX state. Plan digest:
+`dc15038fa6147f6f2ba098e90f880898ff4523586117bc0a338f9ea6e067146d`.
+No promotion ran. A separate owner decision may authorize creation of that one
+immutable release only; Environment creation and graphical activation remain
+later, separate operations.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
