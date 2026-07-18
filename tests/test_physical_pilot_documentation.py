@@ -17,13 +17,17 @@ ROOT_HOST_PREPARE = (
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
-    def test_owner_report_and_pending_phases_are_consistent(self) -> None:
+    def test_reconciled_development_drift_and_pending_phases_are_consistent(self) -> None:
         for source in (STATE, HANDOFF, AUDIT):
             self.assertIn("Phases 1 through 8", source)
             self.assertIn("Phase 9", source)
         self.assertNotIn("Neither script has been executed on the physical target", STATE)
-        self.assertIn("Ollama package is installed", STATE)
-        self.assertIn("no local model has been downloaded", STATE)
+        self.assertIn("complete stop and destroy", STATE)
+        self.assertIn("empty home", STATE)
+        self.assertIn("Phase 10 cleanup", STATE)
+        self.assertIn("are blocked", STATE)
+        self.assertIn("Verified Critical Drift", CURRENT_HANDOFF)
+        self.assertIn("No registered APX snapshot", CURRENT_HANDOFF)
 
     def test_handoff_blocks_replay_and_cleanup_before_audit(self) -> None:
         compact = " ".join(HANDOFF.split())

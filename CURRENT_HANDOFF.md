@@ -32,6 +32,30 @@ The owner renamed the GitHub account from `Andre212004` to
 instructions use `https://github.com/andrepereira2004/apx.git`; the dated audit
 retains the old URL as historical evidence.
 
+## Verified Critical Drift
+
+Read-only root-host reconciliation on 2026-07-18 found that the Development
+audited on 2026-07-17 was subsequently destroyed and replaced. The APX journal
+records complete stop and destroy of generation
+`72b3777b-6dba-4175-8d3e-3fb24401bf50`, including `remove-home` and
+`remove-root`, followed 13 seconds later by creation of generation
+`b90155f6-ece2-44ae-91fc-42d91d6b35a5` and its successful activation.
+
+The replacement is running but has an empty home, approximately 8 KiB of APX
+Environment state, and no GitHub CLI, Ollama, Qwen Code, Codex, or Development
+repository. No registered APX snapshot, archive, quarantine, or catalogue
+object contains the prior generation. The journal records effects, not who
+requested them; do not attribute the destruction without independent evidence.
+
+Consequences:
+
+- the 2026-07-17 audit is historical, not current Development evidence;
+- Phase 10 cleanup is blocked;
+- the old in-place quota-recovery procedure must not run against the replacement;
+- all root-host bootstrap, recovery, and temporary-development checkouts must
+  remain preserved;
+- changing Development requires a fresh exact owner approval.
+
 ## Pinned Local-Model Decision
 
 The owner decided on 2026-07-18 that installing a local Ollama model is not
@@ -56,14 +80,15 @@ automated. The repository-only preparation is documented in:
 
 `docs/temporary-root-host-development-mode-v1.md`
 
-The temporary root-host mode is active. Continue the Phase 10 review without a
-model download. First complete the non-model Phase 9/10 evidence, including the
-guarded quota recovery decision, Development lifecycle persistence, package-
-only Ollama confinement/teardown, recovery dependencies, and exact candidate
-classification. Prepare an exact cleanup plan, but do not execute cleanup
-without fresh approval for its exact targets. Codex may create and destroy its
-own clearly named disposable test Environments. Hub, Development, disks,
-reinstall, and broad cleanup still need fresh owner approval.
+The temporary root-host mode is active. Stop Phase 10 cleanup work and design
+the smallest generation-bound Development reprovision plan. It must preserve
+Hub, host, APX recovery records, and all root-host checkouts; obtain source and
+tools only through reviewed current inputs; restore an authenticated
+Development checkout without copying root-host credentials; keep local-model
+installation deferred; define quota behavior for the new generation; and
+include isolation, stop/start, and recovery evidence. Do not execute the plan
+or change Development until the owner gives fresh explicit approval for its
+exact effects.
 
 The prior read-only audit procedure remains:
 
@@ -74,8 +99,9 @@ package, service, listener, Ollama, repository, and temporary-file evidence. It
 must not clean, install, download, start, stop, mount, unmount, or otherwise
 change the machine.
 
-Expected Ollama outcome is package-only with zero models. Do not download a
-model to complete the audit or Phase 10.
+The current replacement Development has no Ollama package. A future reprovision
+may restore the package-only configuration, but must not download a model to
+complete Phase 9 or Phase 10.
 
 When the owner returns with results:
 

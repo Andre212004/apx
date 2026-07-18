@@ -418,10 +418,27 @@ accounting, and verify healthy traditional qgroups after enablement. This is a
 repository correction only; it does not change the already frozen initial
 physical-pilot tag or claim that either bootstrap was rerun.
 
-The owner reports that the Ollama package is installed inside physical
-Development but no local model has been downloaded. Service, listener,
-data-directory, Qwen Code, partial-download, quota-recovery, and lifecycle
-facts remain unverified.
+The 2026-07-17 audit observed the Ollama package inside physical Development
+with no downloaded model. Root-host reconciliation on 2026-07-18 later proved
+that this audited Development generation no longer exists. The APX journal
+records a complete stop and destroy of generation
+`72b3777b-6dba-4175-8d3e-3fb24401bf50`, including completed `remove-home` and
+`remove-root` effects, followed 13 seconds later by creation of generation
+`b90155f6-ece2-44ae-91fc-42d91d6b35a5`. The replacement is running but has an
+empty home, about 8 KiB of APX Environment state, and no GitHub CLI, Ollama,
+Qwen Code, Codex, or repository. No registered APX snapshot, archive,
+quarantine object, or catalogue object preserves the prior generation. The
+journal does not identify who requested destruction, so no attribution is
+recorded.
+
+This is critical physical-state drift. Phase 10 cleanup and the old in-place
+quota-recovery route are blocked. Before changing Development, the repository
+must define a generation-bound reprovision plan that preserves Hub and host,
+uses the published GitHub source, recreates only Development-local tools and
+state, keeps model installation deferred, and requires fresh owner approval
+for the exact Development changes. The temporary root-host checkout must
+remain until the replacement Development checkout and recovery path are
+independently verified.
 
 **Pinned owner decision — 2026-07-18:** local-model acquisition and execution
 are deferred to a future milestone because the wanted model's storage cost is
@@ -431,9 +448,9 @@ zero-model result are valid deliberate outcomes. Model lifecycle tests are
 `not-applicable` until this decision is separately reopened, while quota
 recovery, Development stop/start persistence, listener confinement and
 teardown, Hub/Host isolation, repository recovery, and every other Phase 10
-gate remain required. This package-only state does not require keeping
-temporary Host bootstrap material after every other Phase 10 audit gate
-passes. The repository now proposes the external model
+gate remain required. Once Development is reprovisioned, a verified
+package-only state does not by itself require keeping temporary Host bootstrap
+material after every other Phase 10 audit gate passes. The repository now proposes the external model
 storage boundary in `docs/external-development-model-storage-v1.md`: one exact
 encrypted device and attachment identity, visible only to one Development
 generation, with bounded capacity, immutable model evidence, fail-closed
