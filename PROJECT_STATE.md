@@ -441,6 +441,24 @@ development state but does not block repository development or physical tests
 using newly created `codex-test-*` disposable Environments. Changing Hub or
 Development still requires fresh exact approval.
 
+The first root-host disposable lifecycle test created and cleanly started and
+stopped `codex-test-lifecycle-v1`. It proved a running minimal system, 139
+internal packages, a distinct PID namespace, link-local-only Environment
+networking, no executor socket, no root-host checkout, no Development home, and
+zero machine or mount residue after stop. Destruction was deliberately not
+executed: the installed runtime generated a destroy plan with a random
+generation instead of the registered generation and did not compare them before
+destructive effects. A stale same-name plan could therefore target a later
+generation.
+
+The repository runtime now binds destroy plans to the current registered
+generation and refuses a mismatch before journal, stop, unpublish, or removal.
+Regression tests cover plan binding and pre-effect stale refusal. The physical
+runtime is not changed by this repository correction. `codex-test-lifecycle-v1`
+remains stopped and preserved until a separately reviewed physical runtime
+update installs the fix; do not use the existing destroy plan or improvise
+cleanup.
+
 **Pinned owner decision — 2026-07-18:** local-model acquisition and execution
 are deferred to a future milestone because the wanted model's storage cost is
 not currently worthwhile. No Phase 9 or Phase 10 procedure may download a

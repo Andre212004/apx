@@ -106,6 +106,20 @@ The current replacement Development has no Ollama package. A future reprovision
 may restore the package-only configuration, but must not download a model to
 complete Phase 9 or Phase 10.
 
+## Active Disposable-Test Hold
+
+`codex-test-lifecycle-v1` generation
+`1ec52013-e715-413a-bb48-b4691cf31ee9` was created, started, observed, and
+cleanly stopped on 2026-07-18. Its isolation and stop evidence passed, but it is
+intentionally preserved because the installed runtime's destroy plan is not
+generation-bound. Do not apply destroy plan
+`868d54ef7e965d9e019c7995af0b46b2b835bd72ae05e187f238e57e1b2bbaee`
+or generate a replacement plan with the installed runtime.
+
+The repository fix binds destruction to the registered generation and refuses
+stale plans before effects. The next physical step is a separately reviewed
+runtime update, not manual cleanup. Hub and Development remain unchanged.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

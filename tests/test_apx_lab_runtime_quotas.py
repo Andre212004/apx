@@ -45,6 +45,37 @@ class RuntimeQuotaTests(unittest.TestCase):
             runtime.apply_limits("development", "unknown")
 
 
+class RuntimeDestroyGenerationTests(unittest.TestCase):
+    def test_destroy_plan_binds_the_registered_generation(self) -> None:
+        record = {"name": "codex-test-one", "generation": "current-generation"}
+        with patch.object(runtime, "registration", return_value=record), \
+             patch.object(runtime, "atomic_json"):
+            plan = runtime.make_plan("destroy", "codex-test-one")
+        self.assertEqual(plan["generation"], "current-generation")
+
+    def test_stale_destroy_plan_refuses_before_journal_or_stop(self) -> None:
+        plan = {
+            "schema": 1,
+            "action": "destroy",
+            "name": "codex-test-one",
+            "generation": "stale-generation",
+            "effects": list(runtime.EFFECTS["destroy"]),
+        }
+        with patch.object(runtime, "require_root"), \
+             patch.object(runtime, "load_plan", return_value=plan), \
+             patch.object(
+                 runtime,
+                 "registration",
+                 return_value={"name": "codex-test-one", "generation": "current-generation"},
+             ), \
+             patch.object(runtime, "append_event") as append_event, \
+             patch.object(runtime, "stop") as stop:
+            with self.assertRaisesRegex(runtime.Refusal, "generation is stale"):
+                runtime.destroy("0" * 64, "DESTROY codex-test-one")
+        append_event.assert_not_called()
+        stop.assert_not_called()
+
+
 class PhysicalRecoveryTests(unittest.TestCase):
     def validate_quota_status(self, output: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

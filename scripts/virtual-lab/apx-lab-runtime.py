@@ -161,20 +161,21 @@ def admitted_release(role: str) -> Path:
 
 def make_plan(action: str, name: str, role: str | None = None) -> dict[str, object]:
     validate_name(name)
+    generation = str(uuid.uuid4())
     if action == "create":
         validate_role(role or "")
         if environment_dir(name).exists():
             raise Refusal("Environment already exists")
         admitted_release(role or "")
     elif action == "destroy":
-        registration(name)
+        generation = str(registration(name)["generation"])
     else:
         raise Refusal("unsupported plan family")
     plan: dict[str, object] = {
         "schema": 1,
         "action": action,
         "name": name,
-        "generation": str(uuid.uuid4()),
+        "generation": generation,
         "effects": list(EFFECTS[action]),
     }
     if role is not None:
@@ -368,6 +369,9 @@ def destroy(plan_identity: str, approval: str) -> None:
     name = str(plan["name"])
     if approval != f"DESTROY {name}":
         raise Refusal("exact destruction approval is absent")
+    record = registration(name)
+    if plan.get("generation") != record.get("generation"):
+        raise Refusal("destruction plan generation is stale")
     operation = str(uuid.uuid4())
     append_event(operation, "destroy", "operation", "started", name=name, plan=plan_identity)
     stop(name)
