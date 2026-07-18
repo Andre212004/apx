@@ -126,6 +126,13 @@ The exact runtime-only candidate preview is recorded in
 `recovery-console-not-verified`. Do not import or activate it and do not treat
 the installed boot entry as proof of a tested recovery console.
 
+The repository now has a pure closed recovery receipt contract in
+`src/apx_recovery_console.py` and the exact future rehearsal is documented in
+the candidate dossier. It performs no reboot and cannot turn boot metadata into
+positive evidence. The remaining physical rehearsal requires the owner at the
+machine and fresh approval for the exact reboot window; it is not implied by
+the standing root-host development permission.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

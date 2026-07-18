@@ -142,15 +142,19 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             self.assertNotIn(forbidden, ROOT_HOST_PREPARE)
 
     def test_runtime_generation_fix_candidate_is_exact_and_still_blocked(self) -> None:
+        compact = " ".join(RUNTIME_FIX_UPDATE.split())
         for required in (
             "host-runtime",
             "30720",
             "recovery-console-not-verified",
+            "Separately authorized recovery-console rehearsal",
+            "distinct before/recovery boot IDs",
+            "fresh approval for the exact reboot window",
             "Minimum-privilege effect map",
             "No automatic rollback is allowed",
             "do not destroy",
         ):
-            self.assertIn(required, RUNTIME_FIX_UPDATE)
+            self.assertIn(required, compact)
 
 
 if __name__ == "__main__":

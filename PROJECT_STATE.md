@@ -69,6 +69,18 @@ preview is documented in
 boot-entry metadata is not substituted for that proof. No artifact was
 imported, installed, or committed and no release tag was created.
 
+`src/apx_recovery_console.py` now provides the pure, closed receipt and
+assessment boundary for that remaining gate. Verification requires distinct
+pre-reboot and recovery boot identities, exact boot-component and physical
+identity digests, an owner physically using the built-in keyboard to unlock
+encrypted root and reach the independent root console, and a post-boot APX
+reconciliation proving unchanged Hub, Development, and disposable hold with no
+uncertain operation. It also requires explicit evidence of no disk,
+encryption, bootloader, package, or APX lifecycle effect. The module performs
+no reboot or mutation, and metadata alone cannot satisfy it. The physical
+rehearsal still requires the owner at the machine and fresh approval for the
+availability-affecting reboot window.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

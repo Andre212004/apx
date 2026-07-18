@@ -97,6 +97,44 @@ The systemd-boot APX entry, EFI loader, kernel, initramfs, and encrypted-root
 arguments exist. Metadata does not prove a human-accessible recovery console
 was exercised in the current physical state, so the gate remains false.
 
+The closed evidence schema is implemented in `src/apx_recovery_console.py`.
+It cannot reboot the Host or manufacture a positive receipt. It accepts a
+receipt only when it binds the physical machine marker, selected boot entry,
+kernel, initramfs, distinct before/recovery boot IDs, owner presence, built-in
+keyboard use, encrypted-root unlock, root console access, and the post-boot APX
+reconciliation. Every field is exact and every safety assertion is mandatory.
+Metadata-only observation, a same-boot observation, a non-physical observer,
+an unknown field, or a non-boolean assertion fails closed.
+
+## Separately authorized recovery-console rehearsal
+
+This procedure is a future availability-affecting physical operation, not
+authorization to run it now. It requires the owner at the machine and fresh
+approval for the exact reboot window.
+
+1. Before reboot, record sanitized digests of the APX physical marker, machine
+   identity, selected systemd-boot entry, kernel and initramfs, the current boot
+   ID, exact Hub and Development generations, the disposable hold, and the APX
+   uncertain-operation result.
+2. Reboot through the already installed APX recovery entry. Do not edit the
+   entry, kernel arguments, disks, encryption, bootloader, packages, or APX
+   registrations.
+3. With the owner physically present, use the built-in keyboard to unlock the
+   encrypted root and confirm an independent root text console. Do not enter
+   passphrases, keys, tokens, command output containing secrets, or raw machine
+   identifiers in the receipt.
+4. Record the recovery boot ID and observation time with timezone. The boot ID
+   must differ from the pre-reboot value.
+5. Return to the ordinary installed boot path, then reconcile APX from the root
+   Host: Hub and Development generations must be unchanged, the disposable
+   hold must still exist, and no uncertain operation may be present.
+6. Record explicit negative evidence that no disk-layout, encryption,
+   bootloader, package, or APX lifecycle change occurred. Parse and assess the
+   sanitized receipt with the repository contract.
+
+Any failed or unknown check keeps the update blocked. The rehearsal does not
+authorize candidate import, activation, rollback, cleanup, or destruction.
+
 ## Minimum-privilege effect map
 
 This is a design boundary, not an implemented adapter.
@@ -130,8 +168,9 @@ staging, rollback bytes, or Host install authority.
 
 ## Remaining gates
 
-1. Exercise and record the physical recovery-console path without modifying
-   Hub, Development, disks, encryption, bootloader, or APX state.
+1. Obtain a fresh reboot-window approval, then exercise and record the physical
+   recovery-console path with the owner present, without modifying Hub,
+   Development, disks, encryption, bootloader, packages, or APX state.
 2. Rebuild the artifact after any source change and reproduce every digest.
 3. Implement and hostile-test bounded staging and fixed host-runtime mapping.
 4. Exercise interruption fixtures before/after rollback retention and install.
