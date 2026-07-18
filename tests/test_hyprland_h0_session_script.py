@@ -14,6 +14,7 @@ class HyprlandH0SessionScriptTests(unittest.TestCase):
         self.assertIn("--reuid=1000 --regid=1000 --groups=5,983,987,992", source)
         self.assertIn("--bounding-set=-all", source)
         self.assertIn("/usr/bin/Hyprland --config", source)
+        self.assertIn("AQ_DRM_DEVICES=/dev/dri/card2 AQ_TRACE=1", source)
         self.assertNotIn("exec /usr/bin/setpriv", source)
 
     def test_script_revalidates_every_internal_device(self) -> None:

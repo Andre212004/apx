@@ -43,5 +43,5 @@ done
   HOME=/home/apx USER=apx LOGNAME=apx SHELL=/usr/bin/bash \
   PATH=/usr/bin XDG_RUNTIME_DIR="$RUNTIME" XDG_SESSION_TYPE=wayland \
   XDG_CURRENT_DESKTOP=Hyprland LIBSEAT_BACKEND=seatd SEATD_SOCK="$SEATD_SOCKET" \
-  AQ_DRM_DEVICES=/dev/dri/card2 \
+  AQ_DRM_DEVICES=/dev/dri/card2 AQ_TRACE=1 \
   /usr/bin/Hyprland --config "$CONFIG"

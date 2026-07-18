@@ -33,6 +33,7 @@ class HyprlandH0ConfigTests(unittest.TestCase):
         self.assertGreaterEqual(source.count("enabled = false"), 3)
         self.assertIn("rounding = 0", source)
         self.assertIn("gaps_out = 0", source)
+        self.assertIn("disable_logs = false", source)
 
 
 if __name__ == "__main__":

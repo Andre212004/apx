@@ -53,7 +53,7 @@ def _preflight() -> launch.H0LaunchPlan:
     if registration.get("generation") != launch.GENERATION or registration.get("state") != "stopped" or registration.get("role") != "graphical-h0":
         raise H0LaunchError("H0 registration changed or is not stopped")
     plan = launch.build_launch_plan(device.build_device_lease_plan(_exact_observation()))
-    if plan.plan_digest != "6c052a00c729193c7f0c81c6cbb4c7577d05b109e83b259ffb4efc988fac9647":
+    if plan.plan_digest != "8e1096161261b68b1bb0b4d540eb78502860b88948c8f035fafc222085026fb0":
         raise H0LaunchError("H0 launch plan identity changed")
     for name, digest, mode in launch.ASSETS:
         path = STATE / name
