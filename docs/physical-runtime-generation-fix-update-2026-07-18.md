@@ -141,7 +141,7 @@ This is a design boundary, not an implemented adapter.
 
 | Effect | Exact allowed object | Forbidden expansion |
 |---|---|---|
-| Reserve staging | one new mode-0700 operation directory under a future fixed APX staging root | existing path adoption, caller path, symlink |
+| Reserve staging | one new mode-0700 operation directory under fixed logical root `/var/lib/apx/updates/staging` | existing path adoption, caller path, symlink |
 | Copy bytes | exact 30,720-byte artifact | network fetch, redirect, overwrite, executable staging |
 | Verify artifact | exact two tar members and all bound hashes | extraction, execution, alternate member |
 | Reverify installed | exact marker, component hashes, generations, journal, capacity, recovery receipt | mutation or inferred positive evidence |
@@ -172,7 +172,9 @@ staging, rollback bytes, or Host install authority.
    recovery-console path with the owner present, without modifying Hub,
    Development, disks, encryption, bootloader, packages, or APX state.
 2. Rebuild the artifact after any source change and reproduce every digest.
-3. Implement and hostile-test bounded staging and fixed host-runtime mapping.
+3. Implement and hostile-test the minimum-privilege adapter that executes the
+   now-fixed staging and host-runtime mapping; the non-executing plan contract
+   is complete.
 4. Exercise interruption fixtures before/after rollback retention and install.
 5. Reobserve all evidence immediately before an import preview.
 6. Obtain separate import approval, then a separate activation approval.

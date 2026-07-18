@@ -1,8 +1,9 @@
 # APX Physical Pilot Update Contract v1
 
-Status: pure candidate, readiness preview, ordered journal, and recovery model
-implemented. No physical update artifact, importer, installer, service adapter,
-restart, rollback executor, or cleanup command is implemented or authorized.
+Status: pure candidate, closed artifact reader, readiness preview, ordered
+journal, recovery model, and fixed import/effect-plan contract implemented. No
+physical importer, installer, service adapter, restart, rollback executor, or
+cleanup command is implemented or authorized.
 
 ## Why This Exists
 
@@ -76,6 +77,37 @@ It binds artifact bytes/hash/count, source and parent revisions, component set,
 manifest digest, member sizes/modes/hashes, and actual reopened content. It
 reads bounded bytes in memory for validation and never extracts, executes,
 installs, changes permissions, or selects a host destination.
+
+## Fixed staging and component mapping
+
+`src/apx_physical_update_effects.py` closes the next planning boundary without
+performing it. A staging plan is derived only from the candidate and ready
+preview. Its logical Host root is fixed at `/var/lib/apx/updates/staging`, its
+operation directory is exactly the update ID, and its only artifact name is
+`candidate.tar`. The plan binds the artifact bytes and digest, candidate,
+installed-evidence and preview-plan digests, and the separately supplied import
+approval digest. It accepts no caller path, filename, command, or destination.
+
+The first physical candidate is deliberately narrower than the generic
+three-component artifact format. Only the singleton `host-runtime` set has a
+reviewed target mapping:
+
+- replace one regular mode-0755 file at
+  `/usr/lib/apx/apx-lab-runtime.py`;
+- require `/usr/bin/apx` to remain a symlink to that exact file, never replace
+  or follow the alias as an independent target;
+- bind the installed-before digest, candidate-after digest and rollback digest
+  to the plan before any future effect.
+
+`host-executor` and `hub-client` remain valid logical artifact component names
+but have no physical destination mapping yet. Planning a physical effect for
+either fails closed. This avoids guessing how to coordinate the executor
+service or the immutable Hub release/current Hub root. A later architecture
+decision and separate tests must define those effects.
+
+The contract emits descriptions and digests only. It does not create staging,
+read or write `/usr`, stop a service or Environment, change the symlink, retain
+rollback bytes, or install the candidate.
 
 ## Installed Machine Evidence
 
@@ -169,16 +201,19 @@ the only working or inspectable state.
 
 Before a real update may be proposed, the repository still needs:
 
-1. reconciled results from the physical state audit;
-2. exact installed runtime, executor, and Hub-client identities;
-3. an exact target candidate built with the implemented closed member manifest
-   and non-extracting raw artifact reader (the generic contract is complete;
-   the target candidate is not yet built);
-4. a bounded physical transport into Host-owned staging;
+1. the separately authorized physical recovery-console rehearsal;
+2. immediate pre-import reobservation of the already reconciled physical state
+   and exact installed component identities;
+3. reproduction of the exact temporary target candidate after any change to
+   its component source (the 2026-07-18 runtime-only candidate was built twice
+   and parsed, but is neither an immutable release nor imported);
+4. a bounded physical transport that executes the fixed Host-owned staging
+   plan (the non-executing plan contract is implemented);
 5. independent component verification and compatibility rules;
-6. minimum-privilege staging, stop, install, verification, and rollback adapters;
+6. minimum-privilege staging, stop, install, verification, and rollback
+   adapters (the host-runtime target mapping is planned but not executable);
 7. recovery-console fixtures before and after every effect;
-8. a target-bound update dossier with exact hashes and consequences;
+8. revalidation of the existing target-bound dossier after every later gate;
 9. a separately reviewed immutable release and explicit owner approvals.
 
 Do not create a tag or write physical update instructions merely because the

@@ -156,6 +156,20 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         ):
             self.assertIn(required, compact)
 
+    def test_physical_update_mapping_is_fixed_but_non_executing(self) -> None:
+        compact = " ".join(UPDATE_CONTRACT.split())
+        for required in (
+            "/var/lib/apx/updates/staging",
+            "candidate.tar",
+            "/usr/lib/apx/apx-lab-runtime.py",
+            "/usr/bin/apx",
+            "host-executor",
+            "hub-client",
+            "fails closed",
+            "does not create staging",
+        ):
+            self.assertIn(required, compact)
+
 
 if __name__ == "__main__":
     unittest.main()

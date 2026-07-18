@@ -81,6 +81,18 @@ no reboot or mutation, and metadata alone cannot satisfy it. The physical
 rehearsal still requires the owner at the machine and fresh approval for the
 availability-affecting reboot window.
 
+`src/apx_physical_update_effects.py` now closes the non-executing staging and
+target-mapping plan. For the first runtime-only candidate it fixes logical
+staging at `/var/lib/apx/updates/staging/<update-id>/candidate.tar`, binds the
+candidate, installed evidence, ready preview, import approval, artifact bytes,
+and every before/after/rollback digest, and maps only `host-runtime` to the
+regular mode-0755 `/usr/lib/apx/apx-lab-runtime.py`. `/usr/bin/apx` is a
+required exact symlink invariant, not a second replacement target. Physical
+mapping of `host-executor` and `hub-client` fails closed until their service and
+immutable/current-Hub effects have separate designs. The plan has no
+filesystem, service, lifecycle, install, rollback, or cleanup adapter; physical
+staging and activation remain unimplemented and unauthorized.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

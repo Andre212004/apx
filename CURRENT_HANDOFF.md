@@ -133,6 +133,13 @@ positive evidence. The remaining physical rehearsal requires the owner at the
 machine and fresh approval for the exact reboot window; it is not implied by
 the standing root-host development permission.
 
+The next repository-only boundary is also closed: the fixed import/effect plan
+accepts only the runtime-only candidate, a ready exact preview and matching
+artifact evidence. It maps one regular Host runtime target and preserves the
+`/usr/bin/apx` symlink as an invariant. It cannot create staging or install the
+runtime. Executor and Hub-client physical mappings deliberately remain
+unsupported rather than guessed.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
