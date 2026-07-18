@@ -36,6 +36,9 @@ H0_PROMOTION_CONTRACT = (
 H0_PROMOTION_EVIDENCE = (
     ROOT / "docs" / "hyprland-h0-release-promotion-preview-2026-07-18.json"
 ).read_text()
+H0_PROMOTION_RESULT = (
+    ROOT / "docs" / "hyprland-h0-release-promotion-result-2026-07-18.json"
+).read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -230,8 +233,25 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertTrue(preview.environment_creation_not_authorized)
         self.assertTrue(preview.graphical_activation_not_authorized)
         compact = " ".join(H0_PROMOTION_CONTRACT.split())
-        self.assertIn("No promotion ran", " ".join(CURRENT_HANDOFF.split()))
+        self.assertIn("At preview time no promotion had run", " ".join(CURRENT_HANDOFF.split()))
         self.assertIn("not standing permission to execute promotion", compact)
+
+    def test_h0_release_result_is_immutable_and_preserves_neighbours(self) -> None:
+        result = __import__("json").loads(H0_PROMOTION_RESULT)
+        self.assertEqual(result["release_id"], "hyprland-h0-v1")
+        self.assertEqual(result["package_count"], 332)
+        self.assertEqual(
+            result["configured_tree_digest"],
+            "4798a8f6a0396dfab94758a9bb2498364a72948c6b2587593eadc04faca15b92",
+        )
+        for field in (
+            "root_read_only", "source_preserved", "hub_generation_unchanged",
+            "development_generation_unchanged", "disposable_hold_unchanged",
+            "no_uncertain_apx_operation",
+        ):
+            self.assertIs(result[field], True)
+        compact = " ".join(H0_PROMOTION_CONTRACT.split())
+        self.assertIn("No Environment was created", compact)
 
 
 if __name__ == "__main__":

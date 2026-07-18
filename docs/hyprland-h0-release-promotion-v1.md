@@ -1,8 +1,9 @@
 # APX Hyprland H0 Release Promotion Contract v1
 
-Status: design and non-executing plan only. No copy into `/var/lib/apx`, Btrfs
-creation, account configuration, release publication, Environment creation,
-GPU/input grant, or Hyprland launch is implemented or authorized here.
+Status: promotion plan complete and exact fixed effect adapter under test. The
+owner separately authorized creation of only `hyprland-h0-v1` on 2026-07-18.
+Environment creation, GPU/input grant, VT change, and Hyprland launch remain
+unimplemented and unauthorized.
 
 ## Practical meaning
 
@@ -75,6 +76,16 @@ Those remain later, separately reviewed steps. Promotion rollback preserves an
 uncertain or partial new release for inspection; it never deletes it
 automatically and never modifies an existing release.
 
+The first authorized run copied the source and configured the fixed account,
+then stopped because the normalized package root correctly had no existing
+`/etc/hostname` to replace. The reviewed partial tree digest is
+`b1bb42da33a9df56b39a28ec84bc11a0cbf14670e2c97efbb805dc294d997664`.
+Hub, Development, the disposable hold, source tree, and APX journal remained
+unchanged. The adapter now has one recovery continuation for only that exact
+writable subvolume/account/home state: create the previously absent fixed
+hostname, then finish measurement, manifest, read-only conversion, and final
+verification. Any other partial state remains preserved and refused.
+
 ## Current preview — 2026-07-18
 
 The finalized tree was independently remeasured with the expected digest. The
@@ -98,3 +109,36 @@ The closed supplied evidence is stored in
 This result requests a separate promotion decision only. It is not standing
 permission to execute promotion and grants no later Environment or graphical
 authority.
+
+## Fixed effect adapter
+
+`src/apx_hyprland_release_promote.py` implements only the approved promotion.
+It has no arguments and revalidates the exact source tree/report, physical
+identity, Btrfs parent, healthy quota accounting, free-space reserve, absent
+destination, exact Hub/Development/disposable generations, and zero uncertain
+APX operations before its first write.
+
+It creates the new release directory and one Btrfs root, copies the normalized
+source, adds only the fixed Environment-local `apx` account and home, writes the
+fixed hostname and canonical manifest, remeasures the complete configured tree,
+sets the root read-only, and verifies it again. Any partial or uncertain result
+is preserved for inspection and blocks retry; the adapter contains no deletion
+or automatic rollback path.
+
+## Physical promotion result — 2026-07-18
+
+The exact recovery continuation completed the owner-authorized promotion.
+`hyprland-h0-v1` now exists as one read-only Btrfs release root. The result is
+stored in `docs/hyprland-h0-release-promotion-result-2026-07-18.json`:
+
+- configured tree digest:
+  `4798a8f6a0396dfab94758a9bb2498364a72948c6b2587593eadc04faca15b92`;
+- manifest digest:
+  `dc1beaaaf6f073f8c3493d2e6b1d001e4b5f07f431f8a522f2125f242151ea40`;
+- package count: 332;
+- logical/allocated bytes: 1,596,400,518 / 1,736,675,328;
+- root read-only and source preserved: true;
+- Hub, Development, disposable hold, and zero-uncertainty state unchanged.
+
+No Environment was created and no graphical, GPU, input, VT, service, Host
+package, source cleanup, or rollback effect occurred.

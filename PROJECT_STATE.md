@@ -143,8 +143,22 @@ than 470 GiB free, exact generations, disposable hold, and zero uncertainty.
 The preview is `ready-for-separate-promotion-approval` with zero blockers and
 plan digest
 `dc15038fa6147f6f2ba098e90f880898ff4523586117bc0a338f9ea6e067146d`.
-Promotion remains unexecuted; even promotion would not create an Environment
-or authorize GPU/input/VT access or Hyprland activation.
+At preview time promotion remained unexecuted; the preview itself did not
+create an Environment or authorize GPU/input/VT access or Hyprland activation.
+
+The owner then authorized only that immutable release promotion. The first run
+safely preserved an exact account-configured partial because the normalized
+source had no hostname file to replace. A digest-bound continuation accepted
+only that reviewed partial, created the fixed missing hostname, measured the
+configured tree, wrote the canonical manifest, set the Btrfs root read-only,
+and reverified all neighbours. `hyprland-h0-v1` is now a physical immutable APX
+release containing 332 packages, configured-tree digest
+`4798a8f6a0396dfab94758a9bb2498364a72948c6b2587593eadc04faca15b92`
+and manifest digest
+`dc1beaaaf6f073f8c3493d2e6b1d001e4b5f07f431f8a522f2125f242151ea40`.
+The source, Hub, Development, disposable hold, and APX uncertainty state are
+unchanged. No graphical Environment or session exists yet; device mediation,
+watchdog, Environment creation, and physical H0 approval remain separate.
 
 ## Human Objective
 

@@ -158,17 +158,25 @@ dated 332-package graphical chain was rebuilt and verified in `/tmp`. A newly
 implemented finalizer removed generated private trust and identity/time/log
 state, producing normalized tree digest
 `83c58deaa56c83c23eee57dc02ecd3a67ccaede0d75918932f7f3b9557ab3401`.
-Nothing was promoted or launched. Next: independent reproduction, immutable
-release promotion contract, exact input/GPU mediation, watchdog, then a
-separately approved physical H0 run.
+At that observation point nothing had been promoted or launched. The later
+promotion result is recorded below.
 
 The immutable-release promotion preview is complete and has zero blockers. It
 binds only `hyprland-h0-v1`, the exact normalized tree and current reconciled
 machine/APX state. Plan digest:
 `dc15038fa6147f6f2ba098e90f880898ff4523586117bc0a338f9ea6e067146d`.
-No promotion ran. A separate owner decision may authorize creation of that one
-immutable release only; Environment creation and graphical activation remain
-later, separate operations.
+At preview time no promotion had run. The later owner decision authorized only
+creation of that one immutable release; Environment creation and graphical
+activation remain separate operations.
+
+The owner authorized and the Host completed creation of the immutable
+`hyprland-h0-v1` release. Its 332-package root is read-only with configured-tree
+digest `4798a8f6a0396dfab94758a9bb2498364a72948c6b2587593eadc04faca15b92`.
+The initial exact partial was preserved and completed only through a
+digest-bound continuation; nothing was deleted. Hub, Development, disposable
+hold, source, and APX health remained unchanged. There is still no graphical
+Environment or Hyprland session. Next work is exact Environment creation plus
+GPU/input/VT/watchdog contracts, each separately bounded before physical H0.
 
 When the owner returns with results:
 

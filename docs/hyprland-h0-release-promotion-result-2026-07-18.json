@@ -1,0 +1,16 @@
+{
+  "allocated_bytes": 1736675328,
+  "configured_tree_digest": "4798a8f6a0396dfab94758a9bb2498364a72948c6b2587593eadc04faca15b92",
+  "development_generation_unchanged": true,
+  "disposable_hold_unchanged": true,
+  "hub_generation_unchanged": true,
+  "logical_bytes": 1596400518,
+  "manifest_digest": "dc1beaaaf6f073f8c3493d2e6b1d001e4b5f07f431f8a522f2125f242151ea40",
+  "no_uncertain_apx_operation": true,
+  "package_count": 332,
+  "release_id": "hyprland-h0-v1",
+  "root_read_only": true,
+  "schema_version": 1,
+  "source_preserved": true,
+  "source_tree_digest": "83c58deaa56c83c23eee57dc02ecd3a67ccaede0d75918932f7f3b9557ab3401"
+}
