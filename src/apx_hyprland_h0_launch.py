@@ -17,8 +17,14 @@ import apx_hyprland_h0_launch_plan as launch
 
 STATE = Path(launch.STATE)
 RESULT = STATE / "physical-result.json"
+DIAGNOSTIC_LOG = STATE / "hyprland-diagnostic.log"
+COMPOSITOR_STATE = STATE / "hyprland-state.json"
 REGISTRATION = Path(f"/var/lib/apx/environments/{launch.ENVIRONMENT}/registration.json")
 OBSERVE_SECONDS = 45
+# Physical H0 is deliberately locked after the 2026-07-18 recovery UX incident.
+# Re-enabling requires a reviewed short-deadline design and a non-graphical
+# rehearsal; owner authorization alone must not bypass this code interlock.
+PHYSICAL_RUN_ENABLED = False
 
 
 class H0LaunchError(RuntimeError):
@@ -47,13 +53,15 @@ def _exact_observation() -> device.H0DeviceObservation:
 
 
 def _preflight() -> launch.H0LaunchPlan:
+    if not PHYSICAL_RUN_ENABLED:
+        raise H0LaunchError("physical H0 is safety-locked pending a shorter reviewed recovery design")
     if os.geteuid() != 0 or RESULT.exists():
         raise H0LaunchError("H0 launch requires root and an absent exact result")
     registration = json.loads(REGISTRATION.read_text())
     if registration.get("generation") != launch.GENERATION or registration.get("state") != "stopped" or registration.get("role") != "graphical-h0":
         raise H0LaunchError("H0 registration changed or is not stopped")
     plan = launch.build_launch_plan(device.build_device_lease_plan(_exact_observation()))
-    if plan.plan_digest != "8e1096161261b68b1bb0b4d540eb78502860b88948c8f035fafc222085026fb0":
+    if plan.plan_digest != "2b98e2038975e57cd145da065cdefa0a65793ff5674f53aec853e5eaf2d89981":
         raise H0LaunchError("H0 launch plan identity changed")
     for name, digest, mode in launch.ASSETS:
         path = STATE / name
@@ -96,6 +104,41 @@ def _process_present(executable: bytes) -> bool:
     return False
 
 
+def _runtime_observation() -> tuple[bool, bytes, dict[str, object]]:
+    """Read bounded evidence through Hyprland's proc root while it is alive."""
+    socket_observed = False
+    log = b""
+    state: dict[str, object] = {}
+    for item in Path("/proc").iterdir():
+        if not item.name.isdigit():
+            continue
+        try:
+            arguments = (item / "cmdline").read_bytes().split(b"\0")
+            if b"/usr/bin/Hyprland" not in arguments:
+                continue
+            runtime = item / "root/run/user/1000/hypr"
+            for candidate in runtime.glob("*/.socket.sock"):
+                socket_observed |= stat.S_ISSOCK(candidate.stat().st_mode)
+                signature = candidate.parent.name
+                for query in ("monitors", "clients"):
+                    answer = _run([
+                        "/usr/bin/nsenter", "--target", item.name, "--mount", "--pid", "--",
+                        "/usr/bin/env", "XDG_RUNTIME_DIR=/run/user/1000",
+                        f"HYPRLAND_INSTANCE_SIGNATURE={signature}",
+                        "/usr/bin/hyprctl", "-j", query,
+                    ], check=False)
+                    if answer.returncode == 0:
+                        try:
+                            state[query] = json.loads(answer.stdout)
+                        except json.JSONDecodeError:
+                            pass
+            for candidate in runtime.glob("*/hyprland.log"):
+                log = candidate.read_bytes()[:262144]
+        except OSError:
+            continue
+    return socket_observed, log, state
+
+
 def _write_result(value: dict[str, object]) -> None:
     data = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
     descriptor = os.open(RESULT, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o400)
@@ -106,6 +149,9 @@ def _write_result(value: dict[str, object]) -> None:
 def execute_h0() -> dict[str, object]:
     plan = _preflight()
     timer_started = graphical_started = hyprland_observed = foot_observed = machine_observed = False
+    wayland_socket_observed = False
+    diagnostic_log = b""
+    compositor_state: dict[str, object] = {}
     try:
         _run(plan.expiry_command)
         timer_started = _run(["systemctl", "is-active", f"{launch.EXPIRY_UNIT}.timer"]).stdout.strip() == "active"
@@ -120,6 +166,12 @@ def execute_h0() -> dict[str, object]:
             machine_observed |= machine.returncode == 0 and machine.stdout.strip() in {"running", "degraded"}
             hyprland_observed |= _process_present(b"/usr/bin/Hyprland")
             foot_observed |= _process_present(b"/usr/bin/foot")
+            socket_now, log_now, state_now = _runtime_observation()
+            wayland_socket_observed |= socket_now
+            if log_now:
+                diagnostic_log = log_now
+            if state_now:
+                compositor_state = state_now
             if _run(["systemctl", "is-active", f"{launch.GRAPHICAL_UNIT}.service"], check=False).stdout.strip() not in {"active", "activating"}:
                 break
             time.sleep(0.25)
@@ -129,14 +181,31 @@ def execute_h0() -> dict[str, object]:
     tty1 = _run(["fgconsole"]).stdout.strip() == "1"
     machine_absent = _run(["machinectl", "show", launch.MACHINE, "--property=State", "--value"], check=False).returncode != 0
     unit_inactive = _run(["systemctl", "is-active", f"{launch.GRAPHICAL_UNIT}.service"], check=False).stdout.strip() not in {"active", "activating"}
+    if diagnostic_log:
+        descriptor = os.open(DIAGNOSTIC_LOG, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o400)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(diagnostic_log); stream.flush(); os.fsync(stream.fileno())
+    if compositor_state:
+        _write_result_file = (json.dumps(compositor_state, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        descriptor = os.open(COMPOSITOR_STATE, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o400)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(_write_result_file); stream.flush(); os.fsync(stream.fileno())
+    monitors = compositor_state.get("monitors", [])
+    monitor_observed = isinstance(monitors, list) and any(
+        isinstance(monitor, dict) and monitor.get("name") == "eDP-2" and not monitor.get("disabled", False)
+        for monitor in monitors
+    )
     result = {
         "schema": 1, "experiment": launch.EXPERIMENT, "generation": launch.GENERATION,
         "plan_digest": plan.plan_digest, "timer_started_before_graphics": timer_started,
         "graphical_unit_started": graphical_started, "machine_observed": machine_observed,
         "hyprland_process_observed": hyprland_observed,
+        "wayland_socket_observed": wayland_socket_observed,
+        "monitor_log_observed": monitor_observed,
+        "diagnostic_log_preserved": bool(diagnostic_log),
         "visual_marker_process_observed": foot_observed, "tty1_restored": tty1,
         "machine_absent_after": machine_absent, "graphical_unit_inactive_after": unit_inactive,
-        "classification": "h0-visual-marker-observed-and-headless-restored" if all((timer_started, graphical_started, machine_observed, hyprland_observed, foot_observed, tty1, machine_absent, unit_inactive)) else "bounded-negative-or-incomplete-headless-restored",
+        "classification": "h0-visual-marker-observed-and-headless-restored" if all((timer_started, graphical_started, machine_observed, hyprland_observed, wayland_socket_observed, monitor_observed, foot_observed, tty1, machine_absent, unit_inactive)) else "bounded-negative-or-incomplete-headless-restored",
     }
     _write_result(result)
     return result
