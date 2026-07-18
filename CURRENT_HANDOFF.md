@@ -268,6 +268,15 @@ resolve exactly to current `event3`/`event11`, then uses those colon-free source
 paths for fixed internal `event0`/`event1`. Current v3 plan digest:
 `83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed`.
 
+Physical v3 then passed the bounded technical H0 run: timer-before-graphics,
+machine observed, transient seatd accepted UID 1000, unprivileged Hyprland
+observed for the full 45-second window, tty1 restored, machine/mount residue
+absent, units inactive, and APX healthy. Sanitized result:
+`docs/hyprland-h0-physical-result-2026-07-18.json`. Do not yet claim visual or
+input acceptance until the owner reports what appeared. Follow up the blocked
+absent-card1 enumeration and create the missing Environment-local `/home/apx`
+before daily-use work.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

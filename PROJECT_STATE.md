@@ -234,6 +234,16 @@ Their 0400/0500 modes and SHA-256 identities reverified, and the result records
 zero failed units. Timer arming, device grants, nspawn launch, and Hyprland
 execution still have not occurred.
 
+Physical H0 v3 has now executed and passed the bounded technical process and
+recovery gate. The expiry timer preceded graphics; the exact nspawn machine,
+transient seatd UID-1000 client, and unprivileged Hyprland process were observed
+through the full 45-second window. Recovery restored tty1, removed machine and
+mount residue, and left graphical/timer units inactive with APX healthy. The
+result is `docs/hyprland-h0-physical-result-2026-07-18.json`. This does not yet
+claim visual/input acceptance: owner observation is pending. Aquamarine's
+blocked absent-card1 enumeration and the missing separate-home `/home/apx`
+directory are follow-up gaps before daily usability.
+
 The exact physical executor is now implemented and bounded to 45 seconds of
 observation inside the independent 120-second expiry window. It rechecks the
 real connector, amdgpu driver, tty1, display-manager absence, asset identities,

@@ -147,3 +147,18 @@ or device consumer started. V3 preserves that result and keeps stable paths as
 the authority while binding only their revalidated current targets, keyboard
 `event3` and touchpad `event11`, to fixed internal `event0`/`event1`. Its plan
 digest is `83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed`.
+
+Physical v3 passed the bounded technical H0 gate. The independent timer was
+active before the graphical unit, the nspawn machine and unprivileged Hyprland
+process were both observed, and the process remained active for the complete
+45-second observation window. Transient seatd accepted the UID 1000 client.
+The final watchdog returned tty1, removed the machine and mounts, and left the
+graphical/timer units inactive with APX healthy and zero failed units. The
+sanitized result is `docs/hyprland-h0-physical-result-2026-07-18.json`.
+
+Two non-fatal gaps remain. Aquamarine attempted to enumerate absent card1 but
+could not open it; only the admitted AMD nodes existed inside the container.
+The separate home subvolume lacks `/home/apx`, so shader-cache creation was
+disabled. Neither prevented the 45-second Hyprland process pass, but both must
+be resolved before calling the Environment daily-usable. Visual output and
+input behavior still require the physically present owner's report.
