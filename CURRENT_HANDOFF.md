@@ -209,6 +209,18 @@ was tested and refused before creating a machine. The immediate milestone is
 now the exact AMD/input/tty2/watchdog activation and recovery adapter; no
 physical Hyprland session has run.
 
+The pure device/config boundary is also complete. Current read-only evidence
+produces plan digest
+`3ef21d19a2518d4fcea9d51513cc1eee63f6ff593d4470bcc10955b06e3059cb`,
+allowing only AMD card2/renderD129, stable built-in keyboard/touchpad identities,
+and tty2 for 120 seconds. tty1, NVIDIA, other input, audio, camera, network,
+Host files, and executor access remain excluded. The installed Hyprland parsed
+`config/hyprland-h0.conf` as the internal `apx` user and returned `config ok`
+without any device or graphical effect. Next implement and hostile-test the
+fixed transient unit, independently armed watchdog, readiness observer, and
+unconditional teardown; do not physically launch while owner recovery is
+unavailable.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -241,7 +253,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 685-test suite succeeds in the root-host checkout with eight expected
+- the 693-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.

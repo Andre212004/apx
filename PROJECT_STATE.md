@@ -190,6 +190,17 @@ root and 8 GiB separate-home qgroup limits. An intentional generic-start test
 refused before any machine or graphical effect. GPU/input/VT/watchdog mediation
 and physical Hyprland activation remain unimplemented and separate.
 
+The next pure H0 boundary is now closed. A generation-bound device-lease plan
+admits only AMD card2/renderD129, the stable built-in keyboard and ELAN touchpad
+identities, and tty2; it excludes NVIDIA, tty1, other input, audio, camera,
+network, Host filesystem, and executor access. Its current plan digest is
+`3ef21d19a2518d4fcea9d51513cc1eee63f6ff593d4470bcc10955b06e3059cb`.
+The Host watchdog contract uses a 120-second deadline, 15-second stop ceiling,
+generation-bound termination, full revocation, tty1 return, zero-residue proof,
+and no automatic graphical restart. The minimal Portuguese-layout H0 config
+was parsed by the installed Hyprland inside the Environment as `config ok`
+without devices or a graphical start. No physical lease or session exists yet.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of
