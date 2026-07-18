@@ -33,7 +33,8 @@ class H0LaunchPlanTests(unittest.TestCase):
             "DevicePolicy=closed", "--private-network", "--private-users=no",
             "--no-new-privileges=yes", "MemoryMax=1536M", "TasksMax=512",
             "/dev/dri/card2", "/dev/dri/renderD129", "/dev/input/event0",
-            "/dev/input/event1", "/dev/tty2", "/run/apx-h0/session",
+            "/dev/input/event1", "/dev/input/event3:/dev/input/event0",
+            "/dev/input/event11:/dev/input/event1", "/dev/tty2", "/run/apx-h0/session",
         ):
             self.assertIn(required, command)
         for forbidden in ("/dev/dri/card1", "/dev/dri/renderD128", "/dev/tty1", "/dev/snd", "/dev/video0", "--network-veth"):

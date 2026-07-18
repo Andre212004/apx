@@ -139,3 +139,11 @@ experiment directory is distinct, and the current launch-plan digest is
 `9c5342a5859a93a09dcafefe8b6d53d370a2028e712d3321ee61d15d93cf9305`.
 The exact final executor is implemented with a 45-second bounded observation
 inside the independent 120-second watchdog window; it has not yet run.
+
+Physical v2 then armed the timer and returned safely to tty1, but nspawn refused
+before registering a machine because the stable touchpad by-path contains a
+colon that conflicts with bind-option syntax. No container, Hyprland process,
+or device consumer started. V3 preserves that result and keeps stable paths as
+the authority while binding only their revalidated current targets, keyboard
+`event3` and touchpad `event11`, to fixed internal `event0`/`event1`. Its plan
+digest is `83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed`.

@@ -53,7 +53,7 @@ def _preflight() -> launch.H0LaunchPlan:
     if registration.get("generation") != launch.GENERATION or registration.get("state") != "stopped" or registration.get("role") != "graphical-h0":
         raise H0LaunchError("H0 registration changed or is not stopped")
     plan = launch.build_launch_plan(device.build_device_lease_plan(_exact_observation()))
-    if plan.plan_digest != "9c5342a5859a93a09dcafefe8b6d53d370a2028e712d3321ee61d15d93cf9305":
+    if plan.plan_digest != "83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed":
         raise H0LaunchError("H0 launch plan identity changed")
     for name, digest, mode in launch.ASSETS:
         path = STATE / name
@@ -64,6 +64,8 @@ def _preflight() -> launch.H0LaunchPlan:
         info = Path(host).stat()
         if not stat.S_ISCHR(info.st_mode) or os.major(info.st_rdev) != major or os.minor(info.st_rdev) != minor:
             raise H0LaunchError(f"H0 device identity changed: {name}")
+        if name in launch.BIND_SOURCES and Path(host).resolve() != Path(launch.BIND_SOURCES[name]):
+            raise H0LaunchError(f"stable H0 input path resolved to a different event: {name}")
     if Path("/sys/class/drm/card2-eDP-2/status").read_text().strip() != "connected":
         raise H0LaunchError("internal AMD connector is not connected")
     if not Path("/sys/class/drm/card2/device/driver").resolve().name == "amdgpu":

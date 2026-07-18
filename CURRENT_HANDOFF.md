@@ -261,6 +261,13 @@ display-manager absence, assets, generation, devices, failed units, and old
 residue, then always invokes recovery in a `finally` path. The v2 assets still
 need exact staging before the first physical run.
 
+Physical v2 was attempted. The independent timer armed and recovery returned to
+tty1 with no machine or Hyprland process, but nspawn rejected the touchpad bind
+because its stable by-path contains `:`. V3 now requires the stable links to
+resolve exactly to current `event3`/`event11`, then uses those colon-free source
+paths for fixed internal `event0`/`event1`. Current v3 plan digest:
+`83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed`.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
