@@ -246,6 +246,13 @@ with private networking and resource limits. It remains non-executing. Next
 implement safe asset staging plus the bounded readiness/teardown adapter; do
 not bypass that adapter by running the emitted commands manually.
 
+The exact staging adapter is now published and physically complete. The config,
+session runner, and watchdog exist under the fixed private H0 Host directory
+with exact 0400/0500 modes and reviewed hashes; the result explicitly records
+no graphical activation. APX is healthy/stopped, tty1 remains active, and no
+timer, graphical unit, device grant, or Hyprland process exists. The remaining
+physical boundary is the not-yet-implemented launch/readiness/teardown adapter.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

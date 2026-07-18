@@ -225,6 +225,13 @@ limits. Its plan digest is
 The module is pure; asset staging, launch, readiness observation, interruption
 execution, and physical display activation have not occurred.
 
+The separately implemented exact asset-staging adapter then copied only the
+three launch-plan assets into the fixed private Host experiment directory.
+Their 0400/0500 modes and SHA-256 identities reverified, and the result records
+`graphical_activation=false`. APX remained healthy/stopped with tty1 active and
+zero failed units. Timer arming, device grants, nspawn launch, and Hyprland
+execution still have not occurred.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

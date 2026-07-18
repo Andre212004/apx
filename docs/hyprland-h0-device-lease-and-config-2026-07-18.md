@@ -111,3 +111,21 @@ private networking, no new privileges, no caller path or command, fixed home,
 config, runner, and five device binds. Its final ordered gate always invokes
 the expiry/recovery path after normal exit too, proves tty1/zero residue, and
 only then permits timer cancellation. This remains a pure plan, not execution.
+
+## Physical asset staging result
+
+The exact staging adapter was published, tested, and then executed. It created
+only `/var/lib/apx/h0/h0-3ef21d19a2518d4fcea9d51513cc1eee` and copied the
+three reviewed assets as root-owned regular files:
+
+- `hyprland.conf`: mode 0400, SHA-256
+  `cf7aae5f7ebbee9d9128d0bd1dc8b762a77cf44202498e940e6cc9a42fccc54c`;
+- `session`: mode 0500, SHA-256
+  `8612d2b6370371679a595421186114e19591b9accdefae0ef03054ffc8137235`;
+- `watchdog`: mode 0500, SHA-256
+  `5c7d63bb2dd505f7f1c916fa1d3dd3083c4f8e591e11d2514424e2e2af7402e9`.
+
+The mode-0400 staging result binds the experiment and Environment generation
+and explicitly records `graphical_activation=false`. Final rehash passed. APX
+remained healthy and stopped, systemd had zero failed units, and tty1 remained
+active. No timer, unit, device, session, or compositor was started.
