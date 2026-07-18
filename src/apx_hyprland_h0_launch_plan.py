@@ -10,7 +10,7 @@ import re
 from apx_hyprland_h0_device_lease import H0DeviceLeasePlan
 
 
-EXPERIMENT = "h0-3ef21d19a2518d4fcea9d51513cc1eee-v4"
+EXPERIMENT = "h0-3ef21d19a2518d4fcea9d51513cc1eee-v5"
 ENVIRONMENT = "codex-test-hyprland-h0-v1"
 GENERATION = "c4fc5c49-4106-4a56-b1f0-13bffa41a0c1"
 LEASE_PLAN_DIGEST = "3ef21d19a2518d4fcea9d51513cc1eee63f6ff593d4470bcc10955b06e3059cb"

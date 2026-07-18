@@ -23,8 +23,9 @@ class H0PhysicalLaunchTests(unittest.TestCase):
 
     def test_result_requires_timer_machine_hyprland_and_complete_recovery(self) -> None:
         source = Path(subject.__file__).read_text()
-        for required in ("timer_started", "machine_observed", "hyprland_observed", "tty1", "machine_absent", "unit_inactive"):
+        for required in ("timer_started", "machine_observed", "hyprland_observed", "foot_observed", "tty1", "machine_absent", "unit_inactive"):
             self.assertIn(required, source)
+        self.assertIn('_process_present(b"/usr/bin/foot")', source)
 
 
 if __name__ == "__main__":

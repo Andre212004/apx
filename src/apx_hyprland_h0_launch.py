@@ -53,7 +53,7 @@ def _preflight() -> launch.H0LaunchPlan:
     if registration.get("generation") != launch.GENERATION or registration.get("state") != "stopped" or registration.get("role") != "graphical-h0":
         raise H0LaunchError("H0 registration changed or is not stopped")
     plan = launch.build_launch_plan(device.build_device_lease_plan(_exact_observation()))
-    if plan.plan_digest != "251bb466a39fa4e4431982449f8a99cd3af153853e6aa42d622b66a98a04358d":
+    if plan.plan_digest != "9c24e02fa200bbe966f5cf7109c8052933805ff1614865d2fad3bc7124e097d6":
         raise H0LaunchError("H0 launch plan identity changed")
     for name, digest, mode in launch.ASSETS:
         path = STATE / name
@@ -83,7 +83,7 @@ def _preflight() -> launch.H0LaunchPlan:
     return plan
 
 
-def _hyprland_present() -> bool:
+def _process_present(executable: bytes) -> bool:
     for item in Path("/proc").iterdir():
         if not item.name.isdigit():
             continue
@@ -91,7 +91,7 @@ def _hyprland_present() -> bool:
             arguments = (item / "cmdline").read_bytes().split(b"\0")
         except OSError:
             continue
-        if b"/usr/bin/Hyprland" in arguments:
+        if executable in arguments:
             return True
     return False
 
@@ -105,7 +105,7 @@ def _write_result(value: dict[str, object]) -> None:
 
 def execute_h0() -> dict[str, object]:
     plan = _preflight()
-    timer_started = graphical_started = hyprland_observed = machine_observed = False
+    timer_started = graphical_started = hyprland_observed = foot_observed = machine_observed = False
     try:
         _run(plan.expiry_command)
         timer_started = _run(["systemctl", "is-active", f"{launch.EXPIRY_UNIT}.timer"]).stdout.strip() == "active"
@@ -118,7 +118,8 @@ def execute_h0() -> dict[str, object]:
         while time.monotonic() < deadline:
             machine = _run(["machinectl", "show", launch.MACHINE, "--property=State", "--value"], check=False)
             machine_observed |= machine.returncode == 0 and machine.stdout.strip() in {"running", "degraded"}
-            hyprland_observed |= _hyprland_present()
+            hyprland_observed |= _process_present(b"/usr/bin/Hyprland")
+            foot_observed |= _process_present(b"/usr/bin/foot")
             if _run(["systemctl", "is-active", f"{launch.GRAPHICAL_UNIT}.service"], check=False).stdout.strip() not in {"active", "activating"}:
                 break
             time.sleep(0.25)
@@ -132,9 +133,10 @@ def execute_h0() -> dict[str, object]:
         "schema": 1, "experiment": launch.EXPERIMENT, "generation": launch.GENERATION,
         "plan_digest": plan.plan_digest, "timer_started_before_graphics": timer_started,
         "graphical_unit_started": graphical_started, "machine_observed": machine_observed,
-        "hyprland_process_observed": hyprland_observed, "tty1_restored": tty1,
+        "hyprland_process_observed": hyprland_observed,
+        "visual_marker_process_observed": foot_observed, "tty1_restored": tty1,
         "machine_absent_after": machine_absent, "graphical_unit_inactive_after": unit_inactive,
-        "classification": "h0-process-observed-and-headless-restored" if all((timer_started, graphical_started, machine_observed, hyprland_observed, tty1, machine_absent, unit_inactive)) else "bounded-negative-or-incomplete-headless-restored",
+        "classification": "h0-visual-marker-observed-and-headless-restored" if all((timer_started, graphical_started, machine_observed, hyprland_observed, foot_observed, tty1, machine_absent, unit_inactive)) else "bounded-negative-or-incomplete-headless-restored",
     }
     _write_result(result)
     return result
