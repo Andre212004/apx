@@ -107,6 +107,32 @@ No physical update or lifecycle effect occurred. The earlier update preview is
 now stale because it bound recovery evidence as false; a new complete preview
 is required and still grants no import or activation authority.
 
+The first post-reboot H0 observation confirms the physical pilot is the clean
+headless path, not the historical KDE/SDDM G2 topology. No display manager or
+Host graphical package is installed; tty1 is the tested recovery console and
+tty2 is inactive; AMD `0000:05:00.0` resolves to card2/renderD129 and uniquely
+owns connected internal eDP-2 at 1920×1080; NVIDIA remains separately resolved
+and excluded. Stable built-in candidates are the i8042 keyboard and ELAN
+touchpad, while the ITE special keys and external Logitech device are outside
+H0. Exact facts are in
+`docs/hyprland-h0-read-only-observation-2026-07-18.md`.
+
+The dated graphical supply chain was also reconstructed into `/tmp`: all 138
+base and 194 role packages repeated double signature and metadata verification,
+and the 332-package offline root rebuilt without Host/APX effects. Review found
+that package installation alone left locally generated pacman private trust,
+machine identity, install timestamps, and a transaction log, so it was not
+publishable. `src/apx_hyprland_release_finalize.py` now validates the closed
+build, removes only temporary pacman trust, empties identity/log state,
+normalizes the 332 install dates, rejects private keys/random seeds/special
+files, and hashes the complete normalized tree. The real finalization produced
+tree digest `83c58deaa56c83c23eee57dc02ecd3a67ccaede0d75918932f7f3b9557ab3401`
+and report digest
+`fb8a06d588b3dbf0f48b8626a1effc0df95e4c6dd12bfa995f167fe0376c530a`,
+with all secret/runtime counters zero. It remains temporary evidence, not an
+APX release; reproducibility, promotion, mediation, watchdog, and H0 approval
+remain required.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

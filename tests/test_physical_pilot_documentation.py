@@ -26,6 +26,9 @@ RUNTIME_FIX_UPDATE = (
 RECOVERY_RECEIPT = (
     ROOT / "docs" / "physical-recovery-console-rehearsal-2026-07-18.json"
 ).read_text()
+H0_OBSERVATION = (
+    ROOT / "docs" / "hyprland-h0-read-only-observation-2026-07-18.md"
+).read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -192,6 +195,21 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertIn("Recovery-console result — 2026-07-18", compact)
         self.assertIn("original preview", compact)
         self.assertIn("are now stale", compact)
+
+    def test_current_h0_observation_is_headless_sanitized_and_not_promoted(self) -> None:
+        compact = " ".join(H0_OBSERVATION.split())
+        for required in (
+            "/dev/dri/card2",
+            "/dev/dri/renderD129",
+            "card2-eDP-2",
+            "platform-i8042-serio-0",
+            "platform-AMDI0010:01",
+            "built package count: 332",
+            "private-key, random-seed, pacman-trust",
+            "83c58deaa56c83c23eee57dc02ecd3a67ccaede0d75918932f7f3b9557ab3401",
+            "must not be copied into `/var/lib/apx`",
+        ):
+            self.assertIn(required, compact)
 
 
 if __name__ == "__main__":

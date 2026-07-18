@@ -150,6 +150,18 @@ reconciled. The sanitized receipt is closed-contract `verified` with digest
 The old blocked preview is retained as history and is now stale; produce a new
 preview before requesting any separate import approval.
 
+Hyprland work now follows clean-host H0. A current read-only observation fixed
+the AMD card2/renderD129/eDP-2 boundary, excluded NVIDIA, selected stable i8042
+keyboard and ELAN touchpad candidates, and confirmed tty1 recovery/tty2
+experiment availability with no display manager or graphical owner. The entire
+dated 332-package graphical chain was rebuilt and verified in `/tmp`. A newly
+implemented finalizer removed generated private trust and identity/time/log
+state, producing normalized tree digest
+`83c58deaa56c83c23eee57dc02ecd3a67ccaede0d75918932f7f3b9557ab3401`.
+Nothing was promoted or launched. Next: independent reproduction, immutable
+release promotion contract, exact input/GPU mediation, watchdog, then a
+separately approved physical H0 run.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
