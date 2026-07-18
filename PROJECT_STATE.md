@@ -216,6 +216,15 @@ exact nspawn machine argument; the repeated rehearsal proved tty1 restored and
 zero residue. It cannot start/restart graphics, broadly kill, delete, or affect
 Hub/Development. The independent arming/launch adapter remains pending.
 
+`src/apx_hyprland_h0_launch_plan.py` now closes the two-unit command plan. It
+binds the three fixed asset identities/modes, arms and verifies an independent
+120-second expiry timer before any device grant, then describes only the fixed
+generation-bound nspawn unit with closed device policy and resource/network
+limits. Its plan digest is
+`b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
+The module is pure; asset staging, launch, readiness observation, interruption
+execution, and physical display activation have not occurred.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

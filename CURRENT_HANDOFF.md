@@ -238,6 +238,14 @@ The final rehearsal returned `tty1-restored zero-residue` with APX healthy. It
 cannot start/restart, delete, broadly kill, or touch Hub/Development. Next work
 is only the independent timer arming plus graphical-unit launch/observer path.
 
+The pure independent-timer plus graphical-unit launch plan is complete with
+digest `b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
+It binds the exact config/session/watchdog files, requires the 120-second timer
+active before any grant, and contains only the closed five-device nspawn unit
+with private networking and resource limits. It remains non-executing. Next
+implement safe asset staging plus the bounded readiness/teardown adapter; do
+not bypass that adapter by running the emitted commands manually.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -270,7 +278,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 704-test suite succeeds in the root-host checkout with eight expected
+- the 709-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.

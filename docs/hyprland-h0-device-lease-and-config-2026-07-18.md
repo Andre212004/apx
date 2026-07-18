@@ -100,3 +100,14 @@ outer test command itself contained the machine name. Review narrowed process
 observation to an exact nspawn `--machine=...` argument rather than weakening
 the residue gate. The repeated rehearsal then returned
 `h0-watchdog: tty1-restored zero-residue`; APX remained healthy and stopped.
+
+The pure two-unit Host launch plan is now closed with digest
+`b5836e03a8c59f62018b58a4b9410a1dab1a7ee11c24fd03e64f1dab2b37d6ea`.
+It binds three fixed assets by SHA-256 and mode, creates an independent
+120-second expiry timer, requires that timer to be observed active, and only
+then permits creation of the generation-bound graphical transient unit. The
+graphical command has closed device policy, fixed CPU/memory/task limits,
+private networking, no new privileges, no caller path or command, fixed home,
+config, runner, and five device binds. Its final ordered gate always invokes
+the expiry/recovery path after normal exit too, proves tty1/zero residue, and
+only then permits timer cancellation. This remains a pure plan, not execution.
