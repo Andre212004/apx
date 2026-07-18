@@ -26,6 +26,11 @@ The mode is not active until the owner explicitly runs the guide on the exact
 physical host, and its later removal requires a fresh inventory and exact
 cleanup approval.
 
+On 2026-07-18 the owner renamed the GitHub account from `Andre212004` to
+`andrepereira2004`. The canonical repository URL for current operations is now
+`https://github.com/andrepereira2004/apx.git`. Dated evidence may retain the old
+URL when it truthfully records what was observed at that time.
+
 The first pure already-installed physical-pilot update contract is now
 implemented in `src/apx_physical_update.py` and documented in
 `docs/physical-pilot-update-contract-v1.md`. It binds one untrusted bounded
@@ -416,10 +421,19 @@ physical-pilot tag or claim that either bootstrap was rerun.
 The owner reports that the Ollama package is installed inside physical
 Development but no local model has been downloaded. Service, listener,
 data-directory, Qwen Code, partial-download, quota-recovery, and lifecycle
-facts remain unverified. Model installation is deliberately deferred until an
-external SSD is available and the owner may then select a larger model. This
-package-only state does not require keeping temporary Host bootstrap material
-after every other Phase 10 audit gate passes. The repository now proposes the external model
+facts remain unverified.
+
+**Pinned owner decision — 2026-07-18:** local-model acquisition and execution
+are deferred to a future milestone because the wanted model's storage cost is
+not currently worthwhile. No Phase 9 or Phase 10 procedure may download a
+smaller substitute merely to close the checklist. The package-only state and
+zero-model result are valid deliberate outcomes. Model lifecycle tests are
+`not-applicable` until this decision is separately reopened, while quota
+recovery, Development stop/start persistence, listener confinement and
+teardown, Hub/Host isolation, repository recovery, and every other Phase 10
+gate remain required. This package-only state does not require keeping
+temporary Host bootstrap material after every other Phase 10 audit gate
+passes. The repository now proposes the external model
 storage boundary in `docs/external-development-model-storage-v1.md`: one exact
 encrypted device and attachment identity, visible only to one Development
 generation, with bounded capacity, immutable model evidence, fail-closed
@@ -647,8 +661,10 @@ experimental runtime. On 2026-07-17 the owner reported that Phases 1 through 8
 of the physical handoff had been completed on the target, including the initial
 installation, Hub, Development, GitHub, and Codex setup. Phase 9 is partial:
 Ollama is reported installed inside Development without a downloaded model;
-quota recovery and the remaining local-agent evidence are pending. Phase 10 is
-pending. This is an owner
+quota recovery and the remaining package-only local-agent evidence are
+pending. On 2026-07-18 the owner pinned model installation as a future-only
+milestone and directed Phase 10 review to proceed without it. Phase 10 remains
+subject to every non-model gate and separate cleanup approval. This is an owner
 progress report, not independently captured repository evidence; the read-only
 physical state and cleanup audit must reconcile the machine before cleanup or
 a later host update.

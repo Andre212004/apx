@@ -1,7 +1,7 @@
 # APX Current Handoff
 
-Last updated: 2026-07-17 through preparation of the temporary root-host
-development mode.
+Last updated: 2026-07-18 after root-host reconciliation and the decision to
+defer local-model installation.
 
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
@@ -19,9 +19,34 @@ through 8 on the Lenovo APX development computer:
 - Ollama package installed inside Development;
 - no Ollama model downloaded.
 
-These are owner-reported facts. They have not yet been reconciled through the
-repository's read-only physical audit. Do not silently promote them to verified
-evidence.
+The dated 2026-07-17 read-only audit is preserved in
+`docs/apx-physical-pilot-state-and-cleanup-audit-v1-2026-07-17.md`. On
+2026-07-18 root-host read-only checks agreed on the fixed physical identity,
+pilot marker, healthy APX status, running Hub and Development, zero failed
+units, expected mounts, and healthy full Btrfs quota accounting. Detailed
+Development qgroup limits remain unavailable through the `/var/lib/apx`
+subvolume view and still require the guarded quota-recovery procedure.
+
+The owner renamed the GitHub account from `Andre212004` to
+`andrepereira2004` on 2026-07-18. Current clones, helpers, package metadata, and
+instructions use `https://github.com/andrepereira2004/apx.git`; the dated audit
+retains the old URL as historical evidence.
+
+## Pinned Local-Model Decision
+
+The owner decided on 2026-07-18 that installing a local Ollama model is not
+currently worthwhile because the wanted model consumes too much storage. It is
+a future milestone, not a prerequisite for Phase 10.
+
+- Do not download a smaller substitute merely to complete Phase 9.
+- Preserve the observed package-only, zero-model state as intentional.
+- Treat model response, persistence, and model restart tests as
+  `not-applicable` while the decision remains pinned.
+- Continue to require quota recovery, Development stop/start persistence,
+  Ollama service/listener inventory and teardown, Host/Hub isolation, repository
+  recovery, and every other Phase 10 gate.
+- Reopening model installation or external storage requires a separate owner
+  decision and the already documented design/approval gates.
 
 ## Next Owner Action
 
@@ -31,16 +56,14 @@ automated. The repository-only preparation is documented in:
 
 `docs/temporary-root-host-development-mode-v1.md`
 
-This decision supersedes the earlier immediate plan to perform the audit first,
-but it does not convert the existing evidence into verified canonical state and
-does not authorize cleanup. Before enabling the mode, publish the repository
-change so the physical host can obtain the exact reviewed guide and helper.
-
-Once the temporary mode is active, the first Codex task is to reconcile the
-existing read-only evidence and automate the remaining Phase 9 and Phase 10
-gates. Codex may create and destroy its own clearly named disposable test
-Environments. Hub, Development, disks, reinstall, and broad cleanup still need
-fresh owner approval.
+The temporary root-host mode is active. Continue the Phase 10 review without a
+model download. First complete the non-model Phase 9/10 evidence, including the
+guarded quota recovery decision, Development lifecycle persistence, package-
+only Ollama confinement/teardown, recovery dependencies, and exact candidate
+classification. Prepare an exact cleanup plan, but do not execute cleanup
+without fresh approval for its exact targets. Codex may create and destroy its
+own clearly named disposable test Environments. Hub, Development, disks,
+reinstall, and broad cleanup still need fresh owner approval.
 
 The prior read-only audit procedure remains:
 
@@ -51,8 +74,8 @@ package, service, listener, Ollama, repository, and temporary-file evidence. It
 must not clean, install, download, start, stop, mount, unmount, or otherwise
 change the machine.
 
-Expected Ollama outcome is currently package-only. `ollama list` should confirm
-whether there are zero models; do not download a model to complete the audit.
+Expected Ollama outcome is package-only with zero models. Do not download a
+model to complete the audit or Phase 10.
 
 When the owner returns with results:
 
@@ -83,7 +106,9 @@ The repository currently has:
 - an ordered update journal that retains the previous version for rollback;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- 635 tests in the current milestone: 631 passing and four expected skips.
+- the 635-test suite succeeds in the root-host checkout with ten expected
+  external-fixture skips. One test fixture was corrected so subordinate-UID
+  behavior no longer depends on the UID running the suite.
 
 The external-model-store code cannot format, unlock, mount, bind, download,
 start, stop, detach, or remove anything. Physical adapters remain blocked on
@@ -133,7 +158,8 @@ VTs, and the installed graphical-role gap.
 
 - The working computer remains an experimental physical pilot, not production.
 - Phase 10 cleanup has not run.
-- Local model installation is deliberately deferred.
+- Local model installation is pinned as a future-only milestone and is not a
+  Phase 10 prerequisite.
 - The external SSD has not been selected, inspected, formatted, or attached.
 - Do not use `sudo` or modify the host from an ordinary repository session.
 - Root-host modification is allowed only after the owner explicitly invokes

@@ -25,7 +25,14 @@ def result(code: int = 0, output: str = "") -> apx_cli.CommandResult:
 
 
 class PracticalTests(unittest.TestCase):
-    def observe(self, *, commands: dict[tuple[str, ...], apx_cli.CommandResult] | None = None, unavailable: bool = False, subordinate_uid_text: str = ""):
+    def observe(
+        self,
+        *,
+        commands: dict[tuple[str, ...], apx_cli.CommandResult] | None = None,
+        unavailable: bool = False,
+        subordinate_uid_text: str = "",
+        home_owner_uid: int | None = None,
+    ):
         accounts = [Account(name, 1000 + index) for index, (_, name, _) in enumerate(apx_practical.ENVIRONMENTS, 1)]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -44,7 +51,14 @@ class PracticalTests(unittest.TestCase):
             def lstat(path: str) -> os.stat_result:
                 if path == "/etc/systemd/system/display-manager.service": return os.lstat(dm)
                 for home, actual in homes.items():
-                    if path == home: return os.lstat(actual)
+                    if path == home:
+                        metadata = os.lstat(actual)
+                        if home_owner_uid is not None:
+                            return SimpleNamespace(
+                                st_mode=metadata.st_mode,
+                                st_uid=home_owner_uid,
+                            )
+                        return metadata
                     if path.startswith(home + "/"): return os.lstat(str(actual) + path[len(home):])
                 raise FileNotFoundError
 
@@ -107,7 +121,10 @@ class PracticalTests(unittest.TestCase):
         self.assertNotIn("evidence.txt: ", apx_practical.render_practical(first))
 
     def test_subordinate_uid_is_not_reported_as_unknown(self) -> None:
-        report, _ = self.observe(subordinate_uid_text="owner:1:999999\n")
+        report, _ = self.observe(
+            subordinate_uid_text="owner:1:999999\n",
+            home_owner_uid=1,
+        )
         rendered = apx_practical.render_practical(report)
         self.assertIn("allocated to owner rootless range", rendered)
         self.assertNotIn("owner UID: UNKNOWN", rendered)

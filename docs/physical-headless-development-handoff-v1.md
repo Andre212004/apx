@@ -55,7 +55,7 @@ must never be adapted to a different disk merely because `/dev/nvme0n1` exists.
 ## Before Rebooting Into the Installer
 
 1. Open a private/incognito browser window with no GitHub session and confirm
-   that `https://github.com/Andre212004/apx`, `master`, release tag
+   that `https://github.com/andrepereira2004/apx`, `master`, release tag
    `physical-headless-pilot-v1`, and this guide are visible. The owner made the
    repository public for recovery before this handoff. Do not continue if
    anonymous access stops working.
@@ -85,7 +85,7 @@ Send the following prompt to ChatGPT on the second device:
 
 ```text
 Guide me through the APX physical headless pilot at:
-https://github.com/Andre212004/apx/blob/master/docs/physical-headless-development-handoff-v1.md
+https://github.com/andrepereira2004/apx/blob/master/docs/physical-headless-development-handoff-v1.md
 
 Rules:
 1. Read the complete guide and PROJECT_STATE.md first.
@@ -131,7 +131,7 @@ Download only the immutable reviewed pilot-tag version:
 
 ```bash
 curl --fail --location --output /root/install-apx-pilot.sh \
-  https://raw.githubusercontent.com/Andre212004/apx/refs/tags/physical-headless-pilot-v1/scripts/physical-pilot/install-arch-headless-pilot.sh
+  https://raw.githubusercontent.com/andrepereira2004/apx/refs/tags/physical-headless-pilot-v1/scripts/physical-pilot/install-arch-headless-pilot.sh
 sha256sum /root/install-apx-pilot.sh
 ```
 
@@ -211,7 +211,7 @@ Clone the public recovery copy into temporary host staging:
 
 ```bash
 git clone --branch physical-headless-pilot-v1 --single-branch \
-  https://github.com/Andre212004/apx.git /root/apx-bootstrap
+  https://github.com/andrepereira2004/apx.git /root/apx-bootstrap
 cd /root/apx-bootstrap
 git status --short
 git log -1 --oneline
@@ -306,7 +306,7 @@ working checkout owned by the internal `apx` user:
 ```bash
 pacman -Syu --noconfirm --needed github-cli
 install -d -o apx -g apx /home/apx/work
-su - apx -c 'git clone --branch master --single-branch https://github.com/Andre212004/apx.git /home/apx/work/apx'
+su - apx -c 'git clone --branch master --single-branch https://github.com/andrepereira2004/apx.git /home/apx/work/apx'
 su - apx
 curl -fsSL https://chatgpt.com/codex/install.sh -o /tmp/codex-install.sh
 sed -n '1,240p' /tmp/codex-install.sh
@@ -337,6 +337,15 @@ them to GitHub, and use the documented promotion boundary for host updates.
 ```
 
 ## Phase 9 — Add the Development-Local Offline Coding Fallback
+
+> **PINNED FUTURE WORK — owner decision 2026-07-18:** do not download or run a
+> local model during the current Phase 9/10 sequence. The wanted model's
+> storage cost is not currently worthwhile, and a smaller substitute must not
+> be installed merely to satisfy this guide. Keep the package-only zero-model
+> state, complete the quota and confinement evidence, and continue to Phase 10.
+> The model-installation commands later in this phase are retained only as
+> historical/future instructions and require a separate decision reopening
+> this milestone.
 
 Do this only after Codex and GitHub work. Read
 `docs/local-development-agent-v1.md` completely before installing anything.
@@ -433,6 +442,13 @@ Send the output to ChatGPT. Do not continue with the 7B model if memory or disk
 pressure would make Development or the host unreliable. The reviewed smaller
 fallback is `qwen2.5-coder:3b`; a larger substitution is not approved.
 
+### Future-only model installation branch
+
+Skip this subsection while the 2026-07-18 pinned decision remains active. If a
+future owner decision reopens local-model installation, re-review package
+versions, storage, model choice, and every external-storage boundary before
+using these historical commands.
+
 As Development root, install the signed Arch packages into Development's own
 package database:
 
@@ -519,6 +535,12 @@ Installing a local model is not a prerequisite for removing temporary Host
 bootstrap state. A deliberately deferred model is `not-applicable` to the model
 lifecycle checks, provided the audit proves the package-only Ollama state is
 confined to Development and every other Phase 10 gate passes.
+
+The 2026-07-18 pinned decision satisfies only the choice to defer model
+installation. It does not waive quota recovery, package/service inventory,
+listener confinement and teardown, Development stop/start persistence,
+Host/Hub separation, recovery analysis, or separate approval of exact cleanup
+targets.
 
 Only after that separate review, exit Development, stop it through APX, and
 remove only the two already documented bootstrap objects:
