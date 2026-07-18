@@ -25,9 +25,8 @@ class HyprlandH0ConfigTests(unittest.TestCase):
         source = CONFIG.read_text()
         lines = [line.strip() for line in source.splitlines() if line.strip().startswith("exec-once")]
         self.assertEqual(len(lines), 1)
-        self.assertIn("/usr/bin/foot --title=APX-H0", lines[0])
-        self.assertIn("APX H0 - HYPRLAND ENVIRONMENT", lines[0])
-        self.assertIn("sleep 40", lines[0])
+        self.assertEqual(lines[0], "exec-once = /usr/bin/foot --title=APX-H0")
+        self.assertNotIn("/usr/bin/bash", lines[0])
 
     def test_visual_effects_are_minimized_for_first_kms_gate(self) -> None:
         source = CONFIG.read_text()
