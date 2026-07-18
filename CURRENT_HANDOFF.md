@@ -140,6 +140,16 @@ artifact evidence. It maps one regular Host runtime target and preserves the
 runtime. Executor and Hub-client physical mappings deliberately remain
 unsupported rather than guessed.
 
+The owner-authorized recovery-console rehearsal completed successfully on
+2026-07-18. The reboot crossed a real boot boundary; built-in keyboard,
+encrypted-root unlock, root text console, unchanged boot components, unchanged
+Hub/Development/disposable generations, intact LUKS/Btrfs layout, zero failed
+units, no package transaction, healthy APX, and zero uncertain operations were
+reconciled. The sanitized receipt is closed-contract `verified` with digest
+`db70438f786c3282755c44940bc27a5b18095bd31eeb4a904dbce62003634ad2`.
+The old blocked preview is retained as history and is now stale; produce a new
+preview before requesting any separate import approval.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

@@ -87,7 +87,7 @@ artifact, update, journal, and stale-destroy tests also passed.
 - Host available capacity exceeds 470 GiB;
 - the stopped disposable-test hold is recorded and preserved.
 
-## Preview result
+## Original preview result
 
 Classification: `blocked`.
 
@@ -96,6 +96,31 @@ Only blocker: `recovery-console-not-verified`.
 The systemd-boot APX entry, EFI loader, kernel, initramfs, and encrypted-root
 arguments exist. Metadata does not prove a human-accessible recovery console
 was exercised in the current physical state, so the gate remains false.
+
+## Recovery-console result — 2026-07-18
+
+The owner then authorized a controlled reboot and remained physically present.
+The owner used the built-in keyboard, unlocked encrypted root, reached the
+independent root text console, and reopened the root-host development session.
+The reboot crossed to a distinct boot ID.
+
+Post-boot reconciliation confirmed unchanged physical marker, machine
+identity, boot entry, kernel, initramfs, Hub, Development, disposable hold, and
+LUKS/Btrfs layout. Systemd reported zero failed units, the package log had no
+transaction during the rehearsal, and APX was healthy with zero uncertain
+operations. No disk, encryption, bootloader, package, APX lifecycle, install,
+update, or cleanup effect occurred.
+
+The sanitized closed receipt is
+`docs/physical-recovery-console-rehearsal-2026-07-18.json`. The repository
+contract classifies it `verified`, with zero blockers, evidence digest
+`db70438f786c3282755c44940bc27a5b18095bd31eeb4a904dbce62003634ad2`,
+and `update_gate_satisfied=true`.
+
+This satisfies the recovery-console gate but does not retroactively change the
+original preview: its installed-evidence and plan digests were built with the
+gate false and are now stale. A fresh complete preview must bind this receipt
+and reobserved installed evidence before any import approval can be requested.
 
 The closed evidence schema is implemented in `src/apx_recovery_console.py`.
 It cannot reboot the Host or manufacture a positive receipt. It accepts a
@@ -168,10 +193,10 @@ staging, rollback bytes, or Host install authority.
 
 ## Remaining gates
 
-1. Obtain a fresh reboot-window approval, then exercise and record the physical
-   recovery-console path with the owner present, without modifying Hub,
-   Development, disks, encryption, bootloader, packages, or APX state.
-2. Rebuild the artifact after any source change and reproduce every digest.
+1. Rebind the verified recovery receipt and freshly reobserved installed state
+   into a new preview; retain the original blocked preview as history.
+2. Rebuild the artifact after any candidate-component source change and
+   reproduce every digest.
 3. Implement and hostile-test the minimum-privilege adapter that executes the
    now-fixed staging and host-runtime mapping; the non-executing plan contract
    is complete.

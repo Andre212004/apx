@@ -1,8 +1,14 @@
 from pathlib import Path
+import sys
 import unittest
 
 
 ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+import apx_recovery_console as recovery
+
+
 STATE = (ROOT / "PROJECT_STATE.md").read_text()
 HANDOFF = (ROOT / "docs" / "physical-headless-development-handoff-v1.md").read_text()
 AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_text()
@@ -16,6 +22,9 @@ ROOT_HOST_PREPARE = (
 ).read_text()
 RUNTIME_FIX_UPDATE = (
     ROOT / "docs" / "physical-runtime-generation-fix-update-2026-07-18.md"
+).read_text()
+RECOVERY_RECEIPT = (
+    ROOT / "docs" / "physical-recovery-console-rehearsal-2026-07-18.json"
 ).read_text()
 
 
@@ -169,6 +178,20 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "does not create staging",
         ):
             self.assertIn(required, compact)
+
+    def test_physical_recovery_receipt_is_verified_but_old_preview_is_stale(self) -> None:
+        evidence = recovery.parse_recovery_evidence_json(RECOVERY_RECEIPT)
+        assessment = recovery.assess_recovery_console(evidence)
+        self.assertEqual(assessment.classification, "verified")
+        self.assertEqual(assessment.blockers, ())
+        self.assertEqual(
+            assessment.evidence_digest,
+            "db70438f786c3282755c44940bc27a5b18095bd31eeb4a904dbce62003634ad2",
+        )
+        compact = " ".join(RUNTIME_FIX_UPDATE.split())
+        self.assertIn("Recovery-console result — 2026-07-18", compact)
+        self.assertIn("original preview", compact)
+        self.assertIn("are now stale", compact)
 
 
 if __name__ == "__main__":

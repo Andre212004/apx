@@ -93,6 +93,20 @@ immutable/current-Hub effects have separate designs. The plan has no
 filesystem, service, lifecycle, install, rollback, or cleanup adapter; physical
 staging and activation remain unimplemented and unauthorized.
 
+The owner-authorized physical recovery-console rehearsal completed on
+2026-07-18. A controlled reboot crossed to a distinct boot identity; the owner
+used the built-in keyboard, unlocked encrypted root, reached the independent
+root text console, and returned to the root-host session. Exact marker,
+machine, boot-entry, kernel, initramfs, Hub, Development, disposable-hold,
+disk/encryption, package, systemd, and APX reconciliation passed with zero
+uncertain operations. The sanitized receipt in
+`docs/physical-recovery-console-rehearsal-2026-07-18.json` is `verified` with
+evidence digest
+`db70438f786c3282755c44940bc27a5b18095bd31eeb4a904dbce62003634ad2`.
+No physical update or lifecycle effect occurred. The earlier update preview is
+now stale because it bound recovery evidence as false; a new complete preview
+is required and still grants no import or activation authority.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of
