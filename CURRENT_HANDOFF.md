@@ -147,6 +147,9 @@ The repository currently has:
 - a pure physical-pilot update candidate and installed-evidence validator;
 - a separate-import/separate-activation update preview;
 - an ordered update journal that retains the previous version for rollback;
+- a closed non-extracting physical-update artifact manifest and reader;
+- reconciled update gates for the intentional simple Development plus current
+  root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
 - the 635-test suite succeeds in the root-host checkout with ten expected

@@ -47,6 +47,19 @@ automatic rollback or cleanup. The implementation contains no artifact reader,
 transport, installer, service control, physical rollback, or cleanup adapter.
 The physical audit and target-bound release remain mandatory gates.
 
+`src/apx_physical_update_artifact.py` now closes the generic raw-artifact
+boundary for physical updates. It accepts only canonical uncompressed tar bytes
+containing one canonical manifest and the exact sorted regular component files;
+it rejects links, special files, directories, extra members, traversal,
+non-root/variable metadata, nonzero timestamps, PAX extensions, oversized
+content, duplicate JSON, and every candidate/manifest/content disagreement. It
+does not extract, execute, install, select a destination, or change the host.
+The update evidence schema now truthfully accepts the owner-approved temporary
+root-host development mode by requiring reconciled Development state and a
+current root-host inventory instead of falsely requiring a Development
+repository. An exact target artifact, transport, effect adapter, interruption
+fixtures, immutable release, and separate approvals remain pending.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

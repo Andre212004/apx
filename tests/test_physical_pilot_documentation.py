@@ -88,7 +88,7 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "a second activation approval is required",
             "Rollback retirement is never included",
             "never automatically installs, rolls back, cleans, or deletes",
-            "The current audit has not run",
+            "2026-07-18 root-host reconciliation",
         ):
             self.assertIn(required, compact_update)
 

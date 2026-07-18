@@ -60,13 +60,35 @@ operation families.
 The candidate remains untrusted even when all fields are valid. Validation
 means only that it is structurally eligible for separate review.
 
+## Closed Artifact Reader
+
+`src/apx_physical_update_artifact.py` now implements the first non-extracting
+artifact boundary. It accepts only one canonical uncompressed tar whose first
+regular member is mode-0600 `manifest.json`, followed by exactly one mode-0755
+regular member for each sorted candidate component. The only component member
+names are `components/host-runtime`, `components/host-executor`, and
+`components/hub-client`.
+
+The reader requires root UID/GID metadata, zero mtime, empty owner names, no PAX
+extensions, no links, no directories, no special files, no path traversal, no
+extra members, an 8 MiB component ceiling, and canonical duplicate-safe JSON.
+It binds artifact bytes/hash/count, source and parent revisions, component set,
+manifest digest, member sizes/modes/hashes, and actual reopened content. It
+reads bounded bytes in memory for validation and never extracts, executes,
+installs, changes permissions, or selects a host destination.
+
 ## Installed Machine Evidence
 
 The preview also requires a fresh `InstalledPilotEvidence` record. It binds the
 physical machine and marker identities, installed source and component digests,
 Hub release and generation, Development generation, reconciled audit evidence,
 recovery availability, GitHub source recovery, APX journal health, Hub
-cleanliness, Development repository health, and free-space reserve.
+cleanliness, reconciled Development state, current temporary root-host-mode
+inventory, and free-space reserve. A Development repository is required only
+when Development is the selected development location. During the explicitly
+accepted temporary root-host mode, the evidence instead binds the intentional
+simple Development generation and the complete root-host inventory/recovery
+boundary; it may not falsely claim a Development checkout exists.
 
 The update is blocked when:
 
@@ -75,12 +97,16 @@ The update is blocked when:
 - the recovery console or GitHub source recovery is unavailable;
 - any APX operation is uncertain;
 - Hub is not clean;
-- Development's repository is unhealthy;
+- Development's current generation/state is not reconciled;
+- the temporary root-host inventory is stale or unavailable;
 - the Host has less than the fixed 16 GiB reserve;
 - any required identity is malformed or changed.
 
-The current audit has not run, so no physical update can presently reach ready
-status. Owner-reported state is not substituted for the evidence record.
+The 2026-07-17 audit and 2026-07-18 root-host reconciliation have now run. A
+preview still cannot reach ready status until a fresh target-bound evidence
+record binds the current simple Development generation, stopped disposable
+test hold, exact installed components, root-host inventory, recovery, and host
+capacity. Owner-reported state is not substituted for that evidence record.
 
 ## Preview and Approvals
 
@@ -145,7 +171,9 @@ Before a real update may be proposed, the repository still needs:
 
 1. reconciled results from the physical state audit;
 2. exact installed runtime, executor, and Hub-client identities;
-3. a closed member manifest and raw artifact reader;
+3. an exact target candidate built with the implemented closed member manifest
+   and non-extracting raw artifact reader (the generic contract is complete;
+   the target candidate is not yet built);
 4. a bounded physical transport into Host-owned staging;
 5. independent component verification and compatibility rules;
 6. minimum-privilege staging, stop, install, verification, and rollback adapters;
