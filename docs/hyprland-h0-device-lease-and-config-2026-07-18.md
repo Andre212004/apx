@@ -72,3 +72,18 @@ The next code may translate only this plan into a fixed transient nspawn unit,
 an independently armed Host watchdog, a bounded readiness observer, and an
 unconditional teardown observer. Physical execution remains blocked until the
 adapter proves that every failure path returns to tty1 without owner input.
+
+The pure non-extendable watchdog state machine and internal session runner are
+now implemented. The watchdog refuses stale generation/plan identities,
+out-of-order or late grants, deadline extension, and completion with any
+process, mount, socket, lease, or tty1 residue. On expiry it always selects
+generation-bound termination, five-device revocation, tty1 activation,
+zero-residue observation, and no restart.
+
+The fixed runner revalidates all five internal character identities, starts
+only transient `seatd`, then runs Hyprland as UID/GID 1000 with only tty, video,
+render, and input supplementary groups and an empty controlled environment.
+All inherited/ambient/bounding capabilities are removed from Hyprland. A shell
+trap terminates and waits for seatd after normal exit, failure, or signal. The
+runner contains no NVIDIA, other input, audio, camera, package, network, or tty1
+path. It has not been physically executed.

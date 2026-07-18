@@ -201,6 +201,13 @@ and no automatic graphical restart. The minimal Portuguese-layout H0 config
 was parsed by the installed Hyprland inside the Environment as `config ok`
 without devices or a graphical start. No physical lease or session exists yet.
 
+`src/apx_hyprland_h0_watchdog.py` now fixes a non-extendable, generation/plan-
+bound watchdog state machine. It cannot complete with tty1 unrestored or any
+process, mount, socket, or lease residue. The internal H0 session runner starts
+only transient seatd, drops Hyprland to UID/GID 1000 with four exact auxiliary
+groups and no capabilities, and traps mediator cleanup. Both remain unexecuted;
+an independent Host launcher and hostile interruption tests are still required.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

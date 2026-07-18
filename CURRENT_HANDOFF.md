@@ -221,6 +221,16 @@ fixed transient unit, independently armed watchdog, readiness observer, and
 unconditional teardown; do not physically launch while owner recovery is
 unavailable.
 
+The non-extendable watchdog state machine and internal session runner are now
+implemented and unit-tested. The runner validates all internal device numbers,
+starts only transient seatd, drops Hyprland to UID/GID 1000 with exact tty,
+video, render, and input groups, removes all capabilities, and traps mediator
+cleanup. The watchdog refuses deadline extension and cannot complete with tty1
+unrestored or any process, mount, socket, or lease residue. Neither has been
+physically executed. Next create the independent Host launcher so watchdog
+arming cannot die with the graphical unit, then test interruption without
+granting physical devices.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary
@@ -253,7 +263,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 693-test suite succeeds in the root-host checkout with eight expected
+- the 701-test suite succeeds in the root-host checkout with eight expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.
