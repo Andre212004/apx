@@ -60,6 +60,15 @@ current root-host inventory instead of falsely requiring a Development
 repository. An exact target artifact, transport, effect adapter, interruption
 fixtures, immutable release, and separate approvals remain pending.
 
+An exact host-runtime-only candidate was then built twice outside Git from
+source revision `909a7de7a257ed7320544bd5faa409b96afc543e`; both 30,720-byte
+tar outputs were byte-identical and passed the closed reader. The target-bound
+preview is documented in
+`docs/physical-runtime-generation-fix-update-2026-07-18.md`. It remains
+`blocked` solely because the physical recovery console has not been exercised;
+boot-entry metadata is not substituted for that proof. No artifact was
+imported, installed, or committed and no release tag was created.
+
 ## Human Objective
 
 APX should make one physical Arch Linux computer feel like a collection of

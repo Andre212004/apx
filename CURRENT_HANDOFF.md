@@ -120,6 +120,12 @@ The repository fix binds destruction to the registered generation and refuses
 stale plans before effects. The next physical step is a separately reviewed
 runtime update, not manual cleanup. Hub and Development remain unchanged.
 
+The exact runtime-only candidate preview is recorded in
+`docs/physical-runtime-generation-fix-update-2026-07-18.md`. Its deterministic
+30,720-byte artifact passed the closed reader and every supplied gate except
+`recovery-console-not-verified`. Do not import or activate it and do not treat
+the installed boot entry as proof of a tested recovery console.
+
 When the owner returns with results:
 
 1. preserve the raw result outside Git if it contains secrets or unnecessary

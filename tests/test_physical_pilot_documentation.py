@@ -14,6 +14,9 @@ ROOT_HOST_MODE = (ROOT / "docs" / "temporary-root-host-development-mode-v1.md").
 ROOT_HOST_PREPARE = (
     ROOT / "scripts" / "physical-pilot" / "prepare-root-host-development-mode-v1.sh"
 ).read_text()
+RUNTIME_FIX_UPDATE = (
+    ROOT / "docs" / "physical-runtime-generation-fix-update-2026-07-18.md"
+).read_text()
 
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
@@ -137,6 +140,17 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
             "apx environment destroy",
         ):
             self.assertNotIn(forbidden, ROOT_HOST_PREPARE)
+
+    def test_runtime_generation_fix_candidate_is_exact_and_still_blocked(self) -> None:
+        for required in (
+            "host-runtime",
+            "30720",
+            "recovery-console-not-verified",
+            "Minimum-privilege effect map",
+            "No automatic rollback is allowed",
+            "do not destroy",
+        ):
+            self.assertIn(required, RUNTIME_FIX_UPDATE)
 
 
 if __name__ == "__main__":
