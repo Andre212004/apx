@@ -48,11 +48,31 @@ def action(card, action_id):
 
 
 class HubViewTests(unittest.TestCase):
+    def test_graphical_hub_is_recognized_as_the_single_active_hub(self) -> None:
+        graphical = environment("hub", role="hub-graphical", state="active")
+        view = apx_hub.build_hub_view((graphical,), (template(),), system_state="ready")
+        self.assertEqual(view.system_state, "ready")
+        self.assertFalse(view.environment_cards[0].actions[0].enabled)
+
+    def test_graphical_base_role_is_supported_as_a_workload(self) -> None:
+        view = ready_view(environment("study", role="graphical-base", state="inactive"))
+        study = next(card for card in view.environment_cards if card.logical_name == "study")
+        self.assertTrue(next(action for action in study.actions if action.action_id == "open").enabled)
+
+    def test_default_graphical_catalogue_maps_to_safe_hub_summaries(self) -> None:
+        summaries = apx_hub.default_graphical_template_summaries()
+        self.assertEqual({item.template_id for item in summaries}, {"hyprland-base-v1", "hub-hyprland-v1"})
+        self.assertTrue(all(item.admitted and item.compatibility == "compatible" for item in summaries))
+        self.assertTrue(all(item.security_profile == "Essencial privado" for item in summaries))
+
     def test_ready_inactive_environment_has_safe_fixed_actions(self) -> None:
         view = ready_view(environment("university"))
         card = next(item for item in view.environment_cards if item.logical_name == "university")
         self.assertTrue(action(card, "open").enabled)
         self.assertEqual(action(card, "open").request_kind, "activate")
+        self.assertTrue(action(card, "capabilities").enabled)
+        self.assertEqual(action(card, "capabilities").request_kind, "configure-capabilities")
+        self.assertEqual(action(card, "capabilities").approval_class, "explicit-confirmation")
         self.assertTrue(action(card, "snapshot").enabled)
         self.assertTrue(action(card, "archive").enabled)
         self.assertTrue(action(card, "destroy").enabled)

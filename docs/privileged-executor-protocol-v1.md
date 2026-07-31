@@ -100,6 +100,20 @@ registered internal ID before planning and never becomes a host path.
 Unknown, duplicate, missing, oversized, wrongly typed, or unsupported fields
 are rejected. Schema parsing and policy validation occur before any effect.
 
+The production client transport now has a separate closed implementation for
+`/run/apx/executor-v1.sock`: fixed Unix-socket path, five-second timeout,
+canonical request serialization, 64 KiB response limit, one-line framing, and
+an exact response schema bound to protocol and operation ID. It accepts no
+caller-selected endpoint, timeout, command, or path.
+
+The endpoint core loads the reviewed plan and approval through injected trusted
+authorities, observes current generation/session/state, performs the complete
+contract assessment, and atomically reserves the nonce before invoking a typed
+effect adapter. Contract rejection never reserves a nonce or reaches effects.
+Failure or contradictory evidence after reservation returns `incomplete`
+rather than retrying or reporting success. The Unix server wrapper, durable
+authorities, and physical effect adapter are not installed yet.
+
 ## Operation Catalogue
 
 V1 defines only these operation families:
@@ -112,6 +126,7 @@ V1 defines only these operation families:
 | `force-stop` | processes terminated; possible lost work | fresh strong confirmation |
 | `snapshot` | immutable local snapshot set | explicit confirmation |
 | `archive` | verified archive from snapshot | explicit confirmation |
+| `configure-capabilities` | generation-bound optional-device policy for next activation | explicit confirmation |
 | `restore` | new inactive Environment identity | explicit confirmation |
 | `destroy` | Environment removed; retained artifacts listed | fresh strong confirmation |
 | `recover-complete` | interrupted approved operation completed | new confirmation unless original remains valid |
@@ -128,6 +143,18 @@ catalogue. Their logical separation is proposed in
 `development-to-hub-release-promotion-v1.md`. They require new closed operation
 families and cannot be disguised as `create`, `restore`, a host update, or an
 arbitrary package action under the current protocol.
+
+All mutation families and `activate` are restricted to trusted evidence for
+the authenticated, authoritative active Environment whose logical name is
+`hub` and whose role is `hub` or `hub-graphical`. A workload may use only
+`stop`, and only against its own active generation. Role and name must agree;
+either value alone never grants Hub authority.
+
+`configure-capabilities` cannot carry arbitrary devices in the executor
+request. Its reviewed plan is separately generation-bound and limited to the
+closed optional set: mediated camera, microphone, controller, and removable
+storage. The target must be stopped and the essential capability baseline is
+retained.
 
 ## Approval Classes
 

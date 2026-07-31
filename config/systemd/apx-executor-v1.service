@@ -1,0 +1,22 @@
+[Unit]
+Description=APX closed local graphical executor v1
+After=local-fs.target
+Before=apx-graphical-hub.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python /usr/lib/apx/apx_executor_daemon.py
+Restart=on-failure
+RestartSec=1s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run/apx /var/lib/apx/executor-v1 /var/lib/apx/environments/hub /var/lib/apx/environments/test
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target

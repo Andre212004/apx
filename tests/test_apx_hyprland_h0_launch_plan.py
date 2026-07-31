@@ -21,7 +21,7 @@ def device_plan():
 class H0LaunchPlanTests(unittest.TestCase):
     def test_expiry_is_independent_and_ordered_before_graphical_unit(self) -> None:
         plan = launch.build_launch_plan(device_plan())
-        self.assertIn("--on-active=120s", plan.expiry_command)
+        self.assertIn("--on-active=15s", plan.expiry_command)
         self.assertNotIn(launch.GRAPHICAL_UNIT, " ".join(plan.expiry_command))
         self.assertLess(plan.ordered_gates.index("start-independent-expiry-timer"), plan.ordered_gates.index("start-generation-bound-graphical-unit"))
         self.assertIn("verify-expiry-timer-active-before-any-device-grant", plan.ordered_gates)
@@ -48,7 +48,7 @@ class H0LaunchPlanTests(unittest.TestCase):
             int(digest, 16)
 
     def test_stale_or_changed_lease_fails_closed(self) -> None:
-        for changed in (replace(device_plan(), plan_digest="0" * 64), replace(device_plan(), timeout_seconds=121)):
+        for changed in (replace(device_plan(), plan_digest="0" * 64), replace(device_plan(), timeout_seconds=16)):
             with self.assertRaises(launch.H0LaunchPlanError):
                 launch.build_launch_plan(changed)
 

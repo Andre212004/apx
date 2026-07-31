@@ -20,7 +20,7 @@ class H0DeviceLeaseTests(unittest.TestCase):
     def test_exact_plan_is_generation_device_and_timeout_bound(self) -> None:
         plan = lease.build_device_lease_plan(observation())
         self.assertEqual(plan.environment, "codex-test-hyprland-h0-v1")
-        self.assertEqual(plan.timeout_seconds, 120)
+        self.assertEqual(plan.timeout_seconds, 15)
         self.assertEqual(plan.recovery_vt, "/dev/tty1")
         self.assertEqual(plan.experiment_vt, "/dev/tty2")
         self.assertIn("DevicePolicy=closed", plan.runtime_properties)

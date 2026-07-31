@@ -1,0 +1,14 @@
+[window]
+padding = { x = 12, y = 12 }
+dynamic_title = true
+
+[font]
+size = 11.0
+
+[colors.primary]
+background = "#101217"
+foreground = "#f1f3f5"
+
+[shell]
+program = "/usr/bin/bash"
+args = ["--login"]

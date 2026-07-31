@@ -19,7 +19,7 @@ SESSION_ID = "session-" + "3" * 32
 NONCE = "4" * 64
 
 
-def valid_subject(kind: str = "activate", generation: int = 7):
+def valid_subject(kind: str = "activate", generation: int | str = 7):
     plan = contract.build_operation_plan(kind, "university", generation)
     request = contract.ExecutorRequest(
         schema_version=contract.REQUEST_SCHEMA_VERSION,
@@ -79,6 +79,24 @@ class OperationPlanTests(unittest.TestCase):
                 contract.build_operation_plan(kind, "new-env", 1)
         with self.assertRaises(contract.ExecutorContractError):
             contract.build_operation_plan("destroy", "games", 0)
+
+    def test_physical_uuid_generation_is_preserved_exactly(self) -> None:
+        generation = "69b56acc-fd4d-4499-8009-e1d0108466f4"
+        plan, request, approval = valid_subject("activate", generation)
+        self.assertEqual(plan.expected_generation, generation)
+        self.assertEqual(contract.parse_executor_request_json(
+            contract.request_to_json(request)).expected_generation, generation)
+        self.assertEqual(approval.expected_generation, generation)
+
+    def test_truncated_uppercase_non_v4_and_malformed_uuid_are_rejected(self) -> None:
+        for generation in (
+            "69b56acc-fd4d-4499-8009-e1d0108466f",
+            "69B56ACC-FD4D-4499-8009-E1D0108466F4",
+            "69b56acc-fd4d-1499-8009-e1d0108466f4",
+            "not-a-generation", -1, True,
+        ):
+            with self.assertRaises(contract.ExecutorContractError):
+                contract.build_operation_plan("activate", "games", generation)
 
     def test_dangerous_actions_require_strong_confirmation(self) -> None:
         for kind in ("destroy", "force-stop", "recover-cleanup"):
@@ -159,6 +177,15 @@ class RequestAssessmentTests(unittest.TestCase):
             "current_session_id": SESSION_ID,
             "nonce_state": "unused",
             "authoritative_state": "confirmed-compatible",
+            "requester_context": contract.RequesterContext(
+                session_id=SESSION_ID,
+                logical_name="hub",
+                role="hub-graphical",
+                generation=3,
+                authenticated=True,
+                active=True,
+                authoritative=True,
+            ),
         }
         values.update(changes)
         return contract.assess_executor_request(**values)
@@ -170,6 +197,89 @@ class RequestAssessmentTests(unittest.TestCase):
         self.assertEqual(first.classification, "authorized-contract")
         self.assertEqual(first.issues, ())
         self.assertEqual(len(first.request_digest), 64)
+
+    def test_non_hub_cannot_manage_or_switch_environments(self) -> None:
+        workload = contract.RequesterContext(
+            session_id=SESSION_ID,
+            logical_name="university",
+            role="graphical-base",
+            generation=7,
+            authenticated=True,
+            active=True,
+            authoritative=True,
+        )
+        for kind in contract.HUB_ONLY_OPERATIONS:
+            generation = 0 if kind in {"create", "restore"} else 7
+            plan, request, approval = valid_subject(kind, generation)
+            result = self.assess(
+                plan=plan,
+                request=request,
+                approval=approval,
+                current_generation=generation,
+                requester_context=workload,
+            )
+            self.assertEqual(result.classification, "rejected", kind)
+            self.assertIn("operation is restricted to the active Hub", result.issues)
+
+    def test_non_hub_may_stop_only_itself(self) -> None:
+        plan, request, approval = valid_subject("stop", 7)
+        workload = contract.RequesterContext(
+            session_id=SESSION_ID,
+            logical_name="university",
+            role="graphical-base",
+            generation=7,
+            authenticated=True,
+            active=True,
+            authoritative=True,
+        )
+        self.assertEqual(
+            self.assess(plan=plan, request=request, approval=approval, requester_context=workload).classification,
+            "authorized-contract",
+        )
+        sibling = replace(workload, logical_name="games")
+        self.assertEqual(
+            self.assess(plan=plan, request=request, approval=approval, requester_context=sibling).classification,
+            "rejected",
+        )
+
+    def test_unverified_inactive_or_wrong_session_hub_is_rejected(self) -> None:
+        base = contract.RequesterContext(
+            session_id=SESSION_ID,
+            logical_name="hub",
+            role="hub-graphical",
+            generation=3,
+            authenticated=True,
+            active=True,
+            authoritative=True,
+        )
+        variants = (
+            replace(base, authenticated=False),
+            replace(base, active=False),
+            replace(base, authoritative=False),
+            replace(base, session_id="session-" + "9" * 32),
+        )
+        for variant in variants:
+            self.assertEqual(self.assess(requester_context=variant).classification, "rejected")
+
+    def test_hub_authority_requires_both_canonical_name_and_role(self) -> None:
+        canonical = contract.RequesterContext(
+            session_id=SESSION_ID,
+            logical_name="hub",
+            role="hub-graphical",
+            generation=3,
+            authenticated=True,
+            active=True,
+            authoritative=True,
+        )
+        variants = (
+            replace(canonical, logical_name="university"),
+            replace(canonical, role="graphical-base"),
+            replace(canonical, role="caller-claims-hub"),
+        )
+        for variant in variants:
+            result = self.assess(requester_context=variant)
+            self.assertEqual(result.classification, "rejected")
+            self.assertTrue(any("role" in issue for issue in result.issues))
 
     def test_expired_replayed_stale_or_unconfirmed_state_is_rejected(self) -> None:
         cases = (

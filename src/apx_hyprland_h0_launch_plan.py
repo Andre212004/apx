@@ -10,10 +10,10 @@ import re
 from apx_hyprland_h0_device_lease import H0DeviceLeasePlan
 
 
-EXPERIMENT = "h0-3ef21d19a2518d4fcea9d51513cc1eee-v9"
+EXPERIMENT = "h0-recovery-v2-disabled"
 ENVIRONMENT = "codex-test-hyprland-h0-v1"
 GENERATION = "c4fc5c49-4106-4a56-b1f0-13bffa41a0c1"
-LEASE_PLAN_DIGEST = "3ef21d19a2518d4fcea9d51513cc1eee63f6ff593d4470bcc10955b06e3059cb"
+LEASE_PLAN_DIGEST = "cfb0a57a8251203d7283dd88e22d500ad3f5d4d1a47495a53904ed2c38cdab96"
 GRAPHICAL_UNIT = "apx-h0-graphical-c4fc5c49"
 EXPIRY_UNIT = "apx-h0-expiry-c4fc5c49"
 STATE = f"/var/lib/apx/h0/{EXPERIMENT}"
@@ -51,10 +51,10 @@ class H0LaunchPlan:
 def build_launch_plan(lease: H0DeviceLeasePlan) -> H0LaunchPlan:
     if type(lease) is not H0DeviceLeasePlan or lease.plan_digest != LEASE_PLAN_DIGEST:
         raise H0LaunchPlanError("launch lease is stale or outside exact H0")
-    if lease.generation != GENERATION or lease.environment != ENVIRONMENT or lease.timeout_seconds != 120:
+    if lease.generation != GENERATION or lease.environment != ENVIRONMENT or lease.timeout_seconds != 15:
         raise H0LaunchPlanError("launch subject or timeout changed")
     expiry = (
-        "/usr/bin/systemd-run", f"--unit={EXPIRY_UNIT}", "--on-active=120s",
+        "/usr/bin/systemd-run", f"--unit={EXPIRY_UNIT}", "--on-active=15s",
         "--timer-property=AccuracySec=1s", "--property=Type=oneshot",
         "--property=NoNewPrivileges=yes", "--property=ProtectSystem=strict",
         "--property=ProtectHome=yes", "--property=PrivateNetwork=yes",

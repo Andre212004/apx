@@ -1,10 +1,210 @@
 # APX Current Handoff
 
-Last updated: 2026-07-18 after root-host reconciliation and the decision to
-defer local-model installation.
+Last updated: 2026-07-31 after the owner installed Hyprland in the official
+Hub and completed the first fully verified physical graphical sessions.
 
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
+
+## Immediate next-chat state — 2026-07-31
+
+The authoritative current checkpoint is:
+
+`docs/official-hub-owner-hyprland-checkpoint-2026-07-31.md`
+
+The canonical `hub` remains generation
+`6f63f9a9-daea-40d1-969f-e25ff0752f4d`, sourced from immutable release
+`hub-headless-v4`. Its mutable live root/home now contain the owner's Hyprland
+0.56.1-2 and kitty 0.48.1-1 installation and owner configuration at
+`~/.config/hypr/hyprland.lua`. Local-admin enrollment is complete. The
+preserved, non-authoritative old graphical Hub remains `hub-testes`, generation
+`2c3dbacc-106f-4053-8603-f649552f5513`.
+
+The new guarded official-Hub launcher is installed. From Host `tty1`, root runs
+`entrar_no_HUB`; it starts the exact Hub, leases the resolved built-in input
+devices plus AMD graphics and tty2, starts Hyprland as Environment user `apx`,
+and opens kitty automatically. A bounded proof verified Hyprland, `eDP-2`, two
+keyboard devices, ELAN mouse/touchpad identities, a real kitty window, complete
+recovery to tty1, and no machine residue. The owner then confirmed two usable
+interactive sessions, including keyboard, pointer, terminal open/close, and
+session exit.
+
+`Super+M` is intentionally temporary: it ends Hyprland and returns to Host
+recovery during development. The owner decided that the final normal desktop
+must not expose a return-to-Host shortcut. Do not remove it until final boot and
+protected administrative recovery are implemented. `Ctrl+Alt+F1` and the
+four-hour Host watchdog are also current recovery mechanisms, not final UX.
+
+For terminal-only maintenance, root may use `apx environment shell hub`, leave
+with `exit`, and then use `apx environment stop hub`. Do not run
+`start-hyprland` directly in that shell; physical graphics/input are provided
+only through the guarded launcher.
+
+Final observed state was Host `tty1`, Hub registration `stopped`, no running
+machine, and no failed systemd unit. The complete repository suite passed 858
+tests with 11 skips after the final launcher correction. Nothing was committed
+or pushed.
+
+Immediate next work is owner-led Hyprland customization inside the Hub. APX
+integration must preserve the owner's mutable config. Later work is final boot
+into Hub, replacement of the temporary exit binding, audio/brightness
+mediation, locale/portal cleanup, owner-selected launcher/file manager, and
+then the separately scoped APX Hub-to-Environment button/effect path.
+
+## Superseded 2026-07-30 cutover checkpoint
+
+The following section records the previous clean-headless delivery and is
+historical. Statements that the official Hub has no Hyprland/kitty, that
+keyboard input is unproven, or that another official-Hub launch is blocked are
+superseded by the 2026-07-31 checkpoint above.
+
+The owner decided that the current graphical Hub is disposable test
+infrastructure. It is now preserved as the ordinary, non-authoritative
+Environment `hub-testes`. The canonical `hub` is now a clean
+Arch text environment: no Hyprland, kitty, Waybar, portal, theme, wallpaper, or
+APX graphical configuration. The owner will install the stable Arch Hyprland
+package and the officially recommended kitty terminal personally, then follow
+the current Hyprland Master Tutorial. APX management UI is integrated only
+after the owner finishes that design.
+
+The guarded physical transition is complete:
+
+- a pure graphical-input proof contract and a physical adapter with a
+  30-second independent watchdog;
+- a two-build `hub-headless-v4` builder that admits base Arch, `sudo`, and the
+  headless APX client but rejects graphical packages and configuration;
+- Environment-local password enrollment, normal `apx` shell entry, separately
+  named root recovery entry, and explicit entry/exit terminal boundary banners;
+- a fixed Hub egress policy that admits DHCP/public Internet while denying Host
+  services, private networks, and sibling veth interfaces;
+- a journaled cutover that renames the whole current Hub to `hub-testes`,
+  removes its Hub authority, and publishes a prepared headless candidate
+  without deleting any root, home, release, or existing `test`.
+
+Two new independent `pacstrap` builds initially exposed expected timestamped
+certificate/GnuPG/linker state and were retained in diagnostic quarantine.
+After deterministic regeneration of that state, two fresh builds matched
+exactly. Immutable release `hub-headless-v4` was published with tree digest
+`3c21ba4145314cd8e6c09b1178adb3f1a904e9e406af03695676b4c21310a0c5`
+and manifest digest
+`5cbb6524dd562e7fb82cb21afedf5f7f6f2a5dd09c91e390d1049d01542b39dc`.
+
+The cutover completed under plan
+`b4f9c2a949d98d3032875400af4fada2fe1a06f5b1978c0f0a248e4044336392`.
+Official Hub generation is `6f63f9a9-daea-40d1-969f-e25ff0752f4d`;
+preserved `hub-testes` generation remains
+`2c3dbacc-106f-4053-8603-f649552f5513`. The textual runtime and fixed network
+adapter are installed.
+
+Physical validation booted the official Hub to systemd `running`, observed 138
+current Arch base packages, UID-1000 user `apx`, no graphical package or
+`~/.config`, successful HTTPS to archlinux.org, blocked access to the Host
+gateway, and correct entry/exit boundary banners. Final recovery is tty1 with
+the Hub stopped, no running machine, no failed unit, and no network-policy
+residue. The only intentional owner step is
+`apx environment enroll-local-admin hub`, which sets the private local password
+and enables password-required sudo without disclosing the password to Codex.
+
+The owner's first enrollment attempt exposed that `machinectl shell` returns
+Host status zero even when its inner command fails, so the absent marker was
+falsely reported as already enrolled. Physical inspection proved the marker,
+wheel membership, sudo policy, and password were all still absent/locked. The
+installed runtime now reads a fixed structured state line from inside the Hub,
+checks the password status after `passwd`, and writes the marker only after
+password, wheel, and exact sudo policy all pass. Source and installed runtime
+match SHA-256
+`e7bc41258559fdec5074c2b2f7f9b115cf595323dcf22805f69451bccfea4209`;
+all 855 tests pass with 11 skips. The owner should repeat the same enrollment
+command; no cleanup or marker removal is needed.
+
+The repository suite passed all 855 tests with 11 skips. `git diff --check`
+and compilation of the guarded physical adapters pass.
+
+The complete current diagnostic record, including the root cause, is:
+
+`docs/graphical-hub-input-handoff-2026-07-19.md`
+
+The installed resolver and repository source currently match. A bounded
+assisted proof on 2026-07-30 observed 3,247 real ELAN events and a changed
+Hyprland cursor position. It observed zero keyboard events and the temporary
+`Super+F12` marker did not appear. Recovery passed completely: tty1 restored,
+Hub and `test` stopped, no machine/unit residue, and zero failed units. Two
+later tty1 keyboard-count attempts also returned zero, but the test timing was
+not explicitly synchronized with the owner, so they are ambiguous rather than
+proof that both internal keyboard candidates are inactive.
+
+On 2026-07-30 the owner explicitly moved the graphical input/button proof out
+of the immediate critical path and requested delivery of the clean textual Hub.
+The cutover no longer treats graphical-input evidence as a prerequisite because
+it does not activate or delete the graphical Hub: that whole generation is
+preserved, stopped, as `hub-testes`. The synchronized count-only tty1 probe and
+full bounded graphical proof remain required before resuming button work later.
+
+The installed `apx-graphical-input-proof-v1.py` measures both candidates
+simultaneously and matches repository SHA-256
+`5dc0ee3be9f2adc3f43a8ab4c19ef7b9040614db3d66bf7f4e564432d5ae8107`.
+It remains inactive until later synchronized owner-assisted invocation.
+
+Current installed prototype facts:
+
+- global command: `entrar_no_HUB`;
+- executor: `apx-executor-v1.service`, local Unix socket only;
+- official Hub generation: `6f63f9a9-daea-40d1-969f-e25ff0752f4d`;
+- preserved `hub-testes` generation: `2c3dbacc-106f-4053-8603-f649552f5513`;
+- test generation: `69b56acc-fd4d-4499-8009-e1d0108466f4`;
+- keyboard candidates: internal i8042 `AT Raw Set 2` and internal USB ITE
+  048d:c101; the event-producing identity is not yet synchronized/proven;
+- pointer identities: both mouse and touchpad capabilities on internal
+  AMDI0010 ELAN, resolved dynamically rather than pinned to event numbers;
+- broker currently still grants the old i8042 identity plus both ELAN nodes,
+  AMD card2/renderD129, and tty2;
+- watchdog currently returns to tty1 after 180 seconds;
+- the APX switcher is configured to open automatically in Hub and test;
+- no successful Hub-to-test button handoff has occurred yet.
+
+## Active physical-graphics safety block
+
+Physical H0 v9 directly proved an active AMD-driven `eDP-2` output and Wayland
+socket, but no application client. During v10 the owner powered off after about
+25 seconds because the graphical session had no obvious usable exit. The old
+absolute Host deadline was 120 seconds and had not yet expired. Physical H0 is
+therefore code-locked and v10 is abandoned, not a successful result.
+
+Repository recovery-v2 work reduces the normal observation window to 10
+seconds, the independent Host deadline to 15 seconds, and stop ceiling to 3
+seconds. Do not re-enable or physically launch it until pure tests and a
+non-graphical exact-unit interruption rehearsal pass and their evidence is
+reviewed. No ricing choice is required for this safety work; visual
+customization remains a later Environment-local layer.
+
+The recovery-v2 suite passed its then-current 714 tests (11 skipped), and the non-graphical
+exact-unit rehearsal also passed. A first protected-home path failure was
+safely recovered and established that watchdog assets must run from private
+`/var/lib/apx/h0` state. The corrected 15-second timer stopped only a dummy
+`sleep`, selected tty1, and left zero residue or failed units. Physical graphics
+remain code-locked until a fresh review; passing this rehearsal does not
+automatically re-enable them.
+
+## Hyprland-by-default decision
+
+The 2026-07-30 headless official-Hub bootstrap above supersedes the initial Hub
+template choice in this historical section. It does not change the longer-term
+goal of extracting a reviewed, independently rebuilt graphical base after the
+owner develops it.
+
+The owner selected a common minimal Hyprland base for every normal Environment,
+including the Hub. Configurations are copied independently at creation. Every
+starter includes a minimal Waybar APX control; the Hub adds the GTK management
+application. Environment-local `sudo pacman` is unrestricted, including in the
+Hub, while Host and sibling package state remain inaccessible. Essential
+graphics/input/network/audio are default; camera, microphone, controller, and
+removable storage are opt-in.
+
+The repository contracts and source assets exist, but the physical
+`hyprland-base-v1` release does not. Next work is verified package acquisition,
+two reproducible builds, and disposable non-Hub validation. Preserve the
+current headless Hub as rollback and do not replace or graphically activate it
+while physical H0 remains code-locked.
 
 ## Owner-Reported Physical State
 
@@ -301,6 +501,35 @@ When the owner returns with results:
 
 The repository currently has:
 
+- a post-battery-loss read-only observation with no failed units, no registered
+  machines, no graphical session, and only the expected active pilot executor;
+
+- a role-aware APX control model: full lifecycle management only in the Hub,
+  with return-to-Hub and read-only status controls in workload Environments;
+- executor-level Hub authorization based on trusted active-session evidence,
+  including refusal of forged/non-Hub management and sibling-stop requests;
+- a pure APX-control launcher decision that binds the active graphical session
+  to verified registration and passes a derived role to the local UI only;
+- a laboratory runtime boundary that reserves Hub roles for logical name
+  `hub` across creation, registration reads, and restore, and copies only the
+  three digest-bound graphical configuration assets into a new independent
+  home;
+- a Hub-only, generation-bound optional capability plan for camera,
+  microphone, controller, and removable storage, all absent by default and
+  changeable only while the target is stopped with explicit confirmation;
+- a production Hub-client pre-freeze gate that cannot itself admit the current
+  GTK demonstration into a release;
+- an effect-free exclusive Hub/workload/Hub handoff state machine and fake
+  executor, including failure injection at every stage and terminal
+  broker-owned recovery;
+- exact typed intent binding from Hub controls to the executor catalogue and a
+  self-generation-only workload return intent;
+- a bounded production executor-v1 Unix client and endpoint core with trusted
+  authority injection, atomic nonce reservation, and incomplete classification
+  after post-reservation adapter failure;
+- an effect-free integrated button/executor/broker round trip that finishes in
+  `hub-active`, plus an explicit physical manual-test assessment that remains
+  blocked on the absent graphical release/client/install/adapters and H0 lock;
 - corrected fail-closed Btrfs quota parsing in both original bootstrap sources;
 - guarded physical Development quota recovery release v3;
 - a detailed physical state and cleanup audit;
@@ -316,7 +545,7 @@ The repository currently has:
   root-host-mode inventory;
 - a pure H0 clean-host Hyprland readiness, preview, journal, and recovery
   contract;
-- the 715-test suite succeeds in the root-host checkout with eight expected
+- the 800-test suite succeeds in the root-host checkout with eleven expected
   external-fixture or privilege-context skips. One test fixture was corrected
   so subordinate-UID
   behavior no longer depends on the UID running the suite.
@@ -379,3 +608,88 @@ VTs, and the installed graphical-role gap.
 - Do not commit or push unless the owner explicitly asks; the owner has asked
   the current development sequence to be published, but future sessions must
   evaluate their own request context.
+
+## Latest Graphical Checkpoint
+
+The physical Host now has a twice-reproduced immutable `hyprland-base-v1`
+release with 402 packages. The stopped real logical Environment `test` exists
+as generation `69b56acc-fd4d-4499-8009-e1d0108466f4` and derives the runtime
+machine name `apx-test`. The earlier incorrectly doubled logical name is
+preserved under quarantine rather than deleted. The current Environment has
+seven independent configuration assets. Its actual
+Hyprland config returned `config ok` inside a device-free validation and the
+Host has no failed unit. No graphical session was launched.
+
+The closed desktop client is now installed into `test` and a separate stopped
+graphical Hub candidate. It reads only `/run/apx/session-ui-v1.json`, accepts
+only Host-issued typed activate/return requests, and refuses caller-supplied
+roles, commands, paths, or management from workloads. The current headless Hub
+registration remains unchanged. The immediate milestone is the Host descriptor
+issuer plus independent recovery-bounded broker/device adapter required for the first
+real `hub -> apx-test -> hub` visual test. Do not bypass those gates by directly
+starting Hyprland; the previous H0 code lock remains active.
+
+The accepted storage policy is now flexible shared capacity, not configurable
+per-Environment caps. Repository creation contracts protect a 32 GiB global
+Host/recovery reserve. The old physical leaf limits have deliberately not yet
+been removed: first install and verify a hierarchical shared-pool guard, then
+remove the leaf caps atomically with rollback evidence.
+
+The Host session issuer and first physical round-trip plan are now closed and
+tested. The latest real read-only observation verified tty1 active, tty2
+unused, connected card2-eDP-2, exact AMD/input identities, no graphical owner,
+no display manager, no failed unit, no machine, no uncertain APX operation,
+present Hub candidate, and stopped `test`. The exact recovery-bounded plan
+digest is
+`7603c8d17c787ed4122cff9520f49392c0865412967b5a53e9b595ff8dec43f3`.
+No devices or graphical process were activated. Next implement and rehearse the
+effect adapter with a harmless dummy unit before publishing the graphical Hub.
+
+That milestone is now complete. The harmless Host timer rehearsal passed, and
+the real stopped `test` passed two-level recovery plus structured machine,
+Hyprland, Wayland, Waybar, `eDP-2`, tty1, and zero-residue evidence. The
+graphical Hub is now the stopped registered Hub at generation
+`2c3dbacc-106f-4053-8603-f649552f5513`; the complete old headless Hub is retained
+at `/var/lib/apx/quarantine/retained-hub-headless-v3-d68ee7a2`. Next rebuild the
+round-trip plan against this published generation, then perform a bounded Hub
+visual launch before enabling button-driven switching.
+
+The rebinding is complete. Current published-Hub round-trip plan digest:
+`2def2bb58aeb6aa3b15cfd7764421c94e94cbd1c092fccddefcf7eeb3787c64f`.
+The previous `7603...` plan is retained only as evidence of the successful
+pre-publication `test` run. The current next action is the bounded Hub visual
+launch; the executor-v1 socket still must be installed before button switching.
+
+Executor installation review found that its tested generation field is an
+integer but physical Hub/test registrations use UUIDs. Do not install or bridge
+the socket by truncating/hashing those UUIDs. The immediate repository task is
+an exact UUID-capable executor protocol (or explicit durable serial binding),
+followed by replay/stale-generation tests and only then local socket install.
+
+The UUID protocol gap is resolved in source and focused tests: physical UUIDv4
+generations are transported exactly, while malformed/truncated/uppercase and
+stale bindings are rejected. No conversion or hash mapping is used. The next
+immediate task is the atomic plan/approval/nonce store plus Unix peer
+authentication; `/run/apx/executor-v1.sock` remains deliberately absent until
+that server can reach only the generation-bound broker adapter.
+
+The atomic executor store is complete and its empty root-only physical
+directories now exist at `/var/lib/apx/executor-v1/{plans,approvals,nonces}`.
+Immutable plan/approval records, symlink/type/owner/schema/digest checks, and
+single-use nonce reservation pass. The store contains no authorization yet.
+Next implement Unix peer-to-active-machine authentication and the socket
+wrapper; do not start the service with a permissive or no-op effect adapter.
+
+Unix peer authentication, bounded framing, transport, and authority composition
+now pass. Peer PID/UID/GID, cgroup unit, active-session record, registration
+role/name/UUID/running state, current target generation, nonce state, plan, and
+approval are all independently rechecked. The code opens no network port.
+`executor-v1.sock` is still absent by design: next implement the real
+generation-bound activate/stop effect adapter and only then install the service.
+
+The published Hub itself now has structured physical visual evidence:
+`apx-hub`, Hyprland, Wayland, Waybar and `eDP-2` all appeared under the 15-second
+Host watchdog, then tty1 and zero residue reverified. Both Hub and `test` can
+therefore render safely. The remaining task is no longer compositor readiness;
+it is persistent active-session publication plus the executor effect that
+stops one exact unit and starts the other before returning success.

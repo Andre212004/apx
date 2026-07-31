@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly LAUNCHER=/var/lib/apx/official-hub-v1/apx-official-hub-graphical-v1.py
+
+if [[ $(id -u) != 0 ]]; then
+  echo "APX: executa entrar_no_HUB como root." >&2
+  exit 1
+fi
+
+if [[ ! -r /sys/class/tty/tty0/active ]] || [[ $(</sys/class/tty/tty0/active) != tty1 ]]; then
+  echo "APX: o HUB só pode arrancar a partir do terminal seguro tty1." >&2
+  exit 1
+fi
+
+if [[ ! -x $LAUNCHER ]]; then
+  echo "APX: o launcher gráfico do HUB oficial está incompleto." >&2
+  exit 1
+fi
+
+echo "========================================================================"
+echo "APX >>> A SAIR DO HOST E A ENTRAR NO HUB GRÁFICO"
+echo "APX >>> Super+Q abre Kitty; Super+M termina o Hyprland."
+echo "========================================================================"
+"$LAUNCHER" --interactive
+echo "========================================================================"
+echo "APX <<< SAÍSTE DO HUB GRÁFICO E ESTÁS DE VOLTA AO HOST EM tty1"
+echo "========================================================================"

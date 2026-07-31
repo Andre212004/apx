@@ -1,0 +1,19 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 30,
+  "spacing": 8,
+  "modules-left": ["custom/apx", "hyprland/workspaces"],
+  "modules-center": ["clock"],
+  "modules-right": ["network", "pulseaudio", "battery"],
+  "custom/apx": {
+    "format": "APX",
+    "tooltip": "Abrir ou trocar de Environment",
+    "on-click": "/usr/bin/apx-hub --switcher",
+    "on-click-right": "/usr/bin/apx-hub --management"
+  },
+  "clock": {"format": "{:%H:%M}"},
+  "network": {"format-wifi": "Wi-Fi {signalStrength}%", "format-ethernet": "Rede", "format-disconnected": "Sem rede"},
+  "pulseaudio": {"format": "Som {volume}%", "format-muted": "Som desligado"},
+  "battery": {"format": "{capacity}%"}
+}

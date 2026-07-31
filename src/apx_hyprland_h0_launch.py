@@ -20,7 +20,7 @@ RESULT = STATE / "physical-result.json"
 DIAGNOSTIC_LOG = STATE / "hyprland-diagnostic.log"
 COMPOSITOR_STATE = STATE / "hyprland-state.json"
 REGISTRATION = Path(f"/var/lib/apx/environments/{launch.ENVIRONMENT}/registration.json")
-OBSERVE_SECONDS = 45
+OBSERVE_SECONDS = 10
 # Physical H0 is deliberately locked after the 2026-07-18 recovery UX incident.
 # Re-enabling requires a reviewed short-deadline design and a non-graphical
 # rehearsal; owner authorization alone must not bypass this code interlock.
@@ -61,7 +61,7 @@ def _preflight() -> launch.H0LaunchPlan:
     if registration.get("generation") != launch.GENERATION or registration.get("state") != "stopped" or registration.get("role") != "graphical-h0":
         raise H0LaunchError("H0 registration changed or is not stopped")
     plan = launch.build_launch_plan(device.build_device_lease_plan(_exact_observation()))
-    if plan.plan_digest != "2b98e2038975e57cd145da065cdefa0a65793ff5674f53aec853e5eaf2d89981":
+    if plan.plan_digest != "c360cc97adce381b56368bde6db034cd685f6d05c688e33719ef4d57f62a9026":
         raise H0LaunchError("H0 launch plan identity changed")
     for name, digest, mode in launch.ASSETS:
         path = STATE / name

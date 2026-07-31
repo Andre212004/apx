@@ -15,7 +15,7 @@ class H0PhysicalLaunchTests(unittest.TestCase):
 
     def test_adapter_is_exact_bounded_and_always_invokes_watchdog(self) -> None:
         source = Path(subject.__file__).read_text()
-        self.assertEqual(subject.OBSERVE_SECONDS, 45)
+        self.assertEqual(subject.OBSERVE_SECONDS, 10)
         self.assertIn('timer_started = _run(["systemctl", "is-active"', source)
         self.assertIn('finally:', source)
         self.assertIn('_run([str(STATE / "watchdog"), "--expire"]', source)

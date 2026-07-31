@@ -50,11 +50,14 @@ product.
 
 ### Hub
 
-The Hub is the default minimal Environment and management surface. It can list,
+The Hub is the default minimal Environment and management surface. Its normal
+graphical template uses the same Hyprland base as workload Environments and
+adds the APX Waybar control and native management application. It can list,
 create from templates, configure, launch, stop, snapshot, archive, restore, and
 delete Environments. It may provide system summaries, visual customization, and
-tightly scoped widgets. It is not a general-purpose browser, editor, gaming, or
-development Environment.
+tightly scoped widgets. Its starter remains deliberately small. Environment-
+local `sudo pacman` is not allowlisted, but general workloads are recommended
+in separate Environments so the Hub stays easy to recreate.
 
 The Hub selects declarative templates, software sets, and policies through a
 future bounded APX protocol. It must not expose an arbitrary privileged package
@@ -69,6 +72,16 @@ independent general desktop. The precise handoff mechanism is under evaluation.
 
 ### Environment to Hub
 
+Every graphical workload may display an APX button, but it is not a management
+surface. It provides a controlled return to the Hub plus read-only details and
+system status. Only the authenticated, active, authoritative Hub may request
+switching or lifecycle mutations. The executor enforces this using trusted
+session context; hiding workload buttons is only an additional UI safeguard.
+
+A workload may request graceful stop only for its own observed active
+generation. It cannot target a sibling, create, snapshot, archive, restore,
+recover, force-stop, or delete an Environment.
+
 Returning must account for unsaved work, graphical clients, user services,
 containers or namespaces, mounted storage, devices, and local assistants. APX
 must distinguish clean stop, refusal because work is active, failure, forced
@@ -76,7 +89,8 @@ termination, and recoverable incomplete handoff.
 
 ## Desktop and Compositor Independence
 
-An Environment may use Hyprland, KDE Plasma, GNOME, or another supported
+The default normal graphical template uses Hyprland. An Environment may later
+use KDE Plasma, GNOME, or another supported
 desktop/compositor. Applications and dependencies are Environment-local in the
 intended product. The boundary between minimal host graphical facilities and
 per-Environment desktop packages remains an architecture question.

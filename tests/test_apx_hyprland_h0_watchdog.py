@@ -21,10 +21,10 @@ class H0WatchdogTests(unittest.TestCase):
         self.assertEqual(partial.phase, "teardown")
         complete = watchdog.observe_teardown(partial, tty1_restored=True, processes=0, mounts=0, sockets=0, leases=0)
         self.assertEqual(complete.phase, "complete")
-        self.assertTrue(watchdog.recovery_decision(complete, monotonic_second=1120).safe_complete)
+        self.assertTrue(watchdog.recovery_decision(complete, monotonic_second=1015).safe_complete)
 
     def test_expiry_always_revokes_returns_tty1_and_never_restarts(self) -> None:
-        decision = watchdog.recovery_decision(armed(), monotonic_second=1120)
+        decision = watchdog.recovery_decision(armed(), monotonic_second=1015)
         self.assertTrue(decision.expired)
         self.assertIn("revoke-five-devices", decision.actions)
         self.assertIn("activate-tty1", decision.actions)
@@ -32,9 +32,9 @@ class H0WatchdogTests(unittest.TestCase):
 
     def test_deadline_cannot_be_extended_and_late_grants_fail(self) -> None:
         with self.assertRaises(watchdog.H0WatchdogError):
-            watchdog.recovery_decision(replace(armed(), deadline=1201), monotonic_second=1100)
+            watchdog.recovery_decision(replace(armed(), deadline=1016), monotonic_second=1010)
         with self.assertRaises(watchdog.H0WatchdogError):
-            watchdog.record_device_grant(armed(), monotonic_second=1120)
+            watchdog.record_device_grant(armed(), monotonic_second=1015)
 
     def test_stale_generation_plan_order_and_bad_residue_fail_closed(self) -> None:
         cases = (

@@ -8,12 +8,12 @@ import json
 import re
 
 
-PROFILE = "apx-hyprland-h0-device-lease-v1"
+PROFILE = "apx-hyprland-h0-device-lease-v2"
 ENVIRONMENT = "codex-test-hyprland-h0-v1"
 GENERATION = "c4fc5c49-4106-4a56-b1f0-13bffa41a0c1"
 RECOVERY_VT = "/dev/tty1"
 EXPERIMENT_VT = "/dev/tty2"
-TIMEOUT_SECONDS = 120
+TIMEOUT_SECONDS = 15
 DEVICES = (
     ("amd-kms", "/dev/dri/card2", "/dev/dri/card2", 226, 2, "rw"),
     ("amd-render", "/dev/dri/renderD129", "/dev/dri/renderD129", 226, 129, "rw"),
@@ -99,15 +99,16 @@ def build_device_lease_plan(observation: H0DeviceObservation) -> H0DeviceLeasePl
         "DevicePolicy=closed",
         *(f"DeviceAllow={host_path} {access}" for _, host_path, _, _, _, access in DEVICES),
         "PrivateNetwork=yes", "ProtectSystem=strict", "ProtectHome=yes",
-        "NoNewPrivileges=yes", "TimeoutStopSec=15s",
+        "NoNewPrivileges=yes", "TimeoutStopSec=3s",
     )
     watchdog = (
-        "arm-host-owned-120-second-deadline-before-device-grant",
+        "arm-host-owned-15-second-deadline-before-device-grant",
         "terminate-only-the-generation-bound-h0-unit-on-deadline",
         "revoke-all-five-device-grants",
         "switch-active-console-back-to-tty1",
         "verify-no-machine-process-wayland-socket-or-device-lease-remains",
         "never-restart-graphical-session-automatically",
+        "keep-local-super-shift-e-emergency-exit",
     )
     observation_digest = _digest(asdict(observation))
     draft = {

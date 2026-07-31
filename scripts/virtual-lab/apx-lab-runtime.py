@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import uuid
@@ -28,20 +29,32 @@ JOURNAL = STATE / "journal" / "operations.jsonl"
 SNAPSHOTS = STATE / "snapshots"
 ARCHIVES = STATE / "archives"
 NAME_RE = re.compile(r"[a-z][a-z0-9-]{0,31}")
-ROLES = {"hub", "development", "minimal", "graphical-h0"}
+ROLES = {"hub", "development", "minimal", "graphical-h0", "graphical-base", "hub-graphical"}
 HEADLESS_START_ROLES = {"hub", "development", "minimal"}
+GRAPHICAL_ROLES = {"graphical-h0", "graphical-base", "hub-graphical"}
+HUB_ROLES = {"hub", "hub-graphical"}
+GRAPHICAL_CONFIG_ASSETS = {
+    "alacritty/alacritty.toml": "14f9191aec4f69568e4c12bba0b96c3cf90989f0a2295eb79bf1a277b7b6a3be",
+    "fastfetch/apx-logo.txt": "cd7ae1943f3b4da9c751e93a1f19f5c12594ae35a28dce0d80fcfaa8f7149077",
+    "fastfetch/config.jsonc": "9c8f7b3184452b42c3e8670805cf7215fa073a7fe32f25d9251a17e08bc4c736",
+    "hyprland/hyprland.conf": "3e143678ca6b19711d71a716a2f8411997772a841614cc800e9b9db070c4cbef",
+    "rofi/config.rasi": "2894cd7636fcf0f03f1a7c19a1008cb8b0c162ac5fae4e9fa85dfe7484a2aa78",
+    "waybar/config.json": "7a045de24f89c69be7e373cc7dc82bb06b62b0a8ee15ec41719fbce0f0de2d2f",
+    "waybar/style.css": "4e649de831c068be9ff05d0c9d6ad03351e1b1a1c44ad752b44a8c353bcd90ca",
+}
+MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 RELEASE_IDS = {
-    "hub": "hub-headless-v3",
+    "hub": "hub-headless-v4",
     "development": "development-headless-v1",
     "minimal": "minimal-headless-v1",
     "graphical-h0": "hyprland-h0-v1",
+    "graphical-base": "hyprland-base-v1",
+    "hub-graphical": "hyprland-base-v1",
 }
-QUOTA_LIMITS = {
-    "hub": {"root": "4G", "home": "2G"},
-    "minimal": {"root": "4G", "home": "2G"},
-    "development": {"root": "16G", "home": "8G"},
-    "graphical-h0": {"root": "16G", "home": "8G"},
-}
+HOST_STORAGE_RESERVE_BYTES = 32 * 1024**3
+STORAGE_POLICY = "shared-flexible-pool-with-host-reserve"
+LOCAL_ADMIN_MARKER = "/etc/apx/local-admin-v1"
+NETWORK_ADAPTER = "/usr/lib/apx/apx-environment-network-v1.py"
 EFFECTS = {
     "create": ("root", "home", "configure", "publish"),
     "destroy": ("stop", "unpublish", "remove-home", "remove-root"),
@@ -82,6 +95,8 @@ def require_root() -> None:
 def validate_name(name: str) -> str:
     if not NAME_RE.fullmatch(name):
         raise Refusal("invalid Environment name")
+    if name.startswith("apx-"):
+        raise Refusal("logical Environment name must not use the derived apx- prefix")
     return name
 
 
@@ -89,6 +104,73 @@ def validate_role(role: str) -> str:
     if role not in ROLES:
         raise Refusal("role is not admitted")
     return role
+
+
+def validate_role_assignment(name: str, role: str) -> tuple[str, str]:
+    """Reserve every Hub role for the canonical Hub logical identity."""
+    validate_name(name)
+    validate_role(role)
+    if name == "hub" and role not in HUB_ROLES:
+        raise Refusal("the Hub name requires an admitted Hub role")
+    if name != "hub" and role in HUB_ROLES:
+        raise Refusal("Hub roles are reserved for the canonical Hub name")
+    return name, role
+
+
+def copy_graphical_config_seed(seed: Path, destination: Path, uid: int = 1000, gid: int = 1000) -> None:
+    """Copy exactly the admitted regular files from an immutable release seed."""
+    if not seed.is_dir() or seed.is_symlink() or destination.exists():
+        raise Refusal("graphical configuration seed is absent or unsafe")
+    config_directories = {relative.split("/", 1)[0] for relative in GRAPHICAL_CONFIG_ASSETS}
+    expected_entries = set(GRAPHICAL_CONFIG_ASSETS) | config_directories
+    observed_entries: set[str] = set()
+    for entry in seed.rglob("*"):
+        relative = entry.relative_to(seed).as_posix()
+        observed_entries.add(relative)
+        metadata = entry.lstat()
+        if relative in GRAPHICAL_CONFIG_ASSETS:
+            if not stat.S_ISREG(metadata.st_mode):
+                raise Refusal("graphical configuration asset is not a regular file")
+        elif relative in config_directories:
+            if not stat.S_ISDIR(metadata.st_mode) or entry.is_symlink():
+                raise Refusal("graphical configuration directory is unsafe")
+        else:
+            raise Refusal("graphical configuration seed contains an unapproved entry")
+    if observed_entries != expected_entries:
+        raise Refusal("graphical configuration seed is incomplete")
+
+    content: dict[str, bytes] = {}
+    for relative, expected_digest in GRAPHICAL_CONFIG_ASSETS.items():
+        path = seed / relative
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            value = os.read(descriptor, MAX_GRAPHICAL_CONFIG_BYTES + 1)
+            if os.read(descriptor, 1) or len(value) > MAX_GRAPHICAL_CONFIG_BYTES:
+                raise Refusal("graphical configuration asset exceeds the size limit")
+        finally:
+            os.close(descriptor)
+        if hashlib.sha256(value).hexdigest() != expected_digest:
+            raise Refusal("graphical configuration asset digest differs")
+        content[relative] = value
+
+    destination.mkdir(mode=0o700)
+    os.chown(destination, uid, gid)
+    for directory in sorted(config_directories):
+        target_directory = destination / directory
+        target_directory.mkdir(mode=0o700)
+        os.chown(target_directory, uid, gid)
+    for relative, value in content.items():
+        target = destination / relative
+        descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(value)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            target.unlink(missing_ok=True)
+            raise
+        os.chown(target, uid, gid)
 
 
 def environment_dir(name: str) -> Path:
@@ -166,7 +248,7 @@ def make_plan(action: str, name: str, role: str | None = None) -> dict[str, obje
     validate_name(name)
     generation = str(uuid.uuid4())
     if action == "create":
-        validate_role(role or "")
+        validate_role_assignment(name, role or "")
         if environment_dir(name).exists():
             raise Refusal("Environment already exists")
         admitted_release(role or "")
@@ -205,6 +287,7 @@ def registration(name: str) -> dict[str, object]:
     record = read_json(registration_path(name))
     if record.get("name") != name or record.get("state") not in {"stopped", "running"}:
         raise Refusal("invalid registration")
+    validate_role_assignment(name, str(record.get("role", "")))
     return record
 
 
@@ -222,6 +305,7 @@ def create(plan_identity: str, approval: str) -> None:
     plan = load_plan(plan_identity, "create")
     name = str(plan["name"])
     role = str(plan["role"])
+    validate_role_assignment(name, role)
     if approval != f"CREATE {name} AS {role}":
         raise Refusal("exact creation approval is absent")
     target = environment_dir(name)
@@ -240,17 +324,29 @@ def create(plan_identity: str, approval: str) -> None:
         home = target / "home"
         append_event(operation, "create", "home", "started", name=name)
         run(["btrfs", "subvolume", "create", str(home)])
-        apply_limits(name, role)
-        if role == "graphical-h0":
-            graphical_home = home / "apx"
-            graphical_home.mkdir(mode=0o700)
-            os.chown(graphical_home, 1000, 1000)
+        verify_shared_storage_reserve()
+        user_home = home / "apx"
+        user_home.mkdir(mode=0o700)
+        os.chown(user_home, 1000, 1000)
+        skeleton = root / "etc/skel"
+        if skeleton.is_dir() and not skeleton.is_symlink():
+            for source in sorted(skeleton.iterdir()):
+                metadata = source.lstat()
+                if not stat.S_ISREG(metadata.st_mode) or source.is_symlink():
+                    raise Refusal("release skeleton contains a non-regular entry")
+                destination = user_home / source.name
+                shutil.copy2(source, destination, follow_symlinks=False)
+                os.chown(destination, 1000, 1000)
         append_event(operation, "create", "home", "complete", name=name)
         fault("home")
 
         append_event(operation, "create", "configure", "started", name=name)
         (root / "etc" / "hostname").write_text(machine(name) + "\n")
         (root / "etc" / "machine-id").write_text("")
+        if role in {"graphical-base", "hub-graphical"}:
+            seed = root / "usr/share/apx/config-seeds/hyprland-minimal-v1"
+            destination = home / "apx/.config"
+            copy_graphical_config_seed(seed, destination)
         if role == "hub":
             (root / "run" / "apx").mkdir(parents=True, exist_ok=True)
         append_event(operation, "create", "configure", "complete", name=name)
@@ -279,15 +375,12 @@ def fault(effect: str) -> None:
         os._exit(86)
 
 
-def apply_limits(name: str, role: str) -> None:
-    limits = QUOTA_LIMITS[validate_role(role)]
-    for label, limit in limits.items():
-        path = environment_dir(name) / label
-        identity = run(["btrfs", "inspect-internal", "rootid", str(path)], capture=True).stdout.strip()
-        if not identity.isdigit():
-            raise Refusal("cannot identify Environment qgroup")
-        run(["btrfs", "qgroup", "limit", limit, f"0/{identity}", str(STATE)])
-        run(["btrfs", "qgroup", "limit", "-e", limit, f"0/{identity}", str(STATE)])
+def verify_shared_storage_reserve() -> None:
+    """Refuse new growth when the Host recovery reserve would be crossed."""
+    stats = os.statvfs(STATE)
+    available = stats.f_bavail * stats.f_frsize
+    if available < HOST_STORAGE_RESERVE_BYTES:
+        raise Refusal("shared Environment pool reached the protected Host reserve")
 
 
 def start(name: str) -> None:
@@ -314,9 +407,15 @@ def start(name: str) -> None:
         if not executor_socket.is_socket():
             raise Refusal("Hub executor endpoint is unavailable")
         command.append("--bind-ro=/run/apx/executor.sock:/run/apx/executor.sock")
+        run([NETWORK_ADAPTER, "apply", "--environment", "hub"])
     operation = str(uuid.uuid4())
     append_event(operation, "activate", "runtime", "started", name=name)
-    run(command, capture=True)
+    try:
+        run(command, capture=True)
+    except BaseException:
+        if record["role"] == "hub":
+            run([NETWORK_ADAPTER, "remove", "--environment", "hub"], check=False)
+        raise
     for _ in range(100):
         if machine_running(name):
             break
@@ -324,6 +423,8 @@ def start(name: str) -> None:
         time.sleep(0.1)
     if not machine_running(name):
         append_event(operation, "activate", "runtime", "uncertain", name=name)
+        if record["role"] == "hub":
+            run([NETWORK_ADAPTER, "remove", "--environment", "hub"], check=False)
         raise Refusal("Environment did not register as running")
     for _ in range(300):
         readiness = run(
@@ -337,6 +438,9 @@ def start(name: str) -> None:
         time.sleep(0.1)
     else:
         append_event(operation, "activate", "runtime", "uncertain", name=name)
+        run(["systemctl", "stop", unit], check=False, capture=True)
+        if record["role"] == "hub":
+            run([NETWORK_ADAPTER, "remove", "--environment", "hub"], check=False)
         raise Refusal("Environment registered but did not reach a usable system state")
     record["state"] = "running"
     atomic_json(registration_path(name), record)
@@ -358,18 +462,123 @@ def stop(name: str) -> None:
     if machine_running(name):
         append_event(operation, "stop", "runtime", "uncertain", name=name)
         raise Refusal("runtime residue remains")
-    run(["systemctl", "reset-failed", f"apx-environment-{name}.service"], check=False)
+    run(
+        ["systemctl", "reset-failed", f"apx-environment-{name}.service"],
+        check=False, capture=True,
+    )
+    if record.get("role") == "hub":
+        run([NETWORK_ADAPTER, "remove", "--environment", "hub"], check=False)
     record["state"] = "stopped"
     atomic_json(registration_path(name), record)
     append_event(operation, "stop", "runtime", "complete", name=name)
 
 
-def shell(name: str) -> None:
+def shell(name: str, *, recovery_root: bool = False) -> None:
     require_root()
     registration(name)
     if not machine_running(name):
         start(name)
-    os.execvp("machinectl", ["machinectl", "shell", f"root@{machine(name)}"])
+    user = "root" if recovery_root else "apx"
+    border = "=" * 72
+    print(f"\n{border}")
+    print(f"APX >>> ESTÁS A ENTRAR NO ENVIRONMENT '{name}' COMO '{user}'")
+    print("APX >>> O PRÓXIMO PROMPT NÃO É O HOST. Alterações ficam neste Environment.")
+    if recovery_root:
+        print("APX >>> MODO ROOT DE RECUPERAÇÃO: usa apenas para reparar este Environment.")
+    print(f"{border}\n", flush=True)
+    result: subprocess.CompletedProcess[str] | None = None
+    try:
+        result = run(["machinectl", "shell", f"{user}@{machine(name)}"], check=False)
+    finally:
+        print(f"\n{border}")
+        print(f"APX <<< SAÍSTE DO ENVIRONMENT '{name}'")
+        print("APX <<< ESTÁS DE VOLTA AO HOST 'apx-host' COMO ROOT.")
+        print("APX <<< Confirma o prompt antes de executar o próximo comando.")
+        print(f"{border}\n", flush=True)
+    if result is None or result.returncode:
+        raise Refusal("Environment terminal session ended with an error")
+
+
+def local_admin_state(target: str) -> tuple[str, str, str, str, str]:
+    """Observe fixed enrollment facts without trusting machinectl's exit status."""
+    observe = (
+        "set -eu; "
+        "marker=absent; test -e /etc/apx/local-admin-v1 && marker=present; "
+        "sudo=absent; test -x /usr/bin/sudo && sudo=present; "
+        "set -- $(/usr/bin/passwd -S apx); password=$2; "
+        "wheel=absent; "
+        "/usr/bin/id -nG apx | /usr/bin/tr ' ' '\\n' "
+        "| /usr/bin/grep -Fxq wheel && wheel=present; "
+        "policy=absent; "
+        "if test -e /etc/sudoers.d/10-apx-local-admin; then "
+        " policy=invalid; "
+        " if test \"$(/usr/bin/stat -c '%a:%u:%g' "
+        "/etc/sudoers.d/10-apx-local-admin)\" = '440:0:0' "
+        " && /usr/bin/grep -Fxq '%wheel ALL=(ALL:ALL) ALL' "
+        "/etc/sudoers.d/10-apx-local-admin; then policy=ready; fi; "
+        "fi; "
+        "/usr/bin/printf 'APX_LOCAL_ADMIN_V1:%s:%s:%s:%s:%s\\n' "
+        "\"$marker\" \"$sudo\" \"$password\" \"$wheel\" \"$policy\""
+    )
+    result = run(
+        ["machinectl", "shell", f"root@{target}", "/usr/bin/bash", "-lc", observe],
+        check=False, capture=True,
+    )
+    prefix = "APX_LOCAL_ADMIN_V1:"
+    lines = [line for line in result.stdout.splitlines() if line.startswith(prefix)]
+    if len(lines) != 1:
+        raise Refusal("Hub local administrator state is absent or ambiguous")
+    fields = tuple(lines[0][len(prefix):].split(":"))
+    if len(fields) != 5:
+        raise Refusal("Hub local administrator state is malformed")
+    marker, sudo, password, wheel, policy = fields
+    if marker not in {"absent", "present"} \
+            or sudo not in {"absent", "present"} \
+            or password not in {"L", "P", "NP"} \
+            or wheel not in {"absent", "present"} \
+            or policy not in {"absent", "invalid", "ready"}:
+        raise Refusal("Hub local administrator state contains an unknown value")
+    return marker, sudo, password, wheel, policy
+
+
+def enroll_local_admin(name: str) -> None:
+    """Enroll one Environment-local password without copying a Host secret."""
+    require_root()
+    record = registration(name)
+    if name != "hub" or record.get("role") != "hub":
+        raise Refusal("local administrator enrollment is fixed to the canonical headless Hub")
+    if not machine_running(name):
+        start(name)
+    target = machine(name)
+    marker, sudo, password, wheel, policy = local_admin_state(target)
+    if sudo != "present":
+        raise Refusal("Hub release does not contain sudo")
+    if (marker, password, wheel, policy) == ("present", "P", "present", "ready"):
+        raise Refusal("Hub local administrator is already enrolled")
+    if marker == "present":
+        raise Refusal("Hub local administrator marker exists but enrollment is incomplete")
+    fixed_prepare = (
+        "set -eu; "
+        "/usr/bin/usermod -aG wheel apx; "
+        "/usr/bin/install -d -m 0755 /etc/apx /etc/sudoers.d; "
+        "/usr/bin/printf '%s\\n' '%wheel ALL=(ALL:ALL) ALL' "
+        "| /usr/bin/install -m 0440 /dev/stdin /etc/sudoers.d/10-apx-local-admin"
+    )
+    run(["machinectl", "shell", f"root@{target}", "/usr/bin/bash", "-lc", fixed_prepare])
+    print("Define agora uma palavra-passe exclusiva deste Hub para o utilizador apx.")
+    run(["machinectl", "shell", f"root@{target}", "/usr/bin/passwd", "apx"])
+    marker, sudo, password, wheel, policy = local_admin_state(target)
+    if (marker, sudo, password, wheel, policy) != (
+        "absent", "present", "P", "present", "ready"
+    ):
+        raise Refusal("password enrollment did not complete; no enrollment marker was written")
+    run(["machinectl", "shell", f"root@{target}", "/usr/bin/touch", LOCAL_ADMIN_MARKER])
+    marker, sudo, password, wheel, policy = local_admin_state(target)
+    if (marker, sudo, password, wheel, policy) != (
+        "present", "present", "P", "present", "ready"
+    ):
+        raise Refusal("Hub local administrator final state differs")
+    print("Hub local administrator enrolled; the Host password was not requested or copied.")
 
 
 def destroy(plan_identity: str, approval: str) -> None:
@@ -485,6 +694,7 @@ def restore(archive_identity: str, name: str, approval: str) -> None:
         raise Refusal("restore destination already exists")
     archive_path = validate_archive(archive_identity)
     manifest = read_json(archive_path / "manifest.json")
+    validate_role_assignment(name, str(manifest.get("role", "")))
     target = environment_dir(name)
     target.mkdir(mode=0o700)
     operation = str(uuid.uuid4())
@@ -499,7 +709,7 @@ def restore(archive_identity: str, name: str, approval: str) -> None:
             if stream_result != 0 or receiver.returncode != 0:
                 raise Refusal(f"restore receive failed: {receiver.stderr.strip()}")
             run(["btrfs", "property", "set", "-f", "-ts", str(target / label), "ro", "false"])
-        apply_limits(name, str(manifest["role"]))
+        verify_shared_storage_reserve()
         root = target / "root"
         (root / "etc" / "hostname").write_text(machine(name) + "\n")
         (root / "etc" / "machine-id").write_text("")
@@ -610,7 +820,8 @@ def parser() -> argparse.ArgumentParser:
     create_apply = sub.add_parser("create")
     create_apply.add_argument("--plan", required=True)
     create_apply.add_argument("--approve", required=True)
-    for command in ("start", "stop", "shell", "snapshot", "archive"):
+    for command in ("start", "stop", "shell", "shell-root", "snapshot", "archive",
+                    "enroll-local-admin"):
         item = sub.add_parser(command)
         item.add_argument("name")
     destroy_plan = sub.add_parser("destroy-plan")
@@ -645,6 +856,10 @@ def main() -> int:
         stop(arguments.name)
     elif arguments.environment_command == "shell":
         shell(arguments.name)
+    elif arguments.environment_command == "shell-root":
+        shell(arguments.name, recovery_root=True)
+    elif arguments.environment_command == "enroll-local-admin":
+        enroll_local_admin(arguments.name)
     elif arguments.environment_command == "snapshot":
         snapshot(arguments.name)
     elif arguments.environment_command == "archive":

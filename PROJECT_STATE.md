@@ -11,6 +11,50 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## Official Hub owner-bootstrap checkpoint — 2026-07-31
+
+The current authoritative physical details and operator commands are recorded
+in `docs/official-hub-owner-hyprland-checkpoint-2026-07-31.md`.
+
+The owner-built official Hub has advanced beyond its clean textual delivery.
+Canonical `hub`, generation `6f63f9a9-daea-40d1-969f-e25ff0752f4d`, still
+derives from immutable `hub-headless-v4`, but its independent mutable root/home
+now contain the owner's Hyprland 0.56.1-2 and kitty 0.48.1-1 installation and
+configuration. This is allowed Environment-local ownership; it did not mutate
+the Host, immutable release, `hub-testes`, `test`, or another Environment.
+Local-admin enrollment is complete.
+
+A dedicated temporary physical bridge is implemented and installed for this
+exact official generation. Host command `entrar_no_HUB`, restricted to root on
+safe `tty1`, dynamically resolves and grants only the fixed internal i8042 and
+ITE keyboard identities, ELAN mouse/touchpad identities, AMD card2/renderD129,
+and tty2. It starts Hyprland as UID/GID 1000 and automatically opens kitty. An
+independent bounded proof returned `classification=verified`, Hyprland true,
+kitty true, monitor `eDP-2`, keyboard count two, all four expected input
+identities, tty1 restored, and no machine residue. The owner subsequently
+confirmed two interactive sessions worked. Earlier ambiguous keyboard results
+and the older official-Hub physical-launch block are superseded for this
+bridge; they remain historical evidence for the abandoned prototype path.
+
+The current `Super+M` exit-to-Host binding, `Ctrl+Alt+F1` visual recovery, and
+four-hour watchdog are development safety mechanisms, not intended normal
+product UX. The owner explicitly requires the final normal Hub desktop not to
+offer a return-to-Host shortcut. Protected Host recovery remains an
+architectural requirement. Do not remove the proven temporary exit until final
+boot/session ownership and separate administrative recovery are implemented.
+
+The owner can now evolve Hyprland independently inside the Hub. APX work must
+not overwrite the live owner configuration or turn that mutable Hub into an
+Environment template. The remaining immediate product work is final boot into
+the authoritative Hub, protected recovery outside normal UX, audio/brightness
+mediation, owner-selected launcher/file manager, locale/portal cleanup, and
+later resumption of the separately scoped Hub-to-Environment button/effect
+integration.
+
+At handoff, Host tty1 was active, the Hub was stopped, no machine or failed unit
+remained, and the complete repository suite passed 858 tests with 11 skips.
+The worktree remains intentionally uncommitted.
+
 The owner has now accepted a temporary development-method deviation for the
 disposable Lenovo physical pilot: Codex, Git, and GitHub CLI may run directly as
 `root@apx-host` so repository changes and physical lifecycle tests can be
@@ -257,6 +301,58 @@ real connector, amdgpu driver, tty1, display-manager absence, asset identities,
 generation, devices, failed units, and zero old machine/unit state before
 arming. Its unconditional finalizer invokes the staged watchdog and stops the
 expiry timer only after that recovery attempt. It has not yet run.
+
+The later physical H0 v9 run produced direct compositor evidence: Hyprland
+published its Wayland socket and reported the internal `eDP-2` panel enabled,
+focused, DPMS-on, and operating at 1920x1080/120.213 Hz on AMD. No application
+client was observed, so this is a compositor/display pass rather than complete
+visual acceptance. During the following v10 attempt the owner powered off after
+about 25 seconds because no obvious exit was available. The 120-second Host
+deadline had not expired; that deadline was nevertheless an unacceptable
+recovery design for an interactive physical test. The incident is recorded in
+`docs/hyprland-h0-recovery-incident-2026-07-18.md`.
+
+Physical H0 is now code-locked. The repository-only recovery-v2 design reduces
+normal observation to 10 seconds, the independent absolute Host deadline to 15
+seconds, and the unit stop ceiling to 3 seconds. It retains the local
+Super+Shift+E compositor exit and the independent Host-owned timer as separate
+escape paths. Its device-plan digest is
+`cfb0a57a8251203d7283dd88e22d500ad3f5d4d1a47495a53904ed2c38cdab96`
+and launch-plan digest is
+`c360cc97adce381b56368bde6db034cd685f6d05c688e33719ef4d57f62a9026`.
+These are unactivated repository contracts, not permission to run graphics;
+the code interlock remains false until pure and non-graphical recovery evidence
+is reviewed.
+
+Recovery v2 then passed all 714 repository tests (11 skipped) and a physical
+non-graphical interruption rehearsal. The first dummy rehearsal exposed and
+safely recovered from an expected `ProtectHome=yes` path error when attempting
+to execute from `/root`; this fixes the requirement that recovery assets live
+under private `/var/lib/apx/h0` state. The corrected digest-matched staged
+watchdog stopped only an exact-unit `sleep` process at 15 seconds, restored
+tty1, and reported zero residue with no failed units. Evidence is in
+`docs/hyprland-h0-recovery-v2-rehearsal-2026-07-18.md`. GPU, input, tty2,
+Hyprland, and Environment lifecycle were not touched. The physical interlock
+remains disabled pending a fresh exact-plan review.
+
+The owner has now selected Hyprland as the default graphical base for all
+normal Environments, including the Hub. Each Environment receives an
+independent copy-on-create configuration and Environment-local unrestricted
+`sudo pacman`; the Hub starter remains minimal by choice rather than package
+allowlisting. Essential defaults are mediated AMD display/GPU, keyboard,
+touchpad, outbound network, audio, notifications, and portals. Camera,
+microphone, controllers, and removable storage remain opt-in. Waybar with an
+APX switch/return control is part of every starter.
+
+Repository implementation now contains the fixed `hyprland-base-v1` and
+`hub-hyprland-v1` template catalogue, independent storage/config creation plan,
+future runtime role mappings, closed release-evidence contract, minimal
+Hyprland/Waybar assets, demo-only GTK/libadwaita Hub shell, safe Hub template
+summaries, and guarded headless-to-graphical Hub replacement plan. The existing
+stopped `hub-headless-v3` has an empty home and is fixed as retained rollback.
+No `hyprland-base-v1` release has been built or promoted, no real Hub was
+replaced, and no graphical activation was unlocked. The architecture is
+documented in `docs/hyprland-default-environment-architecture-v1.md`.
 
 ## Human Objective
 
@@ -950,6 +1046,62 @@ proves the functional architecture; it does not authorize running the
 laboratory installer on the physical computer.
 
 ## Implemented Today
+
+The owner selected a new immediate Hub-development sequence on 2026-07-30.
+The current graphical Hub is disposable and will be preserved as the ordinary
+non-authoritative `hub-testes` Environment. The new canonical Hub begins as a
+clean Arch text Environment. The owner, not APX, will install Hyprland and the
+officially recommended terminal and follow the upstream tutorial. The
+repository contains pure admission contracts and guarded physical adapters
+for an independently rebuilt `hub-headless-v4`, Environment-local password
+enrollment and password-required sudo, public-Internet-only mediated egress,
+explicit Host/Environment terminal boundary banners, physical input proof, and
+a rollback-preserving Hub cutover.
+
+The physical delivery completed on 2026-07-30. After retaining an initial
+non-matching diagnostic pair, two fresh normalized `pacstrap` builds matched
+exactly and published immutable `hub-headless-v4`, tree digest
+`3c21ba4145314cd8e6c09b1178adb3f1a904e9e406af03695676b4c21310a0c5`.
+The journaled cutover published official Hub generation
+`6f63f9a9-daea-40d1-969f-e25ff0752f4d` and preserved the complete former
+graphical Hub as non-authoritative `hub-testes`, generation
+`2c3dbacc-106f-4053-8603-f649552f5513`.
+
+A real bounded boot validated systemd running state, public HTTPS, Host-gateway
+denial, absence of graphical packages and user configuration, and visible
+Host/Environment entry and exit banners. It then stopped cleanly to tty1 with
+no machine, failed unit, or network-rule residue. The local `apx` password
+remains intentionally unknown and locked until the owner runs
+`apx environment enroll-local-admin hub`; that command enables only
+password-required Environment-local sudo.
+
+The first real enrollment invocation then found a false `already enrolled`
+result. `machinectl shell` was proven to return zero for both inner
+`/usr/bin/false` and an absent-file test. Direct Hub inspection confirmed no
+state mutation: the `apx` password remained locked, wheel and sudo policy were
+absent, and no enrollment marker existed. The installed runtime now consumes a
+fixed structured inner observation and verifies password status, wheel, exact
+sudo policy, and marker both before and after enrollment. It cannot write the
+marker after a cancelled or failed password change. The corrected full suite
+passes 855 tests with 11 skips.
+
+The first bounded input proof materially narrowed the existing graphical bug:
+real ELAN pointer events reached the running graphical path and Hyprland's
+cursor moved, while the selected i8042 keyboard produced no observed events and
+the temporary shortcut did not execute. Automatic recovery returned tty1 and
+left no graphical machine, unit, failed-unit, or registration residue. The
+keyboard identity remains unresolved because subsequent Host-only attempts were
+not explicitly synchronized with owner keypresses. On 2026-07-30 the owner
+explicitly deferred the graphical input/button work and prioritized delivery
+of the clean textual official Hub. Its cutover therefore does not depend on
+graphical input evidence: it neither activates nor deletes the current
+graphical generation, which remains stopped and fully preserved as
+`hub-testes`. Input evidence remains mandatory before button work resumes.
+The installed count-only adapter now observes the i8042 and internal USB ITE
+keyboard candidates simultaneously, labels only their stable identities, and
+discards key codes and values. Repository validation after this change passes
+all 855 tests with 11 explicit skips, plus adapter compilation and
+`git diff --check`.
 
 The repository contains documentation, a non-mutating production-oriented
 Python prototype, and a clearly separated guarded disposable-VM laboratory. The
@@ -1901,7 +2053,247 @@ read access from becoming control over a privileged evidence path.
 - Odysseus limited to one active Environment;
 - no ordinary Linux user chooser during boot or switching.
 
+The graphical architecture now also fixes Hub-only lifecycle authority. Every
+Environment may show an APX button, but workloads receive only return-to-Hub
+and read-only actions. The executor uses separately trusted active-session
+context: only an authenticated, authoritative Hub may switch or manage
+Environments, while a workload may gracefully stop only its own generation.
+ASCII animation and ASCII-inspired controls are recorded as a future,
+replaceable ricing layer rather than part of the security boundary.
+
+The role-aware GTK prototype and pure trusted-launch decision now implement the
+same split without real effects. The launcher derives the UI role only after
+active authenticated graphical-session facts exactly match verified
+registration name, role, and generation. The full repository suite passes 800
+tests with 11 expected external-fixture or privilege-context skips.
+
+The disposable runtime now independently enforces the canonical Hub identity:
+`hub` accepts only admitted Hub roles, and no other logical name can acquire a
+Hub role through creation, a forged registration, or restore. Graphical config
+creation no longer copies an open-ended directory tree. It admits exactly the
+three versioned regular files with matching SHA-256 digests and refuses missing,
+extra, changed, linked, special, or oversized entries before publication.
+
+The changing GTK demonstration is no longer represented as an immutable
+production Hub asset. It is explicitly outside the base release; a future
+production Hub overlay needs its own closed manifest and both fake- and
+typed-executor validation gates.
+
+Hub authority now additionally requires canonical name and role to agree at
+the executor and UI-launch boundaries. The typed executor catalogue includes a
+Hub-only `configure-capabilities` family. Its separate plan keeps optional
+camera, microphone, controller, and removable-storage mediation absent by
+default, requires a stopped target generation and explicit confirmation, and
+never changes the essential baseline or activates the Environment.
+
+The GTK prototype delays importing GTK until after CLI role/mode checks. Its
+help and workload-management refusal therefore run successfully in the current
+headless Development context without installing `python-gobject` or opening a
+window. A separate pre-freeze contract defines the evidence a later production
+Hub client needs, but intentionally cannot admit it or freeze its artifact.
+
+After the 2026-07-18 battery-loss reboot, a fresh read-only system-scope check
+observed zero failed systemd units, zero registered machines, and no graphical
+session. Only the expected root tty1/manager sessions were listed, while
+`apx-pilot-executor.service` was active. This confirms no observed Hyprland or
+Environment runtime remained stuck after the power loss; it does not unlock H0
+physical execution.
+
+The graphical button path now has an effect-free exclusive handoff state
+machine. It models Hub stop, broker transitions, hidden incoming start,
+readiness-gated reveal, workload return, and Hub recovery with one seat owner at
+every phase. Recovery and watchdog evidence is mandatory before Hub stop;
+release/readiness evidence cannot be replayed between transitions. The internal
+executor passes a complete Hub-to-workload-to-Hub cycle and failure injection
+before all eight stages reaches terminal broker-owned recovery. This path is
+test-only and is not exposed by the GTK product prototype.
+
+Hub controls now convert into typed executor intents only when their action ID,
+operation kind, enabled state, approval class, target generation, and trusted
+canonical Hub context all agree. The workload return control produces only a
+generation-bound `stop` for itself. An integrated effect-free rehearsal proves
+both executor assessments, the broker boundary, the exclusive handoff, and the
+final `hub-active`/Hub-owned state together.
+
+The new manual physical round-trip assessment truthfully remains `blocked`.
+Positive current evidence is limited to the repository integration, installed
+typed pilot executor, post-battery tty1 recovery observation, and absence of
+failed/uncertain observed runtime state. Missing gates are the admitted
+graphical base release, admitted production Hub client, installed graphical Hub
+and workload, installed trusted launcher and exclusive broker, verified
+mediated device adapter, verified independent graphical watchdog, and an
+unlocked physical H0. Completing the pure contracts does not satisfy those
+physical gates or authorize a test.
+
+At the owner's request, the disposable web/terminal handoff simulation, its
+tests, its GTK fake-executor mode, generated bytecode, and documentation were
+removed completely. Internal effect-free state-machine and integration tests
+remain as non-product regression infrastructure.
+
+Development has moved to the real executor-v1 boundary. The client fixes the
+Unix endpoint, timeout, request format, response limit/framing/schema, protocol,
+and operation binding. The endpoint core retrieves plan/approval/state only
+through trusted authorities, assesses the full contract, atomically reserves
+the nonce, and invokes only the typed plan adapter. Rejection cannot reach an
+effect; post-reservation failure becomes `incomplete`. Durable stores, a socket
+server wrapper, and physical session/device effects remain unimplemented and
+uninstalled.
+
 No container creation, package change, Btrfs mutation, or privileged operation
 is authorized merely by the plan. The first host mutation requires a fresh
 review of the exact base source, disk budget, created resources, backup,
 rollback, and approval request.
+
+On 2026-07-18 the owner authorized the first normal graphical Environment.
+Two builds from immutable `hyprland-h0-v1` produced the same 402 packages and,
+after identity/build-cache normalization, the same content digest
+`a43e3336ace31b21d250abdce25ed5bdfe4b506a7148902d4f5f150c52dd4e85`.
+The resulting `hyprland-base-v1` is read-only; the second build remains in
+quarantine as reproduction evidence.
+
+The first stopped workload was initially published with the invalid doubled
+logical prefix `apx-test`. The validator correctly exposed that the logical
+name must be `test`, which derives runtime machine name `apx-test`. The old
+empty stopped tree was moved intact to quarantine. The corrected stopped
+`test`, generation `69b56acc-fd4d-4499-8009-e1d0108466f4`, includes Hyprland,
+Waybar, Rofi, Alacritty, Fastfetch, Chafa, audio,
+network, notifications, portals and AMD graphical userspace. Seven
+digest-bound config files were copied independently into its home. Its actual
+Hyprland config returned `config ok` and Fastfetch ran in a device-free nspawn
+validation. Eww is deferred as an optional later overlay because it is absent
+from official Arch repositories.
+
+No graphical process or device grant occurred. The visual round trip remains
+blocked on the graphical Hub, production Hub client, installed broker/socket,
+and recovery-bounded mediated activation. The physical H0 code lock remains.
+
+The owner subsequently replaced per-Environment size caps with a flexible
+shared storage policy. New contracts no longer ask the owner to predict root or
+home size when creating an Environment. They require a shared APX pool and a
+fixed 32 GiB Host/recovery reserve. Existing physical leaf limits remain in
+place temporarily until a reviewed hierarchical Btrfs pool limit can replace
+them; removing them first would expose the Host to complete disk exhaustion.
+
+A separate graphical Hub candidate now exists in quarantine with an independent
+root/home and config seed; the registered headless Hub is unchanged. The GTK
+client no longer contains demonstration data or disabled fake buttons. It
+loads a single fixed Host-issued session descriptor, derives its role from that
+descriptor, and sends only complete typed executor requests. Hub descriptors
+may contain activate actions; workload descriptors must contain exactly one
+generation-bound stop for themselves. The client is installed in the Hub
+candidate and `test`, but no descriptor issuer, executor-v1 socket server, or
+physical graphical broker is installed yet, so every real button remains
+fail-closed rather than simulating success.
+
+The Host-side session issuer now creates the exact descriptor, plans,
+approvals, and requests together. Hub sessions can receive only typed activate
+actions; a workload receives exactly one stop action bound to its own logical
+name and generation. All actions expire within 300 seconds and bind the trusted
+active session identity. The physical Hub/test plan then binds the current
+`test` generation, graphical release manifest, AMD card2/renderD129, built-in
+keyboard/touchpad event3/event11, tty2, and a non-extendable 15-second recovery
+deadline. A fresh read-only physical observation passed every clean-host gate;
+plan digest is
+`7603c8d17c787ed4122cff9520f49392c0865412967b5a53e9b595ff8dec43f3`.
+This is still a non-executing plan: the Host effect adapter and graphical Hub
+publication are the remaining boundaries before a visual run.
+
+The Host recovery adapter subsequently passed a real harmless rehearsal: an
+independent three-second timer was active before a constrained `sleep 60`,
+terminated only that unit, restored tty1, and left no machine, failed unit, or
+runtime residue. The same recovery path then bounded real `test` activations to
+10 visible seconds inside a 15-second absolute deadline. After adding an
+Environment-local D-Bus session, structured observation proved the nspawn
+machine, Hyprland, Wayland socket, Waybar, and enabled 1920x1080 `eDP-2`; final
+recovery again restored tty1 with zero residue. Waybar reported its 1920x30 bar
+on `eDP-2`.
+
+Replacement plan
+`e6f99a38aecc88088949770c3213b2690aadcdefcad75c62c06de86b0776abee`
+then published graphical Hub generation
+`2c3dbacc-106f-4053-8603-f649552f5513`. The previous stopped headless Hub was
+moved intact to
+`/var/lib/apx/quarantine/retained-hub-headless-v3-d68ee7a2` and remains the
+rollback; no Hub graphical activation occurred during publication.
+
+Rebinding the exclusive runtime plan to the published Hub generation produced
+current plan digest
+`2def2bb58aeb6aa3b15cfd7764421c94e94cbd1c092fccddefcf7eeb3787c64f`.
+The earlier `7603...` digest remains historical evidence for the successful
+pre-publication `test` proof and must not be replayed for the Hub round trip.
+
+Review before installing the executor-v1 socket exposed a real schema mismatch:
+the pure executor contract currently models `expected_generation` as an
+integer, while every physical registration uses a UUID string. All earlier
+executor tests used synthetic integer generations, so they do not authorize a
+physical request. The server must not hash, truncate, or silently map the UUID.
+Either the protocol must evolve to canonical UUID generations or a durable
+executor-owned serial-to-UUID binding must be added and verified by the effect
+adapter. Until that binding is closed and hostile-tested, the new socket stays
+uninstalled and no button can cause a physical effect.
+
+The protocol has now evolved without a lossy mapping. Existing positive
+integer generations remain accepted only for legacy laboratory fixtures;
+physical requests preserve canonical lowercase UUIDv4 strings end to end in
+plans, requests, approvals, requester context, current-state evidence, and
+desktop descriptors. Truncated, uppercase, non-v4, malformed, boolean, stale,
+and cross-bound values fail closed. The socket remains uninstalled until its
+atomic plan/approval/nonce stores and peer-to-active-machine authentication are
+implemented and tested.
+
+The first durable executor-v1 store is now implemented and its empty physical
+directories are installed at `/var/lib/apx/executor-v1` with root-only mode
+0700. Plans are recomputed from fixed policy before write and after read;
+approvals require verified authenticity; records are immutable create-once
+0400 files; symlinks, wrong ownership/type/schema/digest, and malformed UUIDs
+are rejected. Nonces use atomic exclusive creation, so replay returns false
+without replacing the original request digest. No plan, approval, nonce,
+socket, service, or effect is currently published.
+
+The executor-v1 Unix transport and production authority composition are now
+implemented but not installed as a service. The kernel peer PID/UID/GID must
+map to UID 1000 inside the exact active generation-named graphical systemd
+unit; root-owned active-session state must match the root-owned physical
+registration name, role, UUID, running state, and expected unit. Wrong UID,
+vanished PID, other cgroup, forged Hub role, stale UUID, changed unit, symlink,
+or malformed state fails before plan/approval lookup. Transport accepts one
+bounded newline frame, silently drops malformed/unauthenticated peers, and has
+no network listener. The socket remains absent because starting it with a
+no-op or permissive effect adapter would make an accepted response dishonest.
+
+The published graphical Hub now also passed its own bounded physical visual
+launch against current plan `2def...`: machine `apx-hub`, Hyprland, Wayland
+socket, Waybar, and enabled internal `eDP-2` were observed, followed by tty1
+restoration and zero machine/process/unit residue. A diagnostic attempt to
+change D-Bus activation environment made startup unreliable and was reverted
+to the previously proven runner; its portal/dconf HOME warnings are non-fatal
+follow-up work, not hidden as complete. The executor socket remains blocked
+only on the real activate/stop effect adapter and active-session publication.
+
+On 2026-07-19 the first persistent graphical Hub prototype advanced beyond the
+bounded visual proof but did not complete the owner-facing round trip. The
+local executor-v1 service, fixed broker, Host-issued descriptors, 180-second
+independent watchdog, global `entrar_no_HUB` bootstrap command, and automatic
+GTK switcher launch are installed. Hyprland, Waybar, Wayland, AMD `eDP-2`, and
+tty2 appear reliably. No Hub-to-`test` button transition has yet succeeded.
+
+Physical input remains the active blocker. A fresh observation proved that
+kernel `eventN` numbers changed: event10 is now the PC speaker, while the exact
+internal ELAN mouse and touchpad are event8 and event9. Fixed event numbers are
+not physical identities. Repository broker and bounded-test adapters now
+resolve the exact i8042 keyboard and AMDI0010 ELAN mouse/touchpad udev
+path/capability identities before effects, fail on absence or ambiguity, and
+grant only the three resolved nodes. Their current names are passed to and
+validated by the session runner. The full suite passes 834 tests with 11 skips.
+Installed Host assets remain stale, so graphical launch is blocked pending
+reviewed publication and an automated, recovery-bounded evdev-to-Hyprland
+event-delivery proof. Another manual owner attempt is blocked until it passes.
+See `docs/graphical-hub-input-handoff-2026-07-19.md`.
+
+The owner also confirmed that this Hub is disposable test infrastructure. Once
+the APX switching logic is proven, the current Hub may be replaced only under
+a fresh exact instruction. The owner intends to construct a clean Arch-like
+Hub and its Hyprland/Waybar/Eww/Rofi/Alacritty ricing personally, after which
+APX controls will be integrated. A reviewed visual base may be extracted into
+independent copies for workload Environments; the mutable live Hub must never
+be used directly as their template.
