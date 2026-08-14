@@ -290,8 +290,8 @@ def default_graphical_template_summaries() -> tuple[TemplateSummary, ...]:
     from apx_graphical_template import template_catalogue
 
     software = {
-        "hyprland-base-v1": ("Hyprland", "Waybar", "Foot", "Fuzzel"),
-        "hub-hyprland-v1": ("Hyprland", "Waybar", "APX Hub"),
+        "hyprland-base-v2": ("Hyprland", "Kitty", "Thunar", "Flatpak"),
+        "hub-hyprland-v2": ("Hyprland", "Quickshell", "Thunar", "APX Hub"),
     }
     return tuple(
         TemplateSummary(

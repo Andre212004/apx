@@ -20,7 +20,7 @@ fi
 
 echo "========================================================================"
 echo "APX >>> A SAIR DO HOST E A ENTRAR NO HUB GRÁFICO"
-echo "APX >>> Super+Q abre Kitty; Super+M termina o Hyprland."
+echo "APX >>> Super+Q abre Kitty; Super+E abre Environments; Super+M volta ao Host."
 echo "========================================================================"
 "$LAUNCHER" --interactive
 echo "========================================================================"

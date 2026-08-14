@@ -1,0 +1,18 @@
+[Unit]
+Description=APX coordinated update authority v1
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-coordinated-update-v1.py --serve
+Restart=on-failure
+UMask=0077
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/apx /var/lib/apx/environments /var/lib/apx/coordinated-updates-v1
+
+[Install]
+WantedBy=multi-user.target

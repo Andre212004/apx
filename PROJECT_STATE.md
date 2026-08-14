@@ -11,7 +11,893 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## Environment creation, persistent shortcuts, loading, Brave and HDMI — 2026-08-14
+
+The common creation shell now presents explicit Base APX, Daily Use and Work
+profile titles. Capability drawers and rows remain title-only until right
+click, which reveals their description and exact program set. Accepted create
+requests immediately dismiss the form, preventing the stale form/list layering
+that appeared as background flashing. The workload Control Centre follows the
+Hub's everyday layout but excludes Host-only terminal and APX Host authority.
+
+Future Environments use Brave for browser bindings and MIME defaults. Brave is
+installed from a SHA-256-pinned Host-owned `brave-bin 1:1.93.136-1` artifact;
+Firefox is no longer part of the web/documents capability. Existing profiles
+are not rewritten because the owner chose to recreate them.
+
+`SUPER+A` and `SUPER+E` are seeded into every new graphical Environment and
+have an enabled-by-default per-Environment Control Centre toggle. Their return
+failure was caused by logind deleting `/run/user/1000` after a transient login,
+not by missing bindings. Host-supervised sessions now keep Hyprland and
+QuickShell IPC under `/run/apx/session-1000`. A real Hub-to-Hub transition
+preserved those sockets; the watchdog remained healthy and post-return IPC
+succeeded.
+
+The Host loading page now owns tty1 without a terminal flash. The handoff
+supervisor runtime-masks and stops `getty@tty1` for the supervised graphical
+chain, transfers ownership across overlapping handoff runners, and unmasks the
+recovery login only when no lock, machine or GUI remains and tty1 is active.
+Physical validation showed the unit masked/inactive and no getty journal entry
+during the transition.
+
+Hybrid AMD/NVIDIA sessions now lease both KMS card/render pairs plus the
+NVIDIA auxiliary devices and prefer AMD:NVIDIA in `AQ_DRM_DEVICES`. New roots
+receive `egl-gbm` and exact Host-driver-matched `nvidia-utils 610.43.03-3` from
+a digest-pinned local artifact. The active Hub sees the devices and matching
+userspace. Final two-monitor proof is pending because HDMI-A-1 was physically
+disconnected at the last check. The pre-change `faculdade` profile failed
+closed during a launch and restored Hub; it was not migrated by design.
+
+The complete repository suite passes 1032 tests with 11 expected skips. Source
+and installed runner match SHA-256
+`78af71882edafdc5faedffeef48799d075528eaf0db4c1ca97eecc85a04839fc`.
+Details and rollback are in
+`docs/environment-creation-shortcuts-loading-brave-hdmi-v1-2026-08-14.md`.
+
+## Environment UI clarity and hybrid external displays — 2026-08-13
+
+The Environment creation form now distinguishes clearly between the APX base
+and packages genuinely added by a capability. Basic, Intermediate and Complete
+are labelled as Base APX, Daily Use and Work starting points with concrete
+software summaries. Capability drawers and rows remain compact; right-clicking
+an individual row reveals its purpose and exact base/installed program list.
+The common workload Control Centre has sufficient height and a readable 2×2
+action grid, so Apps, Lock, Files and Return are no longer clipped. It otherwise
+keeps the Hub's mediated everyday controls while excluding the persistent Host
+terminal and APX exit-to-Host rows.
+
+The owner also reported that HDMI never activated. Physical connector evidence
+explains the defect: internal eDP-2 belongs to AMD card2, while HDMI-A-1 and both
+DP connectors belong to NVIDIA card1. Hybrid APX sessions leased AMD KMS plus
+NVIDIA render only, so external connectors were invisible. Hybrid launches now
+lease both card/render pairs and start Hyprland with AMD first and NVIDIA
+second in `AQ_DRM_DEVICES`; the same mechanism covers Hub and normal graphical
+Environments. Installed files match source, but the active Hub was not restarted
+solely for proof. The next normal launch plus a real attached HDMI monitor is
+the remaining physical acceptance. Details and rollback are in
+`docs/environment-ui-and-hybrid-external-monitors-v1-2026-08-13.md`.
+
+## Fresh Environment shell ownership and failed-start recovery — 2026-08-13
+
+The first menu-created Environments exposed a creation defect: nested seed
+copying created the implicit `~/.local` ancestor as Host root with mode 0755,
+then correctly placed user-owned executables below it. The unprivileged shell
+launcher could not create `~/.local/state`, so it exited before opening
+QuickShell or creating its own log. Hyprland remained alive until the generic
+launcher correctly rejected the missing desktop shell after ten seconds.
+
+The runtime now enumerates, validates, modes and owns every destination
+directory between the Environment Home and each reviewed shell asset. Tests
+assert the intermediate `.local`, `.local/bin` and `.config` ownership/mode,
+not only the final files. The existing stopped `jogos` and `andre`
+Environments were repaired in place by changing only `~/.local` to
+`apx:apx 0700`.
+
+The failure also showed that the handoff runner cleaned the rejected workload
+but propagated its exception before reaching the Hub relaunch. It now retains
+the destination or cleanup failure, always attempts authenticated Hub
+restoration after bounded cleanup, and only reports the retained failure after
+that restored Hub session ends. A regression test injects the exact workload
+shell failure and proves that the Hub launcher is still called. Installed and
+source runtime/runner hashes match, and the full suite passes 1021 tests with
+11 skips. A forced graphical transition was not performed while the active
+Hub carried the Host-console Codex; normal owner use remains the visual proof.
+
+The next owner trial exposed a distinct lifetime defect: the 120-second
+startup failsafe remained armed even after `andre` had published a healthy
+QuickShell session, so systemd recovered it at exactly two minutes. The runner
+now treats the failsafe as startup-only. It disarms only after a root-owned,
+bounded active descriptor matches the trusted registration's logical name,
+graphical-base role, v2 release, running state, generation, generation-derived
+outer unit and positive compositor PID. If that evidence never appears, the
+original 120-second recovery remains armed. Installed/source runner hashes
+match and the full suite passes 1022 tests with 11 skips.
+
+The sudo report from the same trial is also confirmed. Fresh v2 graphical
+accounts have `apx:!` until the owner chooses a password local to that
+Environment. Sudo policy and wheel membership were correct, but PAM cannot
+accept any password while the account is locked. APX must never silently copy
+the Hub credential. The existing secure Host-console enrollment command is
+`apx environment enroll-local-admin <name>` while that graphical Environment
+is running; a native first-run/password-management surface remains an explicit
+product gap.
+
+## Native Environment management panel and loading transition — 2026-08-13
+
+The exact physical Hub now has one compact native QuickShell panel with a
+direct selectable catalogue and aligned **Criar**, **Selecionar**, and
+**Apagar** actions. The old explanatory text, ESC/Host footer, and secondary
+Rofi chooser are removed. Creation is fixed to the reviewed
+`graphical-base`/`hyprland-base-v2` path, which supplies independent storage,
+Hyprland, Rofi, desktop essentials and the common QuickShell without cloning
+the live Hub. Delete is stopped-state and generation bound, requires a second
+explicit confirmation, and can never target Hub.
+
+Create/destroy run asynchronously through a root-owned reservation, typed
+plan/digest, existing journalled APX runtime and read-only progress endpoint.
+Workloads receive only return-to-Hub. A full-screen QuickShell loading overlay
+now hands off to a pre-rendered Host-owned tty1 APX progress page, preventing a
+normal transition from exposing a Host prompt. Hyprland readiness changed from
+a fixed two-second stability delay to two complete 50 ms evidence samples;
+recovery/registration polling is also 50 ms while the original deadlines and
+fail-closed gates remain.
+
+The new QML loaded on the physical Hub in about 0.53 seconds; live catalogue
+and progress reads were accepted and the final visual capture is clean. The
+complete repository passes 1020 tests with 11 skips. No disposable Environment
+was created or destroyed solely for proof, and the current Host-console PTY was
+preserved. Backups are under
+`/var/lib/apx/backups/20260813-environment-menu-management-v1/`; details and
+rollback are in
+`docs/environment-menu-management-and-loading-v1-2026-08-13.md`.
+
+## Owner-selected emergency shortcut — 2026-08-12
+
+The owner inverted the two bindings on 2026-08-13: `Super+E` now opens the
+Environments menu and `Super+M` is the IPC-independent internal Hyprland exit.
+The Hub Control Centre no longer contains “Choose Environment”; it contains a
+Hub-only “Exit to Host” action using the same internal exit dispatcher. The
+central bar button remains the graphical route to the Environments menu.
+
+Environment shell startup no longer sleeps for four seconds unconditionally.
+It waits for two consecutive enabled-monitor observations through Hyprland IPC
+at 50 ms intervals, bounded to two seconds. QuickShell itself was measured at
+about 0.5 seconds to load on the physical Hub; the normal ready path therefore
+removes approximately 3.9 seconds of artificial latency while retaining a
+readiness barrier for the historical portal/layer-shell race.
+
+The owner clarified the complete contract on 2026-08-13. `Super+H` in the
+exact Hub attaches to the one persistent Host-owned PTY; it must never launch
+an Environment-local Codex or a second Host Codex. Closing the graphical
+window only detaches, and reopening it reattaches the same Bash and foreground
+program. Direct process evidence confirmed that the current Codex is the sole
+foreground Codex under `apx-host-console-v1.service`.
+The Hub opener focuses an existing `APX HOST ROOT` window; only when no such
+window exists does it open a client that reattaches to that persistent PTY.
+
+The paragraph above supersedes the earlier E/M assignment: `Super+M` is now
+Hyprland's internal `hl.dsp.exit()` dispatcher and `Super+E` opens the menu.
+
+During this investigation an ad-hoc `machinectl shell apx@apx-hub` diagnostic
+login caused logind to remove the graphical session's `/run/user/1000` after
+that transient login closed. This unlinked the Hyprland and QuickShell sockets.
+Do not create user machinectl login sessions inside an active graphical
+Environment; inspect through its existing PID namespace or root-only paths.
+
+The owner rejected `Super+M` for Environment transitions and selected
+`Super+E` as the memorable, service-independent emergency escape. The normal
+graphical button remains the authenticated Work-to-Hub path, `Super+F` opens
+files, and the later clarification above assigns `Super+M` only to opening the
+menu. Exiting the Work compositor
+lets the Host supervisor clean it and restore Hub; exiting Hub restores the
+basic Host terminal on tty1. `Ctrl+Alt+F1` remains an immediate visual fallback.
+
+The physical system currently has the exact Hub active with one Kitty attached
+to the one persistent Host PTY/Codex. The Host-console broker, Environment
+switch service and Hub graphical unit are active with no failed Host units.
+See `CURRENT_HANDOFF.md` for the latest checkpoint.
+
+## Host-driven repeated Environment return — 2026-08-12
+
+The physical Work return defect is closed. The authenticated Host endpoint now
+stops the exact active workload outer unit asynchronously; the workload client
+does not invoke `hyprctl` and receives no generic stop authority. Peer
+PID/UID/GID mapping, active root-published state, cgroup lineage, trusted
+registration, generation and supervised-handoff lock remain mandatory.
+
+The handoff supervisor releases its own inode-matched lock before waiting for
+the restored Hub, allowing a new Hub-to-workload transition without an old
+runner being able to unlink a newer lock. Boot reconciliation dynamically
+repairs stale running state for all trusted `graphical-base` v2 registrations.
+QuickShell reports refusal text, suppresses repeat requests after acceptance,
+and Host journal entries identify accepted/rejected operations. The owner then
+selected `Super+E` as the executor-independent recovery escape on Hub and
+workloads. `Super+M` opens the menu but performs no direct transition; the file
+manager moved to `Super+F`. The graphical button remains the normal typed
+return path.
+
+Repeated physical Hub → Work → Hub cycles passed, including three additional
+complete cycles at 07:29, 07:30 and 07:31. One restored Hub stayed healthy for
+more than 23 minutes with repeated healthy watchdog results; final cleanup left
+both registrations stopped and no machine, active record or lock.
+The repository passes 1019 tests with 11 expected skips. Installed artifacts
+match source and exact pre-change backups are retained. Generic boot
+reconciliation is installed and unit-tested but awaits the next normal reboot
+for physical evidence. See
+`docs/environment-switch-round-trip-hardening-v2-2026-08-12.md`.
+
+The final owner-facing state after a clean 07:34 exit is Hub and Work stopped,
+tty1 free, the switch service active, no handoff lock and no failed Host units.
+
+The owner-selected `Super+E`/`Super+F` bindings are installed in Hub, Work,
+both reviewed graphical seed formats and the creation runtime. A direct Hub
+compositor exit restored tty1 at 10:10:50. Two attempted direct Work proofs
+were pre-empted by the normal typed button return; physical `Super+E` in Work
+therefore remains pending observation and is not claimed as proven.
+
+## Persistent Host-console attachment staged — 2026-08-12
+
+The owner confirmed that a Hub failure or Environment transition can remove
+the graphical Host-console window while its Host-root Codex remains active and
+retains the conversation writer. The Host-console broker now stages one
+persistent in-memory PTY: client loss detaches rather than terminates it, and a
+later exact authenticated Hub client reattaches to the same Bash/Codex. Output
+is drained into a bounded 1 MiB memory buffer while detached; nothing new is
+persisted to disk. `exit`/Ctrl-D ends the shell, and restarting the broker is
+the recovery/forced-termination path. Single attachment, exact Hub lineage and
+workload exclusion remain enforced.
+
+This is implemented, covered by repository tests and installed byte-for-byte on
+the Host, but cannot be activated by restarting the live broker from the Codex
+session that currently depends on that broker. The graphical round trip is now
+proven; a post-session service restart and proof that the same persistent PTY
+reattaches after that round trip remain required. See
+`docs/exact-hub-confirmed-host-console-v1-2026-08-03.md`.
+
+## Work Environment v1 and contextual switch control — 2026-08-12
+
+The first normal non-Hub graphical Environment now exists. `work` is registered
+as **Work**, category `work`, role `graphical-base`, generation
+`23408376-1cfc-4fe2-aeb9-c4f185c5c9c3`, from sealed release
+`hyprland-base-v2`. Its independent Btrfs root/home are capped at 32/64 GiB.
+The Work image has Firefox plus the base's Rofi, Thunar/GVFS, Flatpak/Flathub,
+notifications, portals, Polkit and removable-media support. Its private home
+contains the normal XDG directories and explicit default associations.
+
+Work keeps the Hub's dark/cyan visual language but has Environment semantics:
+its bar identifies `APX · WORK · VOLTAR AO HUB`, `Super+D` launches Rofi,
+`Super+F` opens Thunar and `Super+B` opens Firefox. The button requests a typed
+return to Hub; `Super+E` directly exits the compositor for recovery and
+`Super+M` only opens the menu; it is not a direct transition shortcut. It does not expose Host console, Host power, coordinated update
+or Environment-management controls. Host `/var/lib/apx` and `/root/.codex`
+remain hidden from its namespace.
+
+The Hub control now identifies `APX · HUB · ENVIRONMENTS` and its menu reports
+catalogue state, session policy and update policy. The switch service serves a
+stable live bridge beneath the root-owned Hub home bridge as well as the
+per-launch socket; peer PID/UID/cgroup/active-identity admission remains
+mandatory. A Hub-namespace proof sees Work in the catalogue. Work's Hyprland
+configuration passes offline parsing. A physical supervised run then kept the
+Work compositor and Waybar active for approximately 42 seconds, exited cleanly
+and launched Hub, proving the Work → Hub round trip.
+
+That physical run closed three incompatible assumptions: official-Hub process
+discovery is now scoped to its systemd unit; the generic launcher supplies the
+current full graphics policy to the shared session; and authenticated return
+requests from a normal Environment no longer require an impossible QuickShell
+parent when Waybar or a Hyprland binding launched the client. Work also exports
+its Wayland variables to D-Bus activation before portal consumers start.
+
+The complete repository regression now passes 1011 tests with 11 expected
+hardware/external-condition skips. Installed runtime, switch service/client,
+session launcher and switch unit match their source versions; Host failed-unit
+count remains zero.
+
+The new Work account is locked pending owner-selected local-password
+enrollment. Password-required sudo policy and wheel membership are present;
+no Hub credential, temporary credential or `NOPASSWD` authority was copied.
+Desktop use does not depend on sudo, but the stopped/first-launch enrollment UX
+is an explicit remaining product gap. Full details are in
+`docs/work-environment-v1-2026-08-12.md`.
+
+## Conversation lock and Environment handoff correction — 2026-08-11
+
+An apparently blocked earlier Codex conversation was traced to a still-running
+Host-root `codex resume` process on tty1. It was waiting at an approval prompt
+after the owner had moved away from that console, so its per-thread writer lock
+was working as designed. The process was terminated gracefully; the recorded
+conversation remains resumable. This also confirms that temporary Host-root
+Codex consoles share `/root/.codex` and are not Environment-local development
+sessions. Normal APX use must place development tooling and its state inside a
+dedicated Development Environment home.
+
+The same inspection caught an incompatible same-day change to the direct-Hub
+boot unit. `Restart=always` would relaunch the boot-owned Hub after the normal
+clean exit used by the Hub-to-workload handoff, racing the handoff supervisor.
+The unit is restored to `Restart=on-failure`: boot failures remain restartable,
+while an intentional clean transition remains under the switch supervisor.
+
+## Emergency boot recovery and normal graphical base v2 — 2026-08-11
+
+The reboot regression is recovered without replacing or restarting the live
+Hub again.  The internal AMD backlight changed from `amdgpu_bl2` to
+`amdgpu_bl1`; the Host power authority now resolves the one backlight attached
+to PCI `0000:05:00.0` on every boot instead of pinning the kernel's transient
+number.  The graphical watchdog now accepts the exact single Hyprlock login
+process before authentication, so it no longer tears down a healthy Hub merely
+because the owner has not typed the password within twenty seconds.  A missing
+optional power socket degrades only those controls rather than blocking the
+desktop. Host Ollama no longer uses a one-shot `ExecCondition`: the service
+creates the ephemeral NVIDIA device nodes before startup, probes the GPU
+without making that instant a permanent gate, and retains Ollama's CPU fallback
+plus bounded restart behavior. This closes the Hybrid-mode runtime-resume race
+that left a healthy mounted SSD with the model permanently off. Host
+failed-unit count is zero.
+
+The current Hub is running at its deliberate login screen on tty2.  Normal
+interactive boot opens no terminal.  Its outer service has CPU quota 600%, CPU
+and I/O weight 200, memory high/max 10/12 GiB and 4096 tasks.  Btrfs qgroup
+accounting is consistent; Hub root is capped at 16 GiB and home at 32 GiB,
+while creation reserves 96 GiB for Host recovery.  The filesystem currently
+has approximately 449 GiB available.
+
+`hyprland-base-v2` is now a sealed read-only 540-package graphical release.
+It contains a valid Arch signing keyring, generated `en_US.UTF-8` and
+`pt_PT.UTF-8` locales, password-required Environment-local sudo, `base-devel`,
+Git, `less`, Kitty, Hyprland/Hyprlock, Quickshell, Thunar/GVFS, notifications,
+keyring, portals, UDisks/Udiskie, Flatpak and the normal desktop utilities.  It
+enables networkd/resolved and the paccache timer and carries the system Flathub
+remote.  A disposable boot proved PID 1, logind, D-Bus, a `systemd --user`
+manager and user bus; another isolated run proved the network stack stays
+without Internet until the Host-side APX egress policy is applied, as designed.
+The creation contract, catalogue, generic launcher and switch service all now
+agree on release/config seed v2.  Existing Hub state is not cloned into new
+Environments.
+
+The live control centre uses scale `1` at the desktop's native 150% output
+scale after the 100% trial was found too small.  Its Adwaita symbolic SVGs go
+directly through Qt `ToolButton.icon`; the texture plus `MultiEffect` resampling
+path is absent.  Final perceived sharpness still needs owner inspection after
+unlock.  BlueZ discovery is real and has observed nearby devices; pairing a
+specific owner-selected device remains the required physical proof.
+
+The complete repository regression passes 1004 tests with 11 hardware/external
+condition skips.  Remaining normal-computer gaps are generic hot-plug and
+owner-approved device routing, a real Bluetooth pair/audio proof, background
+continuity/session restore, mediated cross-Environment file transfer, backup
+UX, accessibility certification and the actual creation UI behind the
+Environments button.  These are the next product milestones, not hidden
+claims of the v2 base.
+
+## Host/Hub daily usability correction — 2026-08-11
+
+The physical pilot's direct Host console remains a fixed Host-root Bash PTY,
+but it now advertises the Host-supported `xterm-256color` terminal profile.
+The earlier `xterm-kitty` value had no matching Host terminfo entry and caused
+ordinary terminal commands such as `clear` to fail. Kitty remains only the
+graphical terminal emulator; this compatibility correction does not change the
+console's authority.
+
+Normal interactive Hub startup no longer opens Kitty automatically. The
+automatic window is retained only by the bounded `--test` certification path,
+where it proves terminal integration. Environment-local sudo remains present,
+password-required and unrestricted inside the Hub; container root stays mapped
+away from Host root. `brave` is not an Arch repository package, so that name
+still cannot be installed directly with pacman even when sudo succeeds.
+
+The owner then reproduced `apx is not in the sudoers file` in the already-open
+Hub session. The account database was correct, but the graphical launcher used
+an explicit supplementary-group list that omitted `wheel`. The session list
+now includes the exact wheel GID, and the password-required policy also names
+`apx` explicitly so the live session is repaired without a restart. This
+remains Environment-local and does not add `NOPASSWD` or any Host authority.
+
+The same running session exposed a separate desktop-origin defect: Hyprland was
+started with working directory `/`, so ordinary Kitty windows inherited the
+root-owned filesystem root instead of `/home/apx`. The shared graphical session
+now changes to `/home/apx` before starting the compositor, covering the Hub and
+future graphical Environments. The live Hub binding also launches Kitty with
+`--directory /home/apx` and was reloaded without restarting owner work.
+
+The live Bluetooth v3 scan was observed with BlueZ `Discovering=yes` and found
+nearby devices. Pair/connect support is implemented, but a real peripheral
+still needs an owner-selected physical pairing proof. The Hub control-centre
+icons now request device-pixel-aligned SVG textures and use 16 logical pixels;
+press feedback was shortened. A first owner-requested 100% physical trial was
+too small and exposed pixelated icon corners. The accepted follow-up is 125%
+physical (`5/6` inside the 150%-scaled desktop), while the bar and other windows
+remain unchanged. Control icons now use Qt's native icon source/color pipeline;
+the hidden texture plus `MultiEffect` post-processing path was removed. This
+was live-reloaded and captured at 1920x1080. Full evidence is in
+`docs/host-hub-usability-investigation-2026-08-11.md`.
+
+The first owner-driven AUR build exposed interactive starvation and package
+freshness gaps. The Hub had no memory or I/O pressure, but recent CPU pressure
+reached 24% over 60 seconds while Go compiled and compressed `yay`; build work
+and the compositor share the Environment's intentional 200% CPU quota. Regular
+Kitty terminals now keep the emulator at normal priority but start their Bash
+workload at nice 10 and idle I/O priority, protecting Hyprland/Quickshell. The
+already-open shell was adjusted live. The failed Brave dependency transaction
+used pacman databases last refreshed on August 1 and requested an `nspr`
+signature no longer present beside the cached package; the safe recovery is a
+full `pacman -Syu`, not disabling signatures or performing a partial refresh.
+`less` is also absent from the current base and is a required next-base package.
+
+The follow-up normal-Linux gap audit found two additional P0 consistency
+blocks. The Hub root and home qgroups have no limits, Btrfs reports quota data
+inconsistent/rescan-needed, and the Environment sees the Host's full 476 GB;
+general Environment creation must not claim storage isolation until accounting
+is healthy and enforced. Inside the running Hub, `systemd-logind` is failed and
+`user@1000.service` is inactive, leaving no normal user service manager. The
+next common base/session must close these gaps plus notifications, secret
+service, portal round trips, locale generation and explicit update policy.
+Details are in
+`docs/environment-consistency-and-normal-linux-gap-audit-2026-08-11.md`.
+
+## Host-local coder on target-bound external SSD — 2026-08-05
+
+The owner explicitly replaced the previously deferred Development-only local
+model plan for the current physical pilot: the exact connected Samsung 870 QVO
+1 TB is now dedicated model storage, while Ollama and Qwen Code run on the Host
+and become available only with that SSD. The old NTFS content was intentionally
+destroyed after exact disk identity, non-use and healthy SMART evidence were
+proved. The SSD is now one TPM2/PCR-7-bound LUKS2 volume containing Btrfs and a
+private `/var/lib/apx/model-store` mount.
+
+An exact-identity udev/systemd adapter validates the physical disk, partition,
+LUKS and filesystem before mounting. It then starts a separate Host Ollama
+service bound to the SSD lifecycle. The API is loopback-only, cloud-disabled
+and configured for a 32K working context; Vulkan detects the 6 GB RTX 3060 via
+NVK. The selected model is `qwen3-coder:30b` because its approximately 19 GB
+artifact fits the 28 GiB system RAM, while the 48.4 GB minimum official
+Qwen3-Coder-Next representation does not. Qwen Code and the guarded
+`apx-local-code` launcher provide the Codex-like terminal workflow with normal
+confirmation, never unrestricted mode.
+
+This is an owner-accepted physical-pilot deviation from Environment-local
+application ownership, not a new general APX architecture rule. The model API
+is not exposed to Hub or workloads. There is deliberately no stored LUKS
+recovery key because only replaceable public artifacts live on the disk; a TPM
+policy loss requires recreating and redownloading the store. Do not hot-unplug
+while the model is active. Exact implementation, remaining physical evidence
+and rollback are in
+`docs/host-local-coder-external-ssd-v1-2026-08-05.md`.
+
+## Lenovo Legion GPU and thermal profiles staged — 2026-08-04
+
+The exact Hub battery menu now has working Quiet, Normal and Performance
+firmware profiles plus AMD-only, Hybrid and NVIDIA GPU policies.  Physical
+discovery proved platform profiles `low-power/balanced/performance`, Hybrid
+Graphics support, and no firmware iGPU-only support on this 82JU.  Accordingly,
+AMD-only is an explicit APX device-exclusion policy while Hybrid and NVIDIA use
+the Lenovo MUX.  GPU changes require a Host-enforced confirmation and reboot;
+the boot launcher now resolves AMD/NVIDIA DRM nodes dynamically.  No GPU change
+or reboot was executed during staging.  See
+`docs/legion-hardware-profiles-v1-2026-08-04.md`.
+
+## Secure Boot, measured UKI and TPM unlock staged — 2026-08-03
+
+The owner selected verified boot plus TPM automatic LUKS unlock to remove the
+remaining pre-boot password. UEFI/TPM2/SHA-256 support is confirmed, and the
+first signed LUKS-only UKI boot passed physically with `Measured UKI: yes` and
+`Measured OS: yes`. LUKS password slot 0 remains intact and no TPM token exists.
+The normal signed image is now `/EFI/APX/apx-system-v1.efi`; the duplicate
+auto-discovered image was archived off the ESP, the normal menu is hidden with
+timeout zero, and the retained verbose entry is named `APX Legacy Recovery
+(LUKS)`. The UKI uses `quiet splash`, while tty1 alone remains the automatic
+recovery console so a tty2 getty cannot interfere with the graphical handoff.
+
+The APX-signed systemd-boot vendor and fallback images verify correctly. The
+owner cleared the firmware keys, enrolled the custom APX keys, corrected the
+PXE-first firmware order and enabled enforcement. Physical Host evidence now
+proves `Secure Boot: enabled (user)`, `Measured UKI: yes`, `Measured OS: yes`,
+current entry `apx-secure-boot-v1.conf` and current stub
+`/EFI/APX/apx-system-v1.efi`. LUKS still has only password slot 0. TPM PCR-7
+unlock is now technically eligible but remains pending until the APX session
+password is explicitly set and the new login gate is proven. See
+`docs/secure-boot-measured-uki-tpm-unlock-v1-2026-08-03.md`.
+
+## APX login, idle lock and clean transition staged — 2026-08-03
+
+The owner selected the Windows-like split where TPM unlocks encrypted storage
+and a normal APX password unlocks the graphical session. The Hub already has
+`hyprlock`, `hypridle` and a password-bearing `apx` account. The owner privately
+set that password, and the installed source-matched Hub runner now adds a
+Hub-matched initial hyprlock, five-minute idle lock and ten-minute DPMS off; it
+deliberately adds no automatic suspend, Host account or display manager. Static
+and isolated parser checks pass. The existing `BLOQUEAR` control must now prove
+the password before the first boot-time activation.
+
+The ugly Host flash was proven to be exactly one tty1 recovery getty, not
+accumulating terminals: one task, 544 KiB live memory and 15 ms CPU at the
+inspection point. The installed boot launcher now clears tty1 before starting
+the Hub without removing that recovery getty or adding a persistent process.
+The next physical boot must prove the clean transition. See
+`docs/apx-login-idle-and-clean-transition-v1-2026-08-03.md`.
+
+## Bluetooth v3 and dynamic Environment identity awaiting relaunch proof — 2026-08-03
+
+Host shared-services v3 now has a closed interactive Bluetooth pairing and
+device-management protocol while v1/v2 remain rollback endpoints.  Pairing is
+Host-global and active-Environment controlled; PIN/passkey material uses only a
+no-echo PTY and socket body.  The service and current Hub UI are installed with
+backups, but the already-running Hub retains the old bind-mounted socket inode
+after service restart.  One clean Hub relaunch, authenticated scan and a real
+owner-selected peripheral proof remain required.  HID hotplug and Bluetooth
+audio data-plane handoff remain separate uncertified work.
+
+The switch endpoint now derives a bounded catalog from trusted Host
+registrations.  Only the authenticated Hub can list/select workloads; each
+active workload receives only its own identity and can only end its compositor
+so the Host supervisor returns to the Hub.  Display name/category have safe
+defaults.  Installed/source hashes match, but the new mount awaits the same Hub
+relaunch and Hub/workload round-trip proof.
+
+Per-Environment application session restore is accepted intended architecture:
+disabled by default, persistently toggled, prompt-per-exit, Environment-local
+manifest and explicit browser/LibreOffice adapters.  It is not implemented or
+certified, and generic process checkpointing is not adopted.  See
+`docs/bluetooth-control-and-cross-environment-handoff-v1-2026-08-03.md` and
+`docs/environment-catalog-identity-and-session-restore-v1-2026-08-03.md`.
+
+## HUB fictício switch trial retired — 2026-08-03
+
+The owner explicitly retired the stopped disposable `hub-ficticio` generation
+`441ed74c-c89f-47ae-8102-1ce3e09e6b47`. The normal digest-bound APX destroy
+flow unpublished it and deleted its independent root and Home subvolumes.
+Postconditions showed only the official Hub in the catalogue and only
+`apx-hub` running. A historical red-shell copy remains solely in the
+root-owned environment-switch backup directory; it is not registered or
+launchable. The trial history remains in
+`docs/hub-ficticio-environment-switch-trial-2026-08-03.md`.
+
+## Direct Hub boot confirmed; graphical LUKS transition active — 2026-08-03
+
+The owner selected direct Hub entry after LUKS rather than a display manager.
+The systemd-boot timeout is now zero while its fixed default and disabled editor
+remain. The owner confirmed that the boot menu/root prompt disappeared and the
+exact Hub launches after encrypted-root unlock. Plymouth `spinner` is installed
+in the rebuilt initramfs so the still-required LUKS secret has a graphical UI.
+Root tty1 remains recovery. No Host user, PAM rule, display manager, TPM token
+or automatic LUKS unlock was added. The owner subsequently proved the signed
+measured UKI; Secure Boot enforcement and TPM unlock remain staged separately.
+The Plymouth screen itself still needs visual capture for aesthetic audit. See
+`docs/direct-hub-boot-v1-architecture-and-pending-result-2026-08-03.md`.
+
+## Exact-Hub direct Host console checkpoint — 2026-08-03
+
+The live official Hub now has one `TERMINAL DO HOST` button backed by the
+separate enabled `apx-host-console-v1` service. A click immediately opens one
+fixed Host-root Bash PTY; the extra phrase/token confirmation was removed at
+the owner's request. The Host still enforces exact official-Hub peer and
+Quickshell ancestry plus a single-console lock. There is no command field or
+network endpoint. The socket is inactive
+`root:root 0600`, leased only by the exact Hub launcher, and explicitly omitted
+from general workload launch.
+
+This is intentionally full Host authority and weakens operational separation
+after the deliberate button click; it cannot make an unrestricted root shell safe.
+The initially proposed return-to-tty button and operation were removed at the
+owner's request. The first Codex TUI appeared black because Kitty's terminal
+dimensions were not forwarded. `TIOCSWINSZ` plus `SIGWINCH` now applies the
+initial size; `stty size` observed `31 100`. Audit/process checks proved both
+user-opened consoles closed and left no Bash/Kitty/client/Codex orphan. See
+`docs/exact-hub-confirmed-host-console-v1-2026-08-03.md`.
+
+## General graphical handoff and Host controls checkpoint — 2026-08-03
+
+The shared graphical path is now implemented for admitted `graphical-base`
+Environments while preserving independent homes, configurations and packages.
+Physical bounded proofs passed for both the Quickshell/Kitty Hub and the
+Waybar/Alacritty `test` Environment, including exact input, ALC287 audio,
+Wi-Fi/Bluetooth, tty1 restoration and zero residue. Host-service/audio/update
+sockets are `root:root 0600` while inactive and are leased only to the translated
+active user; shared services/audio accept the active graphical identity, while
+updates and physical power remain Hub-only.
+
+The live Hub now provides unprivileged BLOQUEAR and Host-mediated SUSPENDER in
+addition to reboot/poweroff. Suspend locks first, respects update/sleep blockers
+and preserves the active Environment. Hibernation and all new recovery work are
+deferred. Creation planning defaults to `follow-host` and supports explicit
+exclusion, but the production graphical creation screen is still unfinished.
+The coordinated preview is ready with no exclusions; no package mutation was
+useful or executed. See
+`docs/general-graphical-handoff-and-host-controls-2026-08-03.md`. The complete
+suite passes 939 tests with 11 skips.
+
+## Host system-power v1 checkpoint — 2026-08-03
+
+The Hub-authored power-actions proposal was accepted and implemented as the
+separate enabled `apx-system-power-v1` Host service. The live exact Hub now has
+functional REINICIAR/DESLIGAR controls with Host-enforced prepare, a random
+30-second single-use confirmation, cancel, blockers and status. There is no
+shell or arbitrary argument surface. Mutations require the existing exact-Hub
+peer proof plus a direct Quickshell parent; tokens travel over stdin/socket and
+are absent from arguments and audit.
+
+Because private user namespaces use dynamic translated IDs, the proposed fixed
+Host group was replaced by a safer session lease: the socket is `root:root
+0600` while inactive, `0660` for only the translated active user, then closed
+again during recovery. Power and updates share a transition lock/reservation.
+The runner rechecks inhibitors/update state, closes the Environment, proves no
+machine remains and only then calls Host logind. The first owner-requested real
+poweroff exposed concurrent recovery by the foreground launcher and power
+runner: one deleted device-lease state while the other still expected it, so
+the Environment closed but Host poweroff correctly failed closed. Recovery is
+now serialized, and the runner first quiesces the one exact root interactive
+Hub supervisor before invoking recovery. Source/installed hashes matched and
+19 focused tests passed at that checkpoint. See
+`docs/system-power-v1-architecture-and-result-2026-08-03.md`. The complete
+suite passes 935 tests with 11 skips.
+
+The subsequent real REINICIAR proof confirmed recovery but exposed that
+`loginctl` on systemd 261 has no reboot/poweroff verbs. Those two terminal
+actions now use target-confirmed `systemctl --no-block reboot/poweroff`;
+suspend remains `loginctl suspend`. The daemon's runner launch is asynchronous
+and a vanished Quickshell client no longer kills the authority. The owner then
+proved a real reboot with a changed boot ID. Installed/source runner hashes
+match, and the current focused secure-boot/power/launcher suite passes 24 tests.
+
+## Coordinated updates and active audio physical checkpoint — 2026-08-03
+
+The physical pilot now has enabled, authenticated Host services for coordinated
+updates and machine-continuous audio state. The exact Hub exposes `[ UPDATE ]`,
+requires a preview and confirmation, uses root-only operation staging, creates
+independent Btrfs rollback snapshots, stops on first failure and never reboots
+automatically. New Environments follow the Host by default; explicit exclusions
+are persisted. Packages, applications, files and PipeWire graphs remain
+separate per Environment.
+
+The exact ALC287 playback and capture nodes are leased only to the translated
+user of the active official Hub. Output/input volume and mute persist in a
+root-owned bounded state, and the live Hub has a one-second microphone activity
+indicator. A bounded physical proof passed authenticated update preview, real
+sink/source publication and complete device revocation, then restored tty1
+with no residue. No mass package mutation was executed, and cross-Environment
+audio still awaits the general graphical launcher plus destructive two-target
+certification. Details are in
+`docs/coordinated-updates-and-audio-physical-result-2026-08-03.md`. The suite
+passes 927 tests with 11 skips.
+
+## Host shared services v3 checkpoint — 2026-08-02
+
+The owner-authored Hub proposal for Host-owned shared services has been
+reconciled and its first v3 slice is installed beside v1/v2. The v3 endpoint
+provides a versioned typed contract, capabilities, structured errors, detailed
+Wi-Fi objects, snapshot, bounded events and safe Wi-Fi operations including a
+new protected-network credential path. The credential travels only through the
+Unix-socket body and a no-echo PTY to iwd; it is absent from arguments, logs and
+temporary files. Mutations are serialized and audit records omit payloads.
+
+The current mutable Quickshell uses a compatibility adapter: Wi-Fi comes from
+v3 and Bluetooth remains on v2. A bounded physical proof passed v3
+authentication, capabilities, snapshot, events, detailed Wi-Fi state,
+Quickshell and the complete existing graphical/recovery ladder. v1/v2 remain
+active rollback boundaries. A real new protected AP and two distinct graphical
+Environments were unavailable, so credential enrollment and A-to-B persistence
+are not yet physically certified. The exact official-Hub peer proof remains the
+authorization boundary until the pending general graphical launcher exists.
+
+Battery, Bluetooth controller and time are exposed read-only in the snapshot.
+Host-global audio is not adopted: the current playback-only Environment-local
+PipeWire boundary remains until capture/privacy and routing are designed.
+Power mutations and Host updates require separate higher-risk services rather
+than inheriting the desktop-status authority. Details and rollback are in
+`docs/host-shared-services-v3-architecture-and-result-2026-08-02.md`.
+
+## Coordinated updates and active-audio decision — 2026-08-03
+
+The owner selected coordinated updates as the default policy. An update
+requested through the authoritative Hub includes the Host and every Environment
+with `follow-host`; new Environments default to that policy and expose a checked
+creation control, while explicit opt-out records `excluded`. Equal coordination
+means one frozen signed repository view and one transaction, not identical
+package sets. Each target resolves its own installed packages, receives an
+independent snapshot and is applied offline. Any running/unsnapshottable target
+or incomplete private staged package set blocks the whole operation; first failure stops the
+transaction and retains rollback sets.
+
+The owner also selected machine-continuous audio settings with exclusive active-
+Environment device authority. Output/input volume, mute and selected devices
+are handed from the outgoing session to the incoming session. Local PipeWire
+graphs remain per-Environment; playback and capture leases must be revoked and
+proven inaccessible before the next Environment receives them. The exact
+physical Hub now admits capture; cross-Environment handoff still requires the
+general graphical launcher and a separate two-Environment proof.
+
+Policy/planning contracts, creation metadata, physical preview/executor services
+and exact-Hub microphone state are installed. Real mass package mutation and
+cross-Environment microphone handoff are not yet certified. See
+`docs/coordinated-updates-and-active-audio-architecture-v1.md`.
+
+## Cross-Environment data and notification boundary — 2026-08-03
+
+The owner rejected a shared reusable package-download cache, shared folders and
+a cross-Environment file portal. Environment files do not cross the boundary
+through an APX convenience mechanism. Package update bytes may exist only in
+root-owned, operation-private coordinator staging that is invisible to every
+Environment and is not reused as a common Environment cache.
+
+Application notifications remain Environment-local by default and are not
+aggregated into a global notification history. An inactive Environment cannot
+continue publishing visible notifications. Host-originated machine alerts such
+as critical battery, thermal/storage failure, update result or required reboot
+remain eligible for a separate Host alert channel because they describe the
+computer rather than an Environment application. Any future exception for
+application notifications requires a new explicit owner decision.
+
 ## Official Hub owner-bootstrap checkpoint — 2026-07-31
+
+## Official Hub health watchdog and shell containment — 2026-08-02
+
+The official Hub interactive path no longer has a fixed four-hour expiry.
+Normal sessions arm an independent Host watchdog whose first check runs after
+60 seconds and repeats every 30 seconds. It validates the exact registration,
+active-session record, outer/machine/inner units, Hyprland process and socket,
+`eDP-2`, and admitted keyboards. One or two consecutive unhealthy observations
+are degraded; the third invokes exact recovery. Healthy observations clear the
+failure counter, while an already stopped session is inactive. The bounded
+certification path retains its independent 75-second expiry.
+
+A physical interactive run produced seven consecutive healthy watchdog results
+before normal owner exit, then restored tty1 with no machine or runtime
+residue. The watchdog recovery sandbox now permits the exact seatd socket write
+needed to unlink it while retaining `ProtectSystem=strict`.
+The complete repository suite passes 905 tests with 11 skips.
+
+Quickshell failures observed in older sessions were separate from the
+four-hour session expiry and included Qt Wayland/Core crashes. The live mutable
+Hub's runner now prevents duplicate instances, preserves rotating verbose logs
+and exit status in the Hub Home, and falls back to Waybar. The owner's live QML
+was not overwritten and Quickshell remains an unpromoted Hub-only trial. See
+`docs/official-hub-health-watchdog-and-shell-stability-2026-08-02.md`.
+
+## Official Hub private-users local-admin checkpoint — 2026-08-02
+
+The exact-generation official Hub graphical bridge now combines a dynamic
+65,536-ID private user namespace, idmapped Home and functional
+password-required Environment-local sudo. Container root maps to a high Host
+UID/GID and the authenticated Host services continue to accept only translated
+container UID/GID 1000, rejecting Environment root.
+
+Host `seatd` provides the admitted AMD primary DRM/input/tty descriptors. The
+remaining exact GPU and playback-audio nodes use ephemeral private character
+nodes under `/dev/apx-official-hub-device-leases-v1`, individual binds and an
+outer `DevicePolicy=closed` catalogue. `/run` was rejected as a proxy location
+because its `nodev` mount flag caused the observed Mesa permission failure.
+All proxy state is removed during recovery.
+
+A bounded physical certification passed Hyprland/eDP-2, both keyboards, ELAN
+input, Quickshell, Kitty, local playback, authenticated Host menus, AMD display,
+NVIDIA NVK offload, `private_users=true` and `local_admin=true`, then restored
+tty1 with no machine or unit residue. The temporary exact sudoers proof was
+removed. Bluetooth certification now preserves its initial power state; it was
+on before and after the final proof. Diagnostic `strace` and `libunwind` were
+removed while signed Host `seatd` remains. The complete repository suite passes
+902 tests with 11 skips. Details are in
+`docs/official-hub-private-users-local-admin-result-2026-08-02.md`.
+
+This is still a target-bound, exact-generation physical-pilot adapter. It does
+not yet establish the general graphical Environment launcher or production
+device mediation.
+
+A later owner entry proved that an auxiliary AMD-open preflight was not an
+authoritative readiness check: it ran in a separate transient inner service
+whose device context could be denied even when repeated real compositor proofs
+passed. It is removed. The bounded Hyprland renderer/socket/eDP-2/input
+readiness remains the fail-closed authority and still triggers full recovery
+on failure; the device catalogue is unchanged.
+
+The corrected launcher passed the full certification and the real interactive
+path reached the Hyprland socket before controlled Host recovery. Its
+installed/source SHA-256 is
+`7cb78f591254980248ffc48ef1d35caacbe849b860bab2d4186d4c319ce1ef7f`.
+
+## Quickshell ASCII trial and temporary Hub Codex — 2026-08-01
+
+The live mutable Hub now starts the first `config/quickshell-ascii-v1` shell:
+ASCII/monospace bar, cyan accents, slightly rounded compact popovers, outside-
+click dismissal and scrollable Wi-Fi/Bluetooth/audio/battery content. The
+existing typed Host service clients and Environment-local PipeWire controls
+remain the authority; Quickshell does not bypass them. Waybar remains installed
+as automatic fallback. This is intentionally a Hub-only visual trial and is
+not yet the common graphical seed or an immutable release change.
+
+At the owner's explicit request, Codex CLI 0.146.0 plus its Node/npm runtime is
+temporarily installed under the Hub user `apx`; its PATH is local to that user.
+No Host/root credentials were copied and the user must run `codex login` in the
+Hub. This tooling is not in `desktop-essential-v1` or any Environment template.
+The complete result and physical proof are in
+`docs/quickshell-ascii-v1-and-hub-codex-result-2026-08-01.md`.
+
+## Host-owned desktop services checkpoint — 2026-08-01
+
+The later context-menu/NVIDIA checkpoint is documented in
+`docs/desktop-context-menus-v2-and-nvidia-result-2026-08-01.md`.
+`apx-host-services-v2` is installed beside v1 and the official Hub now opens
+ASCII menus for Wi-Fi, Bluetooth, local audio and battery. Host mutations are
+closed to known iwd networks, explicit Bluetooth power state, and already
+paired BlueZ addresses. New secrets and pairing are not exposed. Audio output
+selection remains Environment-local; battery power modes remain unavailable.
+
+The Host's existing nouveau driver remains kernel owner of the RTX 3060. The
+official Hub launcher now leases only its exact render node, while AMD still
+owns the display. Signed Hub-local NVK userspace passed a physical
+`DRI_PRIME=1!` Vulkan proof identifying the RTX 3060. The common Waybar seed
+contains the menu bindings, but normal graphical Environments cannot yet use
+Host controls or NVIDIA: their admitted general graphical launcher and a new
+reproduced immutable base release remain pending. `hyprland-base-v1` was not
+mutated.
+
+The interactive launcher was subsequently corrected after an owner launch
+exposed that it was incorrectly running the `--test` Bluetooth/Wi-Fi/NVIDIA
+certification path during normal entry. Mutating proof routines are now
+strictly test-only. A real interactive run remained active for 1 minute 54
+seconds and recovered to tty1; final Bluetooth was off with no machine or
+failed-unit residue. The failure message was a launcher-mode bug, not a BlueZ
+service failure.
+
+The owner confirmed that hardware-global essentials belong below Environments
+on the Host. `apx-host-services-v1` is now implemented, installed, enabled and
+physically verified. The complete architecture and evidence are in
+`docs/host-services-v1-architecture-and-result-2026-08-01.md`.
+
+The Host preserves its existing `iwd` Wi-Fi backend; NetworkManager was not
+installed. Host `systemd-timesyncd` is enabled and synchronized. Signed BlueZ
+5.87-2 and bluez-utils 5.87-2 are installed with `bluetooth.service` enabled;
+the final controller state is powered off. No corresponding hardware-owner
+daemon is enabled inside Environments.
+
+The first socket protocol provides sanitized status and one fixed mutating
+operation, `bluetooth-toggle`. It authenticates the exact active official Hub
+by root-owned active state, registration, UID, cgroup and compositor identity.
+The common Waybar seed now displays Host Wi-Fi, Bluetooth and NTP state through
+the fixed client. A click on Bluetooth invokes only the typed toggle. The
+bounded physical proof verified Host services, iwd, NTP, BlueZ, a Bluetooth
+on/off round trip, Waybar, audio, graphics/input, tty1 recovery and zero machine
+residue. Wi-Fi switching, new credentials, Bluetooth discovery/pairing and
+future workload-launcher authorization remain separate pending protocols.
+
+The owner has now selected `desktop-essential-v1` as the common minimum for the
+Hub and all newly created graphical Environments. It is installed as a
+root-owned, digest-bound Host profile and `waybar-ascii-v1` seed. The creation
+runtime copies it independently after the immutable release seed and before
+publishing registration; it does not clone the mutable Hub. Automatic physical
+creation was proved with stopped `codex-test-essential-v1`, generation
+`7ba06c0e-e7fe-4bb4-abcf-3d7ae5682c35`, whose Waybar files exactly match the
+Host seed without a manual overlay. The detailed result is
+`docs/desktop-essential-v1-physical-result-2026-07-31.md`.
+
+The essential local package baseline is already present in the current Hub and
+graphical base: IP inspection tools, complete local playback audio, timezone
+data, and Waybar. `pavucontrol` remains an optional advanced local interface
+and is present in the Hub. Physical Wi-Fi, kernel time/NTP, and Bluetooth remain
+Host-owned. Network status works through private `host0`; Bluetooth now has
+authenticated Host status/power mediation, while pairing remains pending. No competing
+NetworkManager, BlueZ daemon, or time synchronizer is enabled in Environments
+by the profile.
+
+The complete repository suite now passes 897 tests with 11 skips.
+
+The later Waybar/audio checkpoint is recorded in
+`docs/waybar-ascii-v1-physical-result-2026-07-31.md`. The authoritative Hub
+now has the owner-approved ASCII Waybar profile and Hyprland autostart. Its
+exact-generation launcher physically verified Environment-local playback
+audio and Waybar readiness while excluding capture. Network status truthfully
+represents private `host0`, not ownership of Host Wi-Fi. Bluetooth was blocked
+at that earlier checkpoint and is superseded by the 2026-08-01 Host service.
+
+A reviewed `config/waybar-ascii-v1` source profile now defines the common Hub
+and normal-Environment appearance; only the normal profile adds the workspace
+selector immediately after the date. Disposable stopped Environment
+`codex-test-waybar-v1`, generation
+`1df14250-c628-49d4-961e-44ad22fd67a4`, was independently created from
+immutable `hyprland-base-v1` and received its own copy. The profile is not yet
+an admitted replacement release, and the APX visual button is not functional:
+the installed graphical executor prototype is bound to superseded generations
+and the official Hub lacks the matching typed client/session bundle. The
+earlier Waybar-only checkpoint passed 872 tests with 11 skips; the newer
+desktop-essential checkpoint above supersedes that count.
 
 The current authoritative physical details and operator commands are recorded
 in `docs/official-hub-owner-hyprland-checkpoint-2026-07-31.md`.
@@ -36,12 +922,13 @@ confirmed two interactive sessions worked. Earlier ambiguous keyboard results
 and the older official-Hub physical-launch block are superseded for this
 bridge; they remain historical evidence for the abandoned prototype path.
 
-The current `Super+M` exit-to-Host binding, `Ctrl+Alt+F1` visual recovery, and
-four-hour watchdog are development safety mechanisms, not intended normal
-product UX. The owner explicitly requires the final normal Hub desktop not to
-offer a return-to-Host shortcut. Protected Host recovery remains an
-architectural requirement. Do not remove the proven temporary exit until final
-boot/session ownership and separate administrative recovery are implemented.
+The historical `Super+M` exit-to-Host binding, `Ctrl+Alt+F1` visual recovery, and
+health-based watchdog are development safety mechanisms, not intended normal
+product UX. The fixed four-hour expiry was removed on 2026-08-02. The owner
+explicitly requires the final normal Hub desktop not to
+offer a return-to-Host shortcut. That decision was superseded on 2026-08-12 by
+the owner's explicit selection of `Super+E` as a retained recovery escape.
+Protected Host recovery remains an architectural requirement.
 
 The owner can now evolve Hyprland independently inside the Hub. APX work must
 not overwrite the live owner configuration or turn that mutable Hub into an
@@ -340,7 +1227,8 @@ normal Environments, including the Hub. Each Environment receives an
 independent copy-on-create configuration and Environment-local unrestricted
 `sudo pacman`; the Hub starter remains minimal by choice rather than package
 allowlisting. Essential defaults are mediated AMD display/GPU, keyboard,
-touchpad, outbound network, audio, notifications, and portals. Camera,
+touchpad, outbound network, and audio. Application notifications remain local
+to the active Environment and no cross-Environment file portal exists. Camera,
 microphone, controllers, and removable storage remain opt-in. Waybar with an
 APX switch/return control is part of every starter.
 
@@ -2297,3 +3185,133 @@ Hub and its Hyprland/Waybar/Eww/Rofi/Alacritty ricing personally, after which
 APX controls will be integrated. A reviewed visual base may be extracted into
 independent copies for workload Environments; the mutable live Hub must never
 be used directly as their template.
+
+The accepted shared-network boundary now includes captive-portal detection.
+The Host remains the only Wi-Fi authority and classifies connectivity using
+validated RFC 8910/8908 data announced through DHCPv4, DHCPv6 or IPv6 Router
+Advertisements, plus a bounded HTTP fallback. It never contains or
+launches a browser. Only the exact authenticated active Environment may request
+the Host-selected portal URL. The current Hub implements that interaction with
+a single-purpose ephemeral WebKit window: no general browser desktop entry,
+profile, history or Host web stack is introduced. Portal form data and cookies
+remain inside that temporary Environment process and are deleted when it
+closes. This is an accepted Hub-local management dependency, not a shared
+package or an exception to per-Environment package separation. Physical result
+and remaining limitations are recorded in
+`docs/host-wifi-captive-portal-v1-physical-result-2026-08-03.md`.
+
+## Lenovo hardware profiles — 2026-08-04
+
+The physical Legion 5 15ACH6H (`82JU`) exposes Lenovo Hybrid Graphics support
+but no firmware iGPU-only mode. The Hub battery menu therefore exposes exactly
+two GPU modes, `HÍBRIDO` and `NVIDIA`, plus immediate `SILENCIOSO`, `NORMAL`,
+and `PERFORMANCE` platform profiles. The earlier APX-only AMD button was
+removed. GPU changes remain Host-confirmed and require reboot.
+
+The initial Host rejection was an activation mismatch: the live QML had the
+new commands while `apx-system-power-v1` still ran its old process. The updated
+daemon is now active. Because the running nspawn retained the dead file-bind
+socket after service restart, the same authenticated authority also listens on
+a root-owned idmapped live bridge for this Hub session; mutations still require
+a direct Quickshell child and a single-use confirmation. Physical readback is
+`balanced`, Hybrid Mode `1`, and iGPU-only support `0`. No GPU mode or reboot
+was performed. The focused hardware, contract, launcher, and QML tests pass.
+
+The initial profile UI was subsequently corrected to restore the complete
+06:56 Quickshell baseline rather than the stale reduced source used on the
+first attempt. The restored live shell retains calendar behavior, control-centre
+microphone/volume controls, popup dismissal, and animations, while adding only
+the Lenovo battery-menu integration and current authenticated power transport.
+
+The complete control centre now also has target-bound brightness controls. The
+screen slider writes only the exact internal `amdgpu_bl2` backlight at 5–100%
+and applies continuously throttled changes without interrupting the drag; F5/F6
+use the same operation. A compact keyboard-light icon before the slider cycles
+the exact LED levels 0/1/2 like Fn+Space and replaces the removed full-width
+status button. Its dim, cyan, and cyan-filled/white-icon appearances expose
+off, intermediate, and maximum. Hardware status continues to observe both
+values. Microphone mute is now confirmed from the Hub session's own PipeWire
+source rather than being overwritten every second by an unavailable Host input
+name. F1–F4 call Quickshell first for immediate visual feedback and then apply
+the expected PipeWire controls. F10 toggles the exact ELAN
+touchpad, PrintScreen saves a `grim` capture under `Pictures/Screenshots`, and
+F8 remains available to the firmware/kernel RFKill mechanism. Focused tests
+pass and Quickshell reloaded cleanly.
+F5/F6 use a Quickshell-owned exact-input bridge because neither the brightness
+keysym nor raw Hyprland bindings received this Legion's events. The bridge
+opens only the already-admitted ITE and AT internal keyboards, accepts ITE
+brightness codes 224/225 or the Legion F5/F6 fallback 63/64, and invokes the
+same shell methods as the slider so the visible state and panel change together.
+
+## External local-model SSD safe control — 2026-08-05
+
+The exact Samsung model store now mounts read-only for inference, while its
+unmounted Host path is root-owned mode `000`. An authenticated official-Hub
+controller exposes only status, activate and confirmed safe-detach. Safe detach
+was proved to stop Ollama, unmount Btrfs and close LUKS; activation restored the
+same TPM-bound volume and model. The live QML has an `IA ON`/`SSD OK` button.
+Its authenticated root-owned live bridge is operational in the current Hub,
+while later launches use the normal leased `/run` socket binding. The popup
+has independent model start/stop and SSD mount/safe-unmount buttons; manual
+mount leaves the model stopped, while physical reinsertion preserves auto-start.
+
+## Hub control-centre dismissal — 2026-08-13
+
+Calendar, Control Centre, IA, Battery and Environments use anchored
+`PopupWindow` surfaces below their invoking top-bar buttons. Clicking anywhere
+outside dismisses the active menu; Escape and pressing the same top-bar button
+also close it. This restores the established Hub interaction and is active in
+the current Hub.
+
+Menu keyboard access is `SUPER+A` for Control Centre, `SUPER+D` for Calendar,
+`SUPER+I` for the Hub-only IA/model menu, and `SUPER+B` for Battery. Each key is
+a toggle and uses the same QuickShell action as its top-bar button. The former
+browser shortcut moved to `SUPER+SHIFT+B`; application launch remains
+`SUPER+R`.
+
+Host-console reattachment now has a bounded terminal-state replay in addition
+to its persistent PTY. A new Kitty window is reset, receives the retained PTY
+stream, and triggers a foreground resize/redraw, preventing the former mostly
+black screen with only newly changed characters. Activation is deliberately
+deferred until the current persistent console finishes so its Codex process is
+not terminated mid-conversation.
+
+## Environment creation interaction — 2026-08-13
+
+The official Hub's Environment catalogue and creation form have explicit
+keyboard navigation without an implicit initial focus. Opening either view
+leaves every row/control unfocused; creation additionally collapses every
+capability group. The first arrow key establishes focus and subsequent arrows,
+Enter, Tab/Shift+Tab and Escape provide full traversal and activation. This
+focus state is deliberately separate from creation values: Intermediate still
+preselects the reviewed recommended capabilities by default.
+
+Environment deletion accepts an exact duplicate destroy request only when the
+recorded prior destroy for the same name and generation is complete and its
+filesystem target is absent. This prevents a stale UI event from turning a
+successful deletion into a visible failure without weakening generation or
+registration checks for other requests.
+
+Creation-form arrow navigation follows the visual grid: horizontal arrows
+remain within the three-profile row or a two-column module row, while vertical
+arrows move to the control above or below. A creation failure may leave partial
+Btrfs root/home subvolumes deliberately preserved as uncertain. When a user
+retries the exact name, the Host may automatically invoke the existing
+journal-gated unpublished-recovery operation; it proceeds only if the target
+has no registration, is not running and matches an uncertain create/restore
+operation. Otherwise the existing-name refusal is retained.
+
+Password inheritance supports both stopped UID-0 roots and a running Hub whose
+on-disk ownership is shifted by `systemd-nspawn --private-users=pick`. Trust is
+anchored at the Host-root-owned Environment container; the Environment root,
+`etc`, and regular mode-0600 `shadow` must have one consistent root owner.
+Bounded no-follow descriptors prevent path replacement while reading or
+rewriting only the `apx` password field.
+
+Physical alternate-root package installation uses pacman 7's explicit
+`--disable-sandbox` downloader option because the Host `alpm` user cannot
+traverse the private mode-0700 Environment directory. Package state and files
+remain scoped by the Environment-specific `--root` and `--dbpath`; repository
+signature verification remains enabled. This is a deliberate constrained
+exception for creation-time installation, not permission for Environment
+package operations to reach another root.

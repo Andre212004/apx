@@ -10,7 +10,8 @@ class HyprlandH0ConfigTests(unittest.TestCase):
         source = CONFIG.read_text()
         self.assertIn("monitor = eDP-2, preferred, auto, 1", source)
         self.assertIn("kb_layout = pt", source)
-        self.assertIn("bind = SUPER SHIFT, E, exit", source)
+        self.assertIn("bind = SUPER, M, exit", source)
+        self.assertIn("bind = SUPER SHIFT, M, exit", source)
 
     def test_config_has_no_program_network_audio_or_host_integration(self) -> None:
         source = CONFIG.read_text()

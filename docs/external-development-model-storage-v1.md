@@ -1,8 +1,10 @@
 # APX External Development Model Storage v1
 
-Status: repository proposal for review. No external disk, partition, encryption
-container, filesystem, mount, bind, service, model relocation, or runtime change
-is implemented or authorized by this document.
+Status: historical Development-local proposal, superseded for the current
+physical pilot by the owner's explicit 2026-08-05 Host-local decision and the
+implemented result in `host-local-coder-external-ssd-v1-2026-08-05.md`. The pure
+contracts in this document remain useful, but its statement that no disk or
+runtime change exists is no longer current.
 
 ## Purpose
 

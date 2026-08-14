@@ -28,7 +28,9 @@ class HyprlandBaseReleaseTests(unittest.TestCase):
         for package in (
             "hyprland", "waybar", "foot", "fuzzel", "pipewire", "wireplumber",
             "xdg-desktop-portal-hyprland", "mesa", "vulkan-radeon", "gtk4",
-            "libadwaita", "python-gobject", "sudo",
+            "nvidia-utils", "egl-gbm",
+            "libadwaita", "python-gobject", "sudo", "thunar", "flatpak",
+            "gnome-keyring", "udisks2", "hyprpolkitagent",
         ):
             self.assertIn(package, subject.PACKAGE_SEEDS)
 

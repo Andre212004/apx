@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+if (( $# == 0 )); then
+    exit 2
+fi
+
+exec /usr/bin/setsid --fork --wait "$@" </dev/null >/dev/null 2>&1

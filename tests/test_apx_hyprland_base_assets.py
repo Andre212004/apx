@@ -19,7 +19,9 @@ class HyprlandBaseAssetTests(unittest.TestCase):
             "kb_layout = pt", "/usr/bin/waybar", "/usr/bin/mako",
             "/usr/bin/alacritty", "/usr/bin/rofi", "/usr/bin/fastfetch",
             "/usr/bin/apx-hub --switcher",
-            "bind = SUPER SHIFT, E, exit",
+            "bind = SUPER, M, exit",
+            "bind = SUPER, F, exec, /usr/bin/thunar",
+            "bind = SUPER SHIFT, M, exit",
         ):
             self.assertIn(required, source)
         for forbidden in ("sudo", "pacman", "/dev/", "/var/lib/apx", "curl", "wget"):

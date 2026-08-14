@@ -1,0 +1,59 @@
+* {
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+window#waybar {
+  background: rgba(10, 10, 10, 0.92);
+  color: #e6e6e6;
+}
+
+#clock {
+  padding: 0 14px;
+}
+
+#workspaces button {
+  min-width: 0;
+  padding: 0 4px;
+  background: transparent;
+  color: #aaaaaa;
+}
+
+#workspaces button.active {
+  background: #e6e6e6;
+  color: #101010;
+}
+
+#workspaces button:hover {
+  background: #aaaaaa;
+  color: #101010;
+}
+
+#custom-apx-environments {
+  padding: 0 18px;
+}
+
+#custom-apx-environments:hover {
+  background: #e6e6e6;
+  color: #101010;
+}
+
+#pulseaudio,
+#custom-apx-network,
+#custom-apx-bluetooth,
+#custom-apx-time,
+#battery {
+  padding: 0 8px;
+}
+
+#pulseaudio.muted,
+#custom-apx-network.disconnected,
+#custom-apx-bluetooth.locked,
+#custom-apx-time.unsynchronized,
+#battery.critical {
+  color: #aaaaaa;
+}

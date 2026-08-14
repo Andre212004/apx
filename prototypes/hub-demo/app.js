@@ -177,9 +177,12 @@ createForm.addEventListener("submit", (event) => {
   const data = new FormData(createForm);
   const selectedTemplate = data.get("template");
   const name = document.querySelector("#environment-name").value.trim();
+  const followsHostUpdates = data.get("followHostUpdates") === "on";
   if (!name) return;
   const iconName = selectedTemplate === "Jogos" ? "games" : selectedTemplate === "Desenvolvimento" ? "development" : "university";
-  environments.push({ id: `demo-${Date.now()}`, name, icon: iconName, detail: `Modelo ${selectedTemplate}`, state: "ready" });
+  environments.push({ id: `demo-${Date.now()}`, name, icon: iconName,
+    detail: `Modelo ${selectedTemplate} · updates ${followsHostUpdates ? "coordenados" : "excluídos"}`,
+    state: "ready", followsHostUpdates });
   createDialog.close();
   renderSwitcher();
   renderManagement();

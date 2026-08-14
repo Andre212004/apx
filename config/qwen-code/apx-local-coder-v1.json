@@ -1,0 +1,41 @@
+{
+  "$version": 4,
+  "env": {
+    "OLLAMA_API_KEY": "ollama"
+  },
+  "general": {
+    "enableAutoUpdate": false
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "modelProviders": {
+    "openai": [
+      {
+        "id": "qwen2.5-coder:3b",
+        "name": "APX Local Coder — Qwen2.5-Coder 3B Fast",
+        "description": "Local coding agent served by Ollama from the target-bound APX external SSD",
+        "envKey": "OLLAMA_API_KEY",
+        "baseUrl": "http://127.0.0.1:11434/v1",
+        "generationConfig": {
+          "timeout": 600000,
+          "maxRetries": 1,
+          "contextWindowSize": 8192,
+          "samplingParams": {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "max_tokens": 4096
+          }
+        }
+      }
+    ]
+  },
+  "security": {
+    "auth": {
+      "selectedType": "openai"
+    }
+  },
+  "model": {
+    "name": "qwen2.5-coder:3b"
+  }
+}

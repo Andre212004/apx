@@ -92,7 +92,10 @@ Installed Host assets:
 - `/var/lib/apx/official-hub-v1/apx-official-hub-session-v1.sh`;
 - `/usr/local/bin/entrar_no_HUB`.
 
-The interactive watchdog is four hours. The bounded test mode is 75 seconds.
+Historical note: this checkpoint used a four-hour interactive expiry. It was
+replaced on 2026-08-02 by the health watchdog documented in
+`official-hub-health-watchdog-and-shell-stability-2026-08-02.md`. The bounded
+test mode remains 75 seconds.
 `Ctrl+Alt+F1` remains a visual emergency route to the Host, and cleanup selects
 `tty1`, stops exact temporary units, removes Hub network policy, and records the
 Hub stopped.

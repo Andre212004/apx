@@ -23,9 +23,14 @@ class RuntimeQuotaTests(unittest.TestCase):
         self.assertEqual(runtime.RELEASE_IDS["hub"], "hub-headless-v4")
         self.assertIn("hub", runtime.HEADLESS_START_ROLES)
 
-    def test_storage_is_flexible_with_a_global_host_reserve(self) -> None:
-        self.assertEqual(runtime.STORAGE_POLICY, "shared-flexible-pool-with-host-reserve")
-        self.assertEqual(runtime.HOST_STORAGE_RESERVE_BYTES, 32 * 1024**3)
+    def test_storage_is_bounded_with_a_global_host_reserve(self) -> None:
+        self.assertEqual(runtime.STORAGE_POLICY, "bounded-environments-with-protected-host-reserve")
+        self.assertEqual(runtime.HOST_STORAGE_RESERVE_BYTES, 96 * 1024**3)
+        self.assertEqual(runtime.ENVIRONMENT_STORAGE_LIMITS["hub"], ("16G", "32G"))
+        self.assertEqual(runtime.ENVIRONMENT_STORAGE_LIMITS["development"], ("32G", "64G"))
+        self.assertEqual(runtime.ENVIRONMENT_RUNTIME_LIMITS["development"], (
+            "600%", "10G", "12G", "4096",
+        ))
 
     def test_hyprland_role_maps_only_to_promoted_release(self) -> None:
         self.assertEqual(runtime.RELEASE_IDS["graphical-h0"], "hyprland-h0-v1")
@@ -34,6 +39,7 @@ class RuntimeQuotaTests(unittest.TestCase):
 
     def test_every_creation_populates_the_fixed_internal_home(self) -> None:
         source = RUNTIME_PATH.read_text()
+        self.assertIn("home.chmod(0o755)", source)
         self.assertIn('user_home = home / "apx"', source)
         self.assertIn('user_home.mkdir(mode=0o700)', source)
         self.assertIn('os.chown(user_home, 1000, 1000)', source)
@@ -48,8 +54,9 @@ class RuntimeQuotaTests(unittest.TestCase):
         self.assertIn("password enrollment did not complete", source)
         self.assertIn('password not in {"L", "P", "NP"}', source)
         self.assertIn("without trusting machinectl's exit status", source)
-        self.assertIn("local administrator enrollment is fixed to the canonical headless Hub", source)
+        self.assertIn("start the graphical Environment before enrolling its local administrator", source)
         self.assertIn("%wheel ALL=(ALL:ALL) ALL", source)
+        self.assertIn("apx ALL=(ALL:ALL) ALL", source)
         self.assertNotIn("NOPASSWD", source)
 
     def test_terminal_boundary_is_explicit_on_entry_and_return_to_host(self) -> None:
@@ -63,10 +70,10 @@ class RuntimeQuotaTests(unittest.TestCase):
 
     def test_future_graphical_roles_map_to_one_base_and_cannot_headless_start(self) -> None:
         for role in ("graphical-base", "hub-graphical"):
-            self.assertEqual(runtime.RELEASE_IDS[role], "hyprland-base-v1")
+            self.assertEqual(runtime.RELEASE_IDS[role], "hyprland-base-v2")
             self.assertNotIn(role, runtime.HEADLESS_START_ROLES)
         source = RUNTIME_PATH.read_text()
-        self.assertIn('root / "usr/share/apx/config-seeds/hyprland-minimal-v1"', source)
+        self.assertIn('root / "usr/share/apx/config-seeds/hyprland-minimal-v2"', source)
         self.assertIn("copy_graphical_config_seed(seed, destination)", source)
 
     def test_graphical_seed_copy_is_exact_and_rejects_tampering(self) -> None:
@@ -113,14 +120,24 @@ class RuntimeQuotaTests(unittest.TestCase):
             with self.assertRaisesRegex(runtime.Refusal, "regular file"):
                 runtime.copy_graphical_config_seed(seed, base / "destination")
 
-    def test_shared_reserve_refuses_new_growth_below_32_gib(self) -> None:
-        enough = type("Stats", (), {"f_bavail": 33, "f_frsize": 1024**3})()
-        low = type("Stats", (), {"f_bavail": 31, "f_frsize": 1024**3})()
+    def test_shared_reserve_refuses_new_growth_below_96_gib(self) -> None:
+        enough = type("Stats", (), {"f_bavail": 97, "f_frsize": 1024**3})()
+        low = type("Stats", (), {"f_bavail": 95, "f_frsize": 1024**3})()
         with patch.object(runtime.os, "statvfs", return_value=enough):
             runtime.verify_shared_storage_reserve()
         with patch.object(runtime.os, "statvfs", return_value=low):
             with self.assertRaisesRegex(runtime.Refusal, "protected Host reserve"):
                 runtime.verify_shared_storage_reserve()
+
+    def test_subvolume_limits_bound_referenced_and_exclusive_growth(self) -> None:
+        with patch.object(runtime, "run") as run:
+            runtime.apply_subvolume_storage_limit(Path("/environment/root"), "32G")
+        self.assertEqual(run.call_args_list[0].args[0], [
+            "btrfs", "qgroup", "limit", "32G", "/environment/root",
+        ])
+        self.assertEqual(run.call_args_list[1].args[0], [
+            "btrfs", "qgroup", "limit", "-e", "32G", "/environment/root",
+        ])
 
     def test_generic_start_refuses_graphical_role_before_any_effect(self) -> None:
         with patch.object(runtime, "require_root"), \

@@ -1,0 +1,1 @@
+rd.luks.name=3ad5fc06-c4eb-4bb2-936b-f75eff3bc1c4=cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw quiet splash

@@ -143,6 +143,15 @@ changes essential capabilities as part of the policy update.
 
 ## Packages and customization
 
+The owner-selected common essential desktop profile is now
+`desktop-essential-v1`, with presentation in `waybar-ascii-v1`. The installed
+Host runtime validates and independently copies this profile during every new
+`graphical-base` or `hub-graphical` creation. Audio controls are local to the
+Environment. Network and system time remain Host-owned, while Bluetooth is
+visibly locked until an exclusive mediator exists. Installing NetworkManager,
+BlueZ, or a time synchronizer inside every Environment is not used as a
+substitute for hardware mediation and could create competing ownership.
+
 The internal user has `sudo pacman` for its own writable Environment root. No
 package allowlist is imposed on the Hub or workloads. The security boundary is
 that package hooks, databases, caches, services, and files cannot access the

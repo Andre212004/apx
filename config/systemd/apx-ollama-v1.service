@@ -1,0 +1,47 @@
+[Unit]
+Description=APX Host-local Ollama coding model
+Requires=apx-model-store-v1.service
+After=apx-model-store-v1.service network.target systemd-modules-load.service
+PartOf=apx-model-store-v1.service
+
+[Service]
+Type=simple
+User=ollama
+Group=ollama
+WorkingDirectory=/var/lib/ollama
+# nvidia-modprobe is normally reached through its setuid bit. NoNewPrivileges
+# intentionally blocks that path for the ollama user, so create the ephemeral
+# NVIDIA character devices in a narrowly privileged pre-start command. GPU
+# readiness must never prevent the local model from starting: Ollama retains
+# its CPU fallback when the discrete GPU is genuinely unavailable.
+ExecStartPre=-+/usr/bin/nvidia-modprobe -c0 -u
+ExecStartPre=-/usr/bin/nvidia-smi --query-gpu=name --format=csv,noheader
+ExecStart=/usr/bin/ollama serve
+ExecStartPost=/usr/lib/apx/apx-ollama-warmup-v1.py
+Environment="HOME=/var/lib/ollama"
+Environment="OLLAMA_MODELS=/var/lib/apx/model-store/ollama"
+Environment="OLLAMA_HOST=127.0.0.1:11434"
+Environment="OLLAMA_KEEP_ALIVE=-1"
+Environment="OLLAMA_CONTEXT_LENGTH=8192"
+Environment="OLLAMA_FLASH_ATTENTION=true"
+Environment="OLLAMA_KV_CACHE_TYPE=q8_0"
+Environment="OLLAMA_GPU_OVERHEAD=1073741824"
+Environment="OLLAMA_MAX_LOADED_MODELS=1"
+Environment="OLLAMA_NUM_PARALLEL=1"
+Environment="OLLAMA_NO_CLOUD=true"
+Restart=on-failure
+RestartSec=3
+RestartPreventExitStatus=1
+TimeoutStartSec=180
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictSUIDSGID=yes
+ReadOnlyPaths=/var/lib/apx/model-store/ollama
+ReadWritePaths=/var/lib/ollama

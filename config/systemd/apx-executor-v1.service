@@ -2,6 +2,8 @@
 Description=APX closed local graphical executor v1
 After=local-fs.target
 Before=apx-graphical-hub.service
+ConditionPathIsDirectory=/var/lib/apx/environments/hub
+ConditionPathIsDirectory=/var/lib/apx/environments/test
 
 [Service]
 Type=simple

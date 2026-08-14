@@ -13,12 +13,17 @@ class EnvironmentNetworkV1Tests(unittest.TestCase):
         source = ADAPTER.read_text()
         compile(source, str(ADAPTER), "exec")
         for required in (
-            'INTERFACE = "ve-apx-hub"', "udp dport 67 accept",
+            '"ve-apx-" + environment', "udp dport 67 accept",
             "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
             'oifname "ve-*" drop', "hook input", "hook forward",
         ):
             self.assertIn(required, source)
         self.assertNotIn("policy drop", source)
+
+    def test_policy_identity_is_bounded_for_linux_interface_names(self) -> None:
+        source = ADAPTER.read_text()
+        self.assertIn("{0,7}", source)
+        self.assertIn("graphical network identity is too long or malformed", source)
 
     def test_runtime_applies_before_start_and_removes_on_stop_or_failure(self) -> None:
         source = RUNTIME.read_text()

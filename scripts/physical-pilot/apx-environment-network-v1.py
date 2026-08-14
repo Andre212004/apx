@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 
 
-TABLE = "apx_hub_egress_v1"
-INTERFACE = "ve-apx-hub"
+NAME = re.compile(r"[a-z](?:[a-z0-9]|-(?=[a-z0-9])){0,7}")
 PRIVATE_IPV4 = "{ 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 }"
 
 
@@ -26,44 +26,53 @@ def run(arguments: tuple[str, ...], *, check: bool = True,
     )
 
 
-def ruleset() -> str:
-    return f"""table inet {TABLE} {{
+def identities(environment: str) -> tuple[str, str]:
+    if NAME.fullmatch(environment) is None:
+        raise NetworkPolicyError("graphical network identity is too long or malformed")
+    return "apx_" + environment.replace("-", "_") + "_egress_v1", "ve-apx-" + environment
+
+
+def ruleset(table: str, interface: str) -> str:
+    return f"""table inet {table} {{
  chain host_input {{
   type filter hook input priority -5; policy accept;
-  iifname "{INTERFACE}" udp dport 67 accept
-  iifname "{INTERFACE}" drop
+  iifname "{interface}" udp dport 67 accept
+  iifname "{interface}" drop
  }}
  chain environment_forward {{
   type filter hook forward priority -5; policy accept;
-  iifname "{INTERFACE}" ip daddr {PRIVATE_IPV4} drop
-  iifname "{INTERFACE}" oifname "ve-*" drop
+  iifname "{interface}" ip daddr {PRIVATE_IPV4} drop
+  iifname "{interface}" oifname "ve-*" drop
  }}
 }}
 """
 
 
-def table_exists() -> bool:
-    return run(("/usr/bin/nft", "list", "table", "inet", TABLE), check=False).returncode == 0
+def table_exists(table: str) -> bool:
+    return run(("/usr/bin/nft", "list", "table", "inet", table), check=False).returncode == 0
 
 
-def apply() -> None:
-    if table_exists():
-        observed = run(("/usr/bin/nft", "list", "table", "inet", TABLE)).stdout
-        for required in (INTERFACE, "udp dport 67 accept", "ip daddr",
+def apply(environment: str) -> None:
+    table, interface = identities(environment)
+    if table_exists(table):
+        observed = run(("/usr/bin/nft", "list", "table", "inet", table)).stdout
+        for required in (interface, "udp dport 67 accept", "ip daddr",
                          "oifname \"ve-*\" drop"):
             if required not in observed:
                 raise NetworkPolicyError("existing APX Hub network policy differs")
         return
-    run(("/usr/bin/nft", "-c", "-f", "-"), input_text=ruleset())
-    run(("/usr/bin/nft", "-f", "-"), input_text=ruleset())
-    if not table_exists():
+    rendered = ruleset(table, interface)
+    run(("/usr/bin/nft", "-c", "-f", "-"), input_text=rendered)
+    run(("/usr/bin/nft", "-f", "-"), input_text=rendered)
+    if not table_exists(table):
         raise NetworkPolicyError("APX Hub network policy did not appear")
 
 
-def remove() -> None:
-    if table_exists():
-        run(("/usr/bin/nft", "delete", "table", "inet", TABLE))
-    if table_exists():
+def remove(environment: str) -> None:
+    table, _interface = identities(environment)
+    if table_exists(table):
+        run(("/usr/bin/nft", "delete", "table", "inet", table))
+    if table_exists(table):
         raise NetworkPolicyError("APX Hub network policy survived removal")
 
 
@@ -72,9 +81,9 @@ def main() -> int:
     parser.add_argument("mode", choices=("apply", "remove"))
     parser.add_argument("--environment", required=True)
     arguments = parser.parse_args()
-    if os.geteuid() != 0 or arguments.environment != "hub":
+    if os.geteuid() != 0:
         raise NetworkPolicyError("network policy identity or privilege differs")
-    apply() if arguments.mode == "apply" else remove()
+    apply(arguments.environment) if arguments.mode == "apply" else remove(arguments.environment)
     return 0
 
 

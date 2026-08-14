@@ -163,6 +163,10 @@ body { margin: 0; overflow: hidden; background: #d8e6ec; }
 .template-options small { color: var(--muted); font-size: 11px; }
 .name-field { display: grid; gap: 7px; font-weight: 650; }
 .name-field input { height: 44px; border: 1px solid #bbc8cd; border-radius: 9px; padding: 0 12px; }
+.update-follow-field { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #f7fbfa; }
+.update-follow-field input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--teal); }
+.update-follow-field span { display: grid; gap: 3px; }
+.update-follow-field small { color: var(--muted); line-height: 1.35; }
 .safe-note { padding: 10px 12px; border-radius: 8px; background: #eef6f5; font-size: 12px; }
 
 .management-view { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: 255px 1fr; background: #f9fbfb; animation: viewIn 180ms ease-out; }

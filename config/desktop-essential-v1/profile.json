@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "profile": "desktop-essential-v1",
+  "configuration_profile": "waybar-ascii-v1",
+  "local_packages": [
+    "iproute2",
+    "iputils",
+    "pipewire",
+    "pipewire-audio",
+    "pipewire-pulse",
+    "tzdata",
+    "waybar",
+    "wireplumber"
+  ],
+  "controls": {
+    "audio": {
+      "owner": "environment",
+      "state": "local-playback-ready",
+      "interface": "waybar-wpctl"
+    },
+    "network": {
+      "owner": "host",
+      "state": "private-connectivity-and-known-network-menu-ready",
+      "interface": "waybar-host-services-v2-menu"
+    },
+    "system_time": {
+      "owner": "host",
+      "state": "ntp-synchronized-time-and-timezone-ready-control-host-only",
+      "interface": "waybar-clock"
+    },
+    "bluetooth": {
+      "owner": "host",
+      "state": "bluez-power-and-paired-device-menu-ready-pairing-pending",
+      "interface": "waybar-host-services-v2-menu"
+    },
+    "nvidia_render": {
+      "owner": "host-device-lease-and-environment-userspace",
+      "state": "hub-verified-future-base-release-pending",
+      "interface": "DRI_PRIME=1"
+    }
+  },
+  "optional_local_packages": ["pavucontrol", "vulkan-nouveau", "vulkan-tools"],
+  "services_not_enabled": [
+    "bluetooth.service",
+    "NetworkManager.service",
+    "systemd-timesyncd.service"
+  ]
+}

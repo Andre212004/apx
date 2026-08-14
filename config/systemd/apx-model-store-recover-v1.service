@@ -1,0 +1,9 @@
+[Unit]
+Description=APX external model stack recovery after device attachment
+BindsTo=dev-disk-by\x2did-ata\x2dSamsung_SSD_870_QVO_1TB_S5SVNF0R241427A\x2dpart1.device
+After=dev-disk-by\x2did-ata\x2dSamsung_SSD_870_QVO_1TB_S5SVNF0R241427A\x2dpart1.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apx/apx-model-store-recover-v1.py
+TimeoutStartSec=360

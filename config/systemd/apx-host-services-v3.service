@@ -1,0 +1,30 @@
+[Unit]
+Description=APX Host shared services v3
+After=iwd.service bluetooth.service systemd-timesyncd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-host-services-v3.py --serve
+Restart=on-failure
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=CAP_NET_RAW
+ReadWritePaths=/run/apx
+SystemCallFilter=@system-service @io-event @process
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

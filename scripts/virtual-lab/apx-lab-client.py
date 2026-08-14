@@ -22,7 +22,11 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("list")
     create_plan = sub.add_parser("create-plan")
     create_plan.add_argument("name")
-    create_plan.add_argument("--role", required=True, choices=("hub", "development", "minimal"))
+    create_plan.add_argument("--role", required=True, choices=("hub", "development", "minimal", "graphical-base"))
+    create_plan.add_argument(
+        "--exclude-host-updates", action="store_true",
+        help="do not follow coordinated Host updates (default: follow)",
+    )
     create = sub.add_parser("create")
     create.add_argument("--plan", required=True)
     create.add_argument("--approve", required=True)
@@ -47,6 +51,10 @@ def request(arguments: argparse.Namespace) -> dict[str, object]:
     for field in ("name", "role", "plan", "approve", "archive"):
         if hasattr(arguments, field):
             result["approval" if field == "approve" else field] = getattr(arguments, field)
+    if operation == "create-plan":
+        result["update_policy"] = (
+            "excluded" if arguments.exclude_host_updates else "follow-host"
+        )
     return result
 
 

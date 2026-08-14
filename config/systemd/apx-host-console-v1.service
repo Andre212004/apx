@@ -1,0 +1,18 @@
+[Unit]
+Description=APX exact-Hub direct Host console broker v1
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-host-console-v1.py --serve
+Restart=on-failure
+RestartSec=1s
+UMask=0077
+PrivateDevices=no
+ProtectSystem=no
+ProtectHome=no
+NoNewPrivileges=no
+ReadWritePaths=/run/apx /var/lib/apx/host-console-v1 /root /etc /usr /var
+
+[Install]
+WantedBy=multi-user.target

@@ -61,7 +61,7 @@ class HubViewTests(unittest.TestCase):
 
     def test_default_graphical_catalogue_maps_to_safe_hub_summaries(self) -> None:
         summaries = apx_hub.default_graphical_template_summaries()
-        self.assertEqual({item.template_id for item in summaries}, {"hyprland-base-v1", "hub-hyprland-v1"})
+        self.assertEqual({item.template_id for item in summaries}, {"hyprland-base-v2", "hub-hyprland-v2"})
         self.assertTrue(all(item.admitted and item.compatibility == "compatible" for item in summaries))
         self.assertTrue(all(item.security_profile == "Essencial privado" for item in summaries))
 

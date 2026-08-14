@@ -1,0 +1,16 @@
+[Unit]
+Description=APX direct boot into the official graphical Hub
+After=systemd-user-sessions.service getty@tty1.service apx-host-services-v1.service apx-host-services-v2.service apx-host-services-v3.service apx-audio-state-v1.service apx-coordinated-update-v1.service apx-system-power-v1.service apx-environment-switch-v1.service
+Wants=getty@tty1.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-official-hub-autostart-v1.py
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+
+[Install]
+WantedBy=multi-user.target

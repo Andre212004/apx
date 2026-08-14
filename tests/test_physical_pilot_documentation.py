@@ -14,6 +14,9 @@ STATE = (ROOT / "PROJECT_STATE.md").read_text()
 HANDOFF = (ROOT / "docs" / "physical-headless-development-handoff-v1.md").read_text()
 AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_text()
 EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").read_text()
+HOST_LOCAL_MODEL = (
+    ROOT / "docs" / "host-local-coder-external-ssd-v1-2026-08-05.md"
+).read_text()
 CURRENT_HANDOFF = (ROOT / "CURRENT_HANDOFF.md").read_text()
 UPDATE_CONTRACT = (ROOT / "docs" / "physical-pilot-update-contract-v1.md").read_text()
 H0_CONTRACT = (ROOT / "docs" / "hyprland-h0-clean-host-v1.md").read_text()
@@ -92,11 +95,13 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         ):
             self.assertIn(required, AUDIT)
 
-    def test_external_storage_remains_a_non_implemented_proposal(self) -> None:
-        self.assertIn("No external disk", EXTERNAL_STORAGE)
-        self.assertIn("no shared writable host or Hub path", STATE)
-        self.assertIn("External model storage remains blocked", EXTERNAL_STORAGE)
-        self.assertIn("target-bound destructive formatting dossier", EXTERNAL_STORAGE)
+    def test_external_storage_records_the_owner_authorized_host_deviation(self) -> None:
+        self.assertIn("historical Development-local proposal", EXTERNAL_STORAGE)
+        self.assertIn("Host-local coder on target-bound external SSD", STATE)
+        self.assertIn("owner-authorized physical implementation", HOST_LOCAL_MODEL)
+        self.assertIn("TPM2 automatic unlock bound to SHA-256 PCR 7", HOST_LOCAL_MODEL)
+        self.assertIn("uses a second-click confirmation", HOST_LOCAL_MODEL)
+        self.assertIn("read-only during normal inference", HOST_LOCAL_MODEL)
 
     def test_current_handoff_and_update_contract_preserve_all_safety_blocks(self) -> None:
         for required in (

@@ -1,0 +1,22 @@
+[Unit]
+Description=APX authenticated Hub controller for the external model store
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-model-store-control-v1.py --serve
+Restart=on-failure
+RestartSec=2
+UMask=0077
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/apx /var/lib/apx/model-store
+ReadWritePaths=/var/lib/apx/environments/hub/home/.apx-host-bridge
+ReadWritePaths=/var/lib/apx/model-selection-v1
+
+[Install]
+WantedBy=multi-user.target

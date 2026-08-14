@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+readonly state_dir=${XDG_CONFIG_HOME:-$HOME/.config}/apx
+readonly state_file=$state_dir/shortcuts-enabled-v1
+readonly quickshell=/usr/bin/quickshell
+
+install -d -m 0700 "$state_dir"
+if [[ ! -e $state_file ]]; then
+    printf '%s\n' enabled > "$state_file"
+    chmod 0600 "$state_file"
+fi
+state=$(<"$state_file")
+[[ $state == enabled || $state == disabled ]]
+
+case ${1:-apply} in
+    status)
+        printf '%s\n' "$state"
+        exit 0
+        ;;
+    toggle)
+        if [[ $state == enabled ]]; then state=disabled; else state=enabled; fi
+        printf '%s\n' "$state" > "$state_file"
+        chmod 0600 "$state_file"
+        ;;
+    apply) ;;
+    *) exit 2 ;;
+esac
+
+/usr/bin/hyprctl keyword unbind 'SUPER, E' >/dev/null
+/usr/bin/hyprctl keyword unbind 'SUPER, A' >/dev/null
+if [[ $state == enabled ]]; then
+    /usr/bin/hyprctl keyword bind "SUPER, E, exec, $quickshell -c apx ipc call host openEnvironments" >/dev/null
+    /usr/bin/hyprctl keyword bind "SUPER, A, exec, $quickshell -c apx ipc call host toggleControls" >/dev/null
+fi
+printf '%s\n' "$state"

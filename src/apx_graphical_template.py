@@ -9,9 +9,10 @@ import json
 from apx_environment import validate_logical_name
 
 
-SCHEMA_VERSION = 1
-BASE_RELEASE = "hyprland-base-v1"
-CONFIG_SEED = "hyprland-minimal-v1"
+SCHEMA_VERSION = 2
+BASE_RELEASE = "hyprland-base-v2"
+CONFIG_SEED = "hyprland-minimal-v2"
+DESKTOP_PROFILE = "desktop-essential-v1"
 POLICY = "normal-desktop"
 ESSENTIAL_CAPABILITIES = (
     "amd-graphics-mediated",
@@ -31,7 +32,9 @@ OPTIONAL_CAPABILITIES = (
 )
 LOCAL_PACKAGE_ADMIN = "environment-local-sudo-pacman-unrestricted"
 CONFIG_INHERITANCE = "copy-on-create-independent"
-STORAGE_POLICY = "shared-flexible-pool-with-host-reserve"
+STORAGE_POLICY = "bounded-environment-with-protected-host-reserve"
+ROOT_STORAGE_LIMIT = "32G"
+HOME_STORAGE_LIMIT = "64G"
 
 
 class GraphicalTemplateError(ValueError):
@@ -44,6 +47,7 @@ class GraphicalTemplate:
     role: str
     release: str
     config_seed: str
+    desktop_profile: str
     display_name: str
     description: str
     essential_capabilities: tuple[str, ...]
@@ -67,9 +71,12 @@ class GraphicalCreationPlan:
     release: str
     policy: str
     config_seed: str
+    desktop_profile: str
     config_destination: str
     root_storage: str
     home_storage: str
+    root_storage_limit: str
+    home_storage_limit: str
     storage_policy: str
     capabilities: tuple[str, ...]
     local_package_admin: str
@@ -85,6 +92,7 @@ def _template(*, template_id: str, role: str, display_name: str,
         role=role,
         release=BASE_RELEASE,
         config_seed=CONFIG_SEED,
+        desktop_profile=DESKTOP_PROFILE,
         display_name=display_name,
         description=description,
         essential_capabilities=ESSENTIAL_CAPABILITIES,
@@ -101,14 +109,14 @@ def _template(*, template_id: str, role: str, display_name: str,
 
 
 TEMPLATES = {
-    "hyprland-base-v1": _template(
-        template_id="hyprland-base-v1", role="graphical-base",
+    "hyprland-base-v2": _template(
+        template_id="hyprland-base-v2", role="graphical-base",
         display_name="Hyprland Base",
         description="Arch e Hyprland mínimos, funcionais e independentes.",
         hub=False,
     ),
-    "hub-hyprland-v1": _template(
-        template_id="hub-hyprland-v1", role="hub-graphical",
+    "hub-hyprland-v2": _template(
+        template_id="hub-hyprland-v2", role="hub-graphical",
         display_name="APX Hub",
         description="Hub Hyprland mínimo com Waybar e gestão APX nativa.",
         hub=True,
@@ -142,15 +150,19 @@ def build_creation_plan(logical_name: str, template_id: str) -> GraphicalCreatio
         "release": template.release,
         "policy": POLICY,
         "config_seed": template.config_seed,
+        "desktop_profile": template.desktop_profile,
         "config_destination": f"{home}/apx/.config",
         "root_storage": root,
         "home_storage": home,
+        "root_storage_limit": ROOT_STORAGE_LIMIT,
+        "home_storage_limit": HOME_STORAGE_LIMIT,
         "storage_policy": template.storage_policy,
         "capabilities": template.essential_capabilities,
         "local_package_admin": template.local_package_admin,
         "effects": (
             "snapshot-immutable-graphical-release-to-independent-writable-root",
-            "create-independent-home-subvolume-without-per-environment-size-cap",
+            "create-independent-home-subvolume-with-role-size-cap",
+            "apply-root-and-home-qgroup-limits",
             "verify-shared-pool-host-reserve-before-creation",
             "copy-versioned-config-seed-once",
             "create-environment-local-admin-account",

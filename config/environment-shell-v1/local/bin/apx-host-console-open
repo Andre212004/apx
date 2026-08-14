@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+# There is exactly one Host PTY.  If its Hub window is already present, focus
+# it instead of creating a competing client.  If the window was closed, the
+# broker reattaches the replacement client to the same persistent PTY.
+if /usr/bin/hyprctl clients | /usr/bin/grep -Fq "title: APX HOST ROOT"; then
+    exec /usr/bin/hyprctl eval 'local w = hl.get_window("title:^(APX HOST ROOT)$"); if w then hl.dispatch(hl.dsp.focus({ window = w })) end'
+fi
+
+exec /home/apx/.local/bin/apx-detached-launch \
+    /usr/bin/kitty --title "APX HOST ROOT" \
+    /home/apx/.local/bin/apx-host-console-terminal

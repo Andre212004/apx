@@ -34,7 +34,7 @@ runtime = load_runtime()
 FIELDS = {
     "status": {"schema", "operation"},
     "list": {"schema", "operation"},
-    "create-plan": {"schema", "operation", "name", "role"},
+    "create-plan": {"schema", "operation", "name", "role", "update_policy"},
     "create": {"schema", "operation", "plan", "approval"},
     "start": {"schema", "operation", "name"},
     "stop": {"schema", "operation", "name"},
@@ -80,7 +80,12 @@ def dispatch(request: dict[str, object]) -> None:
     elif operation == "list":
         runtime.list_environments(bool(request.get("json", False)))
     elif operation == "create-plan":
-        print(json.dumps(runtime.make_plan("create", str(request["name"]), str(request["role"])), sort_keys=True, indent=2))
+        policy = request["update_policy"]
+        if policy not in {"follow-host", "excluded"}:
+            raise runtime.Refusal("unknown update policy")
+        print(json.dumps(runtime.make_plan(
+            "create", str(request["name"]), str(request["role"]), str(policy)
+        ), sort_keys=True, indent=2))
     elif operation == "create":
         runtime.create(str(request["plan"]), str(request["approval"]))
     elif operation == "start":

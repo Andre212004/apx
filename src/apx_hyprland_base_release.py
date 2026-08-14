@@ -8,23 +8,26 @@ import json
 import re
 
 
-PROFILE = "apx-hyprland-base-release-v1"
-RELEASE = "hyprland-base-v1"
-CONFIG_SEED = "hyprland-minimal-v1"
+PROFILE = "apx-hyprland-base-release-v2"
+RELEASE = "hyprland-base-v2"
+CONFIG_SEED = "hyprland-minimal-v2"
 PACKAGE_SEEDS = (
-    "alacritty", "base", "ca-certificates", "chafa", "dbus-broker",
-    "fastfetch", "foot", "fuzzel", "grim",
-    "gtk4", "hyprland", "iproute2", "iputils", "libadwaita", "mako",
-    "mesa", "noto-fonts", "pipewire", "polkit", "polkit-gnome",
-    "python-gobject", "rofi", "slurp", "sudo", "ttf-dejavu", "vulkan-radeon",
-    "waybar", "wireplumber", "xdg-desktop-portal",
-    "xdg-desktop-portal-hyprland", "xkeyboard-config",
+    "alacritty", "base", "base-devel", "bash-completion", "ca-certificates", "chafa", "dbus-broker",
+    "egl-gbm", "fastfetch", "file-roller", "flatpak", "foot", "fuzzel", "gnome-keyring",
+    "git", "grim", "gtk4", "gvfs", "gvfs-gphoto2", "gvfs-mtp", "gvfs-smb",
+    "hypridle", "hyprland", "hyprlock", "hyprpolkitagent", "iproute2", "iputils", "less", "libadwaita",
+    "libnotify", "mako", "man-db", "mesa", "mousepad", "nano", "ncurses", "noto-fonts", "nvidia-utils", "pacman-contrib",
+    "pipewire", "polkit", "python-gobject", "ristretto", "rofi", "slurp",
+    "sudo", "thunar", "tumbler", "udiskie", "udisks2",
+    "vulkan-radeon", "waybar", "wireplumber", "xdg-desktop-portal",
+    "xdg-desktop-portal-gtk", "xdg-desktop-portal-hyprland", "xdg-user-dirs",
+    "xkeyboard-config",
 )
 CONFIG_ASSETS = (
     ("alacritty/alacritty.toml", "14f9191aec4f69568e4c12bba0b96c3cf90989f0a2295eb79bf1a277b7b6a3be"),
     ("fastfetch/apx-logo.txt", "cd7ae1943f3b4da9c751e93a1f19f5c12594ae35a28dce0d80fcfaa8f7149077"),
     ("fastfetch/config.jsonc", "9c8f7b3184452b42c3e8670805cf7215fa073a7fe32f25d9251a17e08bc4c736"),
-    ("hyprland/hyprland.conf", "3e143678ca6b19711d71a716a2f8411997772a841614cc800e9b9db070c4cbef"),
+    ("hyprland/hyprland.conf", "8d793c51f1fb5195d12636ebc504d6c80cfac836245bacbcf5f90ac769a925ac"),
     ("rofi/config.rasi", "2894cd7636fcf0f03f1a7c19a1008cb8b0c162ac5fae4e9fa85dfe7484a2aa78"),
     ("waybar/config.json", "7a045de24f89c69be7e373cc7dc82bb06b62b0a8ee15ec41719fbce0f0de2d2f"),
     ("waybar/style.css", "4e649de831c068be9ff05d0c9d6ad03351e1b1a1c44ad752b44a8c353bcd90ca"),

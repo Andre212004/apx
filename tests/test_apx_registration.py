@@ -42,6 +42,7 @@ class RegistrationObservationTests(unittest.TestCase):
                     path.write_bytes(content)
                 else:
                     path.write_text(content, encoding="utf-8")
+                path.chmod(0o644)
             return apx_registration.observe_registration("work", directory)
 
     def test_valid_schema_v1(self) -> None:

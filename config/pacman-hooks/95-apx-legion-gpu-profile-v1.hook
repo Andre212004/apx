@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = linux
+Target = linux-headers
+
+[Action]
+Description = Rebuilding the APX Lenovo Legion GPU profile bridge...
+When = PostTransaction
+Exec = /usr/lib/apx/apx-legion-gpu-profile-build-v1.sh
+NeedsTargets

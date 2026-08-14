@@ -20,6 +20,12 @@ import subprocess
 import sys
 import uuid
 
+try:
+    from apx_environment_features import local_packages_for, packages_for, validate_selection
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+    from apx_environment_features import local_packages_for, packages_for, validate_selection
+
 
 STATE = Path("/var/lib/apx")
 RELEASES = STATE / "releases"
@@ -37,10 +43,34 @@ GRAPHICAL_CONFIG_ASSETS = {
     "alacritty/alacritty.toml": "14f9191aec4f69568e4c12bba0b96c3cf90989f0a2295eb79bf1a277b7b6a3be",
     "fastfetch/apx-logo.txt": "cd7ae1943f3b4da9c751e93a1f19f5c12594ae35a28dce0d80fcfaa8f7149077",
     "fastfetch/config.jsonc": "9c8f7b3184452b42c3e8670805cf7215fa073a7fe32f25d9251a17e08bc4c736",
-    "hyprland/hyprland.conf": "3e143678ca6b19711d71a716a2f8411997772a841614cc800e9b9db070c4cbef",
+    "hyprland/hyprland.conf": "8d793c51f1fb5195d12636ebc504d6c80cfac836245bacbcf5f90ac769a925ac",
     "rofi/config.rasi": "2894cd7636fcf0f03f1a7c19a1008cb8b0c162ac5fae4e9fa85dfe7484a2aa78",
     "waybar/config.json": "7a045de24f89c69be7e373cc7dc82bb06b62b0a8ee15ec41719fbce0f0de2d2f",
     "waybar/style.css": "4e649de831c068be9ff05d0c9d6ad03351e1b1a1c44ad752b44a8c353bcd90ca",
+}
+DESKTOP_CONFIG_SEED = Path("/usr/share/apx/config-seeds/desktop-essential-v1")
+DESKTOP_CONFIG_ASSETS = {
+    "environment-config.json": "eebaa9be26aaa5d120ec71d7d68c17c326714b51b46961fd4651f30bdb75da88",
+    "hub-config.json": "eac4219dc026fab9ea2bfd34d51dc9bcb69418fa9b2a727b692112f2160c40eb",
+    "style.css": "f26c8dec509c50ae56cf7f5fe2861266a2056ca4667493b94e186a801e58c80a",
+}
+ENVIRONMENT_SHELL_SEED = Path("/usr/share/apx/config-seeds/environment-shell-v1")
+LOCAL_PACKAGE_ARTIFACTS = STATE / "package-artifacts"
+LOCAL_PACKAGE_MANIFESTS = {
+    "brave-bin": "brave-bin-v1.json",
+    "nvidia-utils": "nvidia-utils-v1.json",
+}
+ENVIRONMENT_SHELL_ASSETS = {
+    "hypr/hypridle.conf": "dc34b120018d969d9b873265179ac8013e175252fdb87d0e2fe3846795d2a0e9",
+    "hypr/hyprlock.conf": "a3486791844e0e298a1a1a617dc8006ebb288a93f25c0619e57e2c2f72f53c99",
+    "hypr/hyprland.lua": "1b28abea5fdbe75bbc1a36fb778e9c47ce6eb7b16ec1190e6eb16fb9e8d0a24f",
+    "hyprland/hyprland.conf": "4a53246fddda7fa7b12ddf16d0ecaa51e1c25bdb67562f5e6fc12afc51acc351",
+    "local/bin/apx-detached-launch": "40970a9ed235a6799913211dc135c66222ee55e15d5d38e5cfe5d2feafd785ef",
+    "local/bin/apx-host-console-open": "25ad55f70cf212defb86b2d4869378c49a39e8fb0be7588a47403547560846a2",
+    "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
+    "local/bin/apx-shell-v1": "fb11d72639b6784bfeb6eb4e0004c20ecf7d88b1e22ef0655092a69bdbc25710",
+    "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
+    "quickshell/apx/shell.qml": "14926962660731f2bb00bf33aa746e4279eceaf70d9e4491be3b2bf5723502e4",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 RELEASE_IDS = {
@@ -48,11 +78,24 @@ RELEASE_IDS = {
     "development": "development-headless-v1",
     "minimal": "minimal-headless-v1",
     "graphical-h0": "hyprland-h0-v1",
-    "graphical-base": "hyprland-base-v1",
-    "hub-graphical": "hyprland-base-v1",
+    "graphical-base": "hyprland-base-v2",
+    "hub-graphical": "hyprland-base-v2",
 }
-HOST_STORAGE_RESERVE_BYTES = 32 * 1024**3
-STORAGE_POLICY = "shared-flexible-pool-with-host-reserve"
+HOST_STORAGE_RESERVE_BYTES = 96 * 1024**3
+STORAGE_POLICY = "bounded-environments-with-protected-host-reserve"
+ENVIRONMENT_STORAGE_LIMITS = {
+    "hub": ("16G", "32G"),
+    "development": ("32G", "64G"),
+    "minimal": ("8G", "16G"),
+    "graphical-h0": ("32G", "64G"),
+    "graphical-base": ("32G", "64G"),
+    "hub-graphical": ("16G", "32G"),
+}
+ENVIRONMENT_RUNTIME_LIMITS = {
+    "hub": ("600%", "10G", "12G", "4096"),
+    "development": ("600%", "10G", "12G", "4096"),
+    "minimal": ("200%", "3G", "4G", "1024"),
+}
 LOCAL_ADMIN_MARKER = "/etc/apx/local-admin-v1"
 NETWORK_ADAPTER = "/usr/lib/apx/apx-environment-network-v1.py"
 EFFECTS = {
@@ -173,6 +216,150 @@ def copy_graphical_config_seed(seed: Path, destination: Path, uid: int = 1000, g
         os.chown(target, uid, gid)
 
 
+def copy_desktop_config_seed(
+    seed: Path, destination: Path, role: str, uid: int = 1000, gid: int = 1000,
+) -> None:
+    """Overlay the exact reviewed Waybar profile into a newly copied config."""
+    if role not in {"graphical-base", "hub-graphical"}:
+        raise Refusal("desktop configuration role is unsupported")
+    if not seed.is_dir() or seed.is_symlink():
+        raise Refusal("desktop configuration seed is absent or unsafe")
+    if {item.name for item in seed.iterdir()} != set(DESKTOP_CONFIG_ASSETS):
+        raise Refusal("desktop configuration seed entries differ")
+    content: dict[str, bytes] = {}
+    for name, expected_digest in DESKTOP_CONFIG_ASSETS.items():
+        source = seed / name
+        descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            value = os.read(descriptor, MAX_GRAPHICAL_CONFIG_BYTES + 1)
+            if os.read(descriptor, 1) or len(value) > MAX_GRAPHICAL_CONFIG_BYTES:
+                raise Refusal("desktop configuration asset exceeds the size limit")
+        finally:
+            os.close(descriptor)
+        if hashlib.sha256(value).hexdigest() != expected_digest:
+            raise Refusal("desktop configuration asset digest differs")
+        content[name] = value
+    waybar = destination / "waybar"
+    if not waybar.is_dir() or waybar.is_symlink():
+        raise Refusal("Waybar destination is absent or unsafe")
+    selected = "hub-config.json" if role == "hub-graphical" else "environment-config.json"
+    for source_name, destination_name in ((selected, "config.json"), ("style.css", "style.css")):
+        target = waybar / destination_name
+        metadata = target.lstat()
+        if not stat.S_ISREG(metadata.st_mode) or target.is_symlink():
+            raise Refusal("Waybar destination asset is unsafe")
+        temporary = target.with_name(f".{target.name}.desktop-essential-{os.getpid()}.tmp")
+        descriptor = os.open(
+            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, 0o600,
+        )
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(content[source_name])
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.chown(temporary, uid, gid)
+            os.replace(temporary, target)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+
+
+def copy_environment_shell_seed(
+    seed: Path, user_home: Path, uid: int = 1000, gid: int = 1000,
+) -> None:
+    """Overlay the reviewed QuickShell desktop shared by Hub and environments."""
+    if not seed.is_dir() or seed.is_symlink():
+        raise Refusal("environment shell seed is absent or unsafe")
+
+    expected_directories: set[str] = set()
+    for relative in ENVIRONMENT_SHELL_ASSETS:
+        parent = Path(relative).parent
+        while parent != Path("."):
+            expected_directories.add(parent.as_posix())
+            parent = parent.parent
+    expected_entries = set(ENVIRONMENT_SHELL_ASSETS) | expected_directories
+    observed_entries: set[str] = set()
+    for entry in seed.rglob("*"):
+        relative = entry.relative_to(seed).as_posix()
+        observed_entries.add(relative)
+        metadata = entry.lstat()
+        if relative in ENVIRONMENT_SHELL_ASSETS:
+            if not stat.S_ISREG(metadata.st_mode):
+                raise Refusal("environment shell asset is not a regular file")
+        elif relative in expected_directories:
+            if not stat.S_ISDIR(metadata.st_mode) or entry.is_symlink():
+                raise Refusal("environment shell directory is unsafe")
+        else:
+            raise Refusal("environment shell seed contains an unapproved entry")
+    if observed_entries != expected_entries:
+        raise Refusal("environment shell seed is incomplete")
+
+    content: dict[str, bytes] = {}
+    for relative, expected_digest in ENVIRONMENT_SHELL_ASSETS.items():
+        source = seed / relative
+        descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        try:
+            value = os.read(descriptor, MAX_GRAPHICAL_CONFIG_BYTES + 1)
+            if os.read(descriptor, 1) or len(value) > MAX_GRAPHICAL_CONFIG_BYTES:
+                raise Refusal("environment shell asset exceeds the size limit")
+        finally:
+            os.close(descriptor)
+        if hashlib.sha256(value).hexdigest() != expected_digest:
+            raise Refusal("environment shell asset digest differs")
+        content[relative] = value
+
+    if not user_home.is_dir() or user_home.is_symlink():
+        raise Refusal("environment home is absent or unsafe")
+    targets: dict[str, Path] = {}
+    for relative in ENVIRONMENT_SHELL_ASSETS:
+        parts = Path(relative).parts
+        if parts[0] == "local":
+            targets[relative] = user_home / ".local" / Path(*parts[1:])
+        else:
+            targets[relative] = user_home / ".config" / relative
+
+    # mkdir(parents=True) creates missing ancestors with the runner's root
+    # ownership.  Include every directory below user_home explicitly so a
+    # fresh Home does not leave ~/.local root-owned and prevent the desktop
+    # user from creating ~/.local/state when QuickShell starts.
+    directories: set[Path] = set()
+    for target in targets.values():
+        directory = target.parent
+        while directory != user_home:
+            directories.add(directory)
+            directory = directory.parent
+    for directory in sorted(directories, key=lambda item: len(item.parts)):
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        metadata = directory.lstat()
+        if not stat.S_ISDIR(metadata.st_mode) or directory.is_symlink():
+            raise Refusal("environment shell destination directory is unsafe")
+        os.chmod(directory, 0o700)
+        os.chown(directory, uid, gid)
+
+    for relative, value in content.items():
+        target = targets[relative]
+        if target.exists() or target.is_symlink():
+            metadata = target.lstat()
+            if not stat.S_ISREG(metadata.st_mode) or target.is_symlink():
+                raise Refusal("environment shell destination asset is unsafe")
+        temporary = target.with_name(f".{target.name}.environment-shell-{os.getpid()}.tmp")
+        mode = 0o755 if relative.startswith("local/bin/") else 0o600
+        descriptor = os.open(
+            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC, mode,
+        )
+        try:
+            os.fchmod(descriptor, mode)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(value)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.chown(temporary, uid, gid)
+            os.replace(temporary, target)
+        except BaseException:
+            temporary.unlink(missing_ok=True)
+            raise
+
+
 def environment_dir(name: str) -> Path:
     return ENVIRONMENTS / validate_name(name)
 
@@ -244,14 +431,29 @@ def admitted_release(role: str) -> Path:
     return release
 
 
-def make_plan(action: str, name: str, role: str | None = None) -> dict[str, object]:
+def make_plan(action: str, name: str, role: str | None = None,
+              update_policy: str = "follow-host", description: str = "",
+              preset: str = "intermediate", modules: tuple[str, ...] | list[str] = ()) -> dict[str, object]:
     validate_name(name)
     generation = str(uuid.uuid4())
     if action == "create":
         validate_role_assignment(name, role or "")
+        if update_policy not in {"follow-host", "excluded"}:
+            raise Refusal("unsupported update policy")
+        if len(description) > 120 or description != description.strip() \
+                or any(ord(character) < 32 for character in description):
+            raise Refusal("invalid Environment description")
         if environment_dir(name).exists():
             raise Refusal("Environment already exists")
         admitted_release(role or "")
+        if role == "graphical-base":
+            if not modules:
+                from apx_environment_features import PRESETS
+                modules = PRESETS["intermediate"]
+            try:
+                preset, modules = validate_selection(preset, modules)
+            except ValueError as error:
+                raise Refusal(str(error)) from error
     elif action == "destroy":
         generation = str(registration(name)["generation"])
     else:
@@ -265,6 +467,11 @@ def make_plan(action: str, name: str, role: str | None = None) -> dict[str, obje
     }
     if role is not None:
         plan["role"] = role
+        plan["update_policy"] = update_policy
+        plan["description"] = description
+        if role == "graphical-base":
+            plan["desktop_preset"] = preset
+            plan["desktop_modules"] = list(modules)
     identity = digest(plan)
     plan["digest"] = identity
     atomic_json(PLANS / f"{identity}.json", plan)
@@ -311,6 +518,7 @@ def create(plan_identity: str, approval: str) -> None:
     target = environment_dir(name)
     if target.exists():
         raise Refusal("Environment path already exists")
+    verify_shared_storage_reserve()
     operation = str(uuid.uuid4())
     append_event(operation, "create", "operation", "started", name=name, plan=plan_identity)
     target.mkdir(mode=0o700)
@@ -318,12 +526,15 @@ def create(plan_identity: str, approval: str) -> None:
         root = target / "root"
         append_event(operation, "create", "root", "started", name=name)
         run(["btrfs", "subvolume", "snapshot", str(admitted_release(role)), str(root)])
+        apply_subvolume_storage_limit(root, ENVIRONMENT_STORAGE_LIMITS[role][0])
         append_event(operation, "create", "root", "complete", name=name)
         fault("root")
 
         home = target / "home"
         append_event(operation, "create", "home", "started", name=name)
         run(["btrfs", "subvolume", "create", str(home)])
+        home.chmod(0o755)
+        apply_subvolume_storage_limit(home, ENVIRONMENT_STORAGE_LIMITS[role][1])
         verify_shared_storage_reserve()
         user_home = home / "apx"
         user_home.mkdir(mode=0o700)
@@ -344,9 +555,13 @@ def create(plan_identity: str, approval: str) -> None:
         (root / "etc" / "hostname").write_text(machine(name) + "\n")
         (root / "etc" / "machine-id").write_text("")
         if role in {"graphical-base", "hub-graphical"}:
-            seed = root / "usr/share/apx/config-seeds/hyprland-minimal-v1"
+            seed = root / "usr/share/apx/config-seeds/hyprland-minimal-v2"
             destination = home / "apx/.config"
             copy_graphical_config_seed(seed, destination)
+            copy_desktop_config_seed(DESKTOP_CONFIG_SEED, destination, role)
+            copy_environment_shell_seed(ENVIRONMENT_SHELL_SEED, user_home)
+        if role == "graphical-base":
+            configure_environment_features(root, plan)
         if role == "hub":
             (root / "run" / "apx").mkdir(parents=True, exist_ok=True)
         append_event(operation, "create", "configure", "complete", name=name)
@@ -360,7 +575,13 @@ def create(plan_identity: str, approval: str) -> None:
             "release": RELEASE_IDS[role],
             "state": "stopped",
             "created_at": now(),
+            "update_policy": plan.get("update_policy", "follow-host"),
         }
+        if role == "graphical-base":
+            record["desktop_preset"] = plan["desktop_preset"]
+            record["desktop_modules"] = plan["desktop_modules"]
+        if plan.get("description"):
+            record["description"] = plan["description"]
         append_event(operation, "create", "publish", "started", name=name)
         atomic_json(registration_path(name), record)
         append_event(operation, "create", "publish", "complete", name=name)
@@ -368,6 +589,166 @@ def create(plan_identity: str, approval: str) -> None:
     except BaseException:
         append_event(operation, "create", "operation", "uncertain", name=name)
         raise
+
+
+def configure_environment_features(root: Path, plan: dict[str, object]) -> None:
+    """Apply the closed package selection and inherit only Hub's password hash."""
+    preset, modules = validate_selection(plan.get("desktop_preset"), plan.get("desktop_modules"))
+    feature_dir = root / "etc/apx"
+    feature_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
+    atomic_json(feature_dir / "environment-features.json", {
+        "schema": 1, "preset": preset, "modules": list(modules),
+    }, 0o644)
+
+    hub_shadow = ENVIRONMENTS / "hub/root/etc/shadow"
+    target_shadow = root / "etc/shadow"
+    source_lines = read_trusted_shadow(ENVIRONMENTS / "hub/root").splitlines()
+    target_lines = read_trusted_shadow(root).splitlines()
+    source = next((line.split(":", 2)[1] for line in source_lines if line.startswith("apx:")), None)
+    if not source or source.startswith(("!", "*")):
+        raise Refusal("Hub apx password is not enrolled")
+    replaced = False
+    for index, line in enumerate(target_lines):
+        if line.startswith("apx:"):
+            fields = line.split(":"); fields[1] = source
+            target_lines[index] = ":".join(fields); replaced = True; break
+    if not replaced:
+        raise Refusal("Environment apx account is absent")
+    write_trusted_shadow(root, "\n".join(target_lines) + "\n")
+
+    packages = packages_for(modules)
+    if packages:
+        run(["pacman", "--root", str(root), "--dbpath", str(root / "var/lib/pacman"),
+             "--cachedir", "/var/cache/pacman/pkg", "--config", str(root / "etc/pacman.conf"),
+             "--disable-sandbox", "-Sy", "--needed", "--noconfirm", *packages])
+    for package in local_packages_for(modules):
+        artifact = validated_local_package_artifact(package)
+        run(["pacman", "--root", str(root), "--dbpath", str(root / "var/lib/pacman"),
+             "--cachedir", "/var/cache/pacman/pkg", "--config", str(root / "etc/pacman.conf"),
+             "--disable-sandbox", "-U", "--needed", "--noconfirm", str(artifact)])
+
+
+def validated_local_package_artifact(package: str) -> Path:
+    """Resolve one Host-owned, digest-pinned non-repository package."""
+    manifest_name = LOCAL_PACKAGE_MANIFESTS.get(package)
+    if manifest_name is None:
+        raise Refusal("Environment local package is unsupported")
+    directory = LOCAL_PACKAGE_ARTIFACTS
+    manifest = directory / manifest_name
+    for path, expected_directory in ((directory, True), (manifest, False)):
+        try:
+            metadata = path.lstat()
+        except OSError as error:
+            raise Refusal("Environment local package metadata is absent") from error
+        if path.is_symlink() or (expected_directory and not stat.S_ISDIR(metadata.st_mode)) \
+                or (not expected_directory and not stat.S_ISREG(metadata.st_mode)) \
+                or (metadata.st_uid, metadata.st_gid) != (0, 0) or metadata.st_mode & 0o022:
+            raise Refusal("Environment local package metadata is not Host-owned")
+    try:
+        record = json.loads(manifest.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise Refusal("Environment local package manifest is invalid") from error
+    if type(record) is not dict or record.get("schema") != 1 \
+            or record.get("package") != package:
+        raise Refusal("Environment local package manifest is unsupported")
+    filename = record.get("filename")
+    digest = record.get("sha256")
+    if type(filename) is not str or Path(filename).name != filename \
+            or not filename.startswith(package + "-") or not filename.endswith(".pkg.tar.zst") \
+            or type(digest) is not str or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise Refusal("Environment local package manifest fields are invalid")
+    artifact = directory / filename
+    try:
+        metadata = artifact.lstat()
+    except OSError as error:
+        raise Refusal("Environment local package artifact is absent") from error
+    if artifact.is_symlink() or not stat.S_ISREG(metadata.st_mode) \
+            or (metadata.st_uid, metadata.st_gid) != (0, 0) or metadata.st_mode & 0o022 \
+            or metadata.st_size <= 0 or metadata.st_size > 512 * 1024**2:
+        raise Refusal("Environment local package artifact is not admitted")
+    computed = hashlib.sha256()
+    with artifact.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            computed.update(chunk)
+    if computed.hexdigest() != digest:
+        raise Refusal("Environment local package digest does not match")
+    return artifact
+
+
+def trusted_root_owner(root: Path) -> tuple[int, int]:
+    """Resolve root ownership across stopped and private-user active roots."""
+    container = root.parent
+    container_metadata = container.lstat()
+    root_metadata = root.lstat()
+    etc_metadata = (root / "etc").lstat()
+    if any(path.is_symlink() for path in (container, root, root / "etc")) \
+            or not all(stat.S_ISDIR(value.st_mode) for value in (
+                container_metadata, root_metadata, etc_metadata,
+            )) \
+            or (container_metadata.st_uid, container_metadata.st_gid) != (0, 0) \
+            or container_metadata.st_mode & 0o022 \
+            or (etc_metadata.st_uid, etc_metadata.st_gid) != (
+                root_metadata.st_uid, root_metadata.st_gid,
+            ) \
+            or etc_metadata.st_mode & 0o022:
+        raise Refusal("trusted password source is unavailable")
+    return root_metadata.st_uid, root_metadata.st_gid
+
+
+def open_trusted_shadow(root: Path, flags: int) -> int:
+    owner = trusted_root_owner(root)
+    path = root / "etc/shadow"
+    try:
+        descriptor = os.open(path, flags | os.O_NOFOLLOW | os.O_CLOEXEC)
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) \
+                or (metadata.st_uid, metadata.st_gid) != owner \
+                or stat.S_IMODE(metadata.st_mode) != 0o600 \
+                or metadata.st_size > 65536:
+            raise Refusal("trusted password source is unavailable")
+        return descriptor
+    except BaseException:
+        if "descriptor" in locals():
+            os.close(descriptor)
+        raise
+
+
+def read_trusted_shadow(root: Path) -> str:
+    descriptor = open_trusted_shadow(root, os.O_RDONLY)
+    try:
+        value = bytearray()
+        while len(value) <= 65536:
+            chunk = os.read(descriptor, min(8192, 65537 - len(value)))
+            if not chunk:
+                break
+            value.extend(chunk)
+        if len(value) > 65536:
+            raise Refusal("trusted password source is unavailable")
+        return value.decode()
+    except (UnicodeDecodeError, OSError) as error:
+        raise Refusal("trusted password source is unavailable") from error
+    finally:
+        os.close(descriptor)
+
+
+def write_trusted_shadow(root: Path, value: str) -> None:
+    encoded = value.encode()
+    if len(encoded) > 65536:
+        raise Refusal("trusted password target is unavailable")
+    descriptor = open_trusted_shadow(root, os.O_WRONLY)
+    try:
+        os.ftruncate(descriptor, 0)
+        view = memoryview(encoded)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError("short shadow write")
+            view = view[written:]
+        os.fsync(descriptor)
+    except OSError as error:
+        raise Refusal("trusted password target is unavailable") from error
+    finally:
+        os.close(descriptor)
 
 
 def fault(effect: str) -> None:
@@ -383,6 +764,14 @@ def verify_shared_storage_reserve() -> None:
         raise Refusal("shared Environment pool reached the protected Host reserve")
 
 
+def apply_subvolume_storage_limit(path: Path, limit: str) -> None:
+    """Bound both total referenced and exclusive growth for one Environment volume."""
+    if not re.fullmatch(r"[1-9][0-9]*G", limit):
+        raise Refusal("Environment storage limit is malformed")
+    run(["btrfs", "qgroup", "limit", limit, str(path)])
+    run(["btrfs", "qgroup", "limit", "-e", limit, str(path)])
+
+
 def start(name: str) -> None:
     require_root()
     record = registration(name)
@@ -393,6 +782,7 @@ def start(name: str) -> None:
         return
     target = environment_dir(name)
     unit = f"apx-environment-{name}.service"
+    cpu_quota, memory_high, memory_max, tasks_max = ENVIRONMENT_RUNTIME_LIMITS[str(record["role"])]
     command = [
         "systemd-run", "--unit", unit, "--collect", "--property=Delegate=yes",
         "--property=KillMode=mixed", "--",
@@ -401,6 +791,11 @@ def start(name: str) -> None:
         "--private-users=pick", "--private-users-ownership=chown",
         "--private-network", "--network-veth", "--link-journal=no", "--settings=no",
         f"--bind={target / 'home'}:/home:idmap",
+    ]
+    command[6:6] = [
+        f"--property=CPUQuota={cpu_quota}", "--property=CPUWeight=200",
+        "--property=IOWeight=200", f"--property=MemoryHigh={memory_high}",
+        f"--property=MemoryMax={memory_max}", f"--property=TasksMax={tasks_max}",
     ]
     if record["role"] == "hub":
         executor_socket = Path("/run/apx/executor.sock")
@@ -515,6 +910,8 @@ def local_admin_state(target: str) -> tuple[str, str, str, str, str]:
         " if test \"$(/usr/bin/stat -c '%a:%u:%g' "
         "/etc/sudoers.d/10-apx-local-admin)\" = '440:0:0' "
         " && /usr/bin/grep -Fxq '%wheel ALL=(ALL:ALL) ALL' "
+        "/etc/sudoers.d/10-apx-local-admin "
+        " && /usr/bin/grep -Fxq 'apx ALL=(ALL:ALL) ALL' "
         "/etc/sudoers.d/10-apx-local-admin; then policy=ready; fi; "
         "fi; "
         "/usr/bin/printf 'APX_LOCAL_ADMIN_V1:%s:%s:%s:%s:%s\\n' "
@@ -527,17 +924,17 @@ def local_admin_state(target: str) -> tuple[str, str, str, str, str]:
     prefix = "APX_LOCAL_ADMIN_V1:"
     lines = [line for line in result.stdout.splitlines() if line.startswith(prefix)]
     if len(lines) != 1:
-        raise Refusal("Hub local administrator state is absent or ambiguous")
+        raise Refusal("Environment local administrator state is absent or ambiguous")
     fields = tuple(lines[0][len(prefix):].split(":"))
     if len(fields) != 5:
-        raise Refusal("Hub local administrator state is malformed")
+        raise Refusal("Environment local administrator state is malformed")
     marker, sudo, password, wheel, policy = fields
     if marker not in {"absent", "present"} \
             or sudo not in {"absent", "present"} \
             or password not in {"L", "P", "NP"} \
             or wheel not in {"absent", "present"} \
             or policy not in {"absent", "invalid", "ready"}:
-        raise Refusal("Hub local administrator state contains an unknown value")
+        raise Refusal("Environment local administrator state contains an unknown value")
     return marker, sudo, password, wheel, policy
 
 
@@ -545,27 +942,29 @@ def enroll_local_admin(name: str) -> None:
     """Enroll one Environment-local password without copying a Host secret."""
     require_root()
     record = registration(name)
-    if name != "hub" or record.get("role") != "hub":
-        raise Refusal("local administrator enrollment is fixed to the canonical headless Hub")
     if not machine_running(name):
-        start(name)
+        if record.get("role") in HEADLESS_START_ROLES:
+            start(name)
+        else:
+            raise Refusal("start the graphical Environment before enrolling its local administrator")
     target = machine(name)
     marker, sudo, password, wheel, policy = local_admin_state(target)
     if sudo != "present":
-        raise Refusal("Hub release does not contain sudo")
+        raise Refusal("Environment release does not contain sudo")
     if (marker, password, wheel, policy) == ("present", "P", "present", "ready"):
-        raise Refusal("Hub local administrator is already enrolled")
+        raise Refusal("Environment local administrator is already enrolled")
     if marker == "present":
-        raise Refusal("Hub local administrator marker exists but enrollment is incomplete")
+        raise Refusal("Environment local administrator marker exists but enrollment is incomplete")
     fixed_prepare = (
         "set -eu; "
         "/usr/bin/usermod -aG wheel apx; "
         "/usr/bin/install -d -m 0755 /etc/apx /etc/sudoers.d; "
         "/usr/bin/printf '%s\\n' '%wheel ALL=(ALL:ALL) ALL' "
+        "'apx ALL=(ALL:ALL) ALL' "
         "| /usr/bin/install -m 0440 /dev/stdin /etc/sudoers.d/10-apx-local-admin"
     )
     run(["machinectl", "shell", f"root@{target}", "/usr/bin/bash", "-lc", fixed_prepare])
-    print("Define agora uma palavra-passe exclusiva deste Hub para o utilizador apx.")
+    print(f"Define agora uma palavra-passe exclusiva do Environment {name} para o utilizador apx.")
     run(["machinectl", "shell", f"root@{target}", "/usr/bin/passwd", "apx"])
     marker, sudo, password, wheel, policy = local_admin_state(target)
     if (marker, sudo, password, wheel, policy) != (
@@ -577,8 +976,8 @@ def enroll_local_admin(name: str) -> None:
     if (marker, sudo, password, wheel, policy) != (
         "present", "present", "P", "present", "ready"
     ):
-        raise Refusal("Hub local administrator final state differs")
-    print("Hub local administrator enrolled; the Host password was not requested or copied.")
+        raise Refusal("Environment local administrator final state differs")
+    print(f"Environment {name} local administrator enrolled; the Host password was not requested or copied.")
 
 
 def destroy(plan_identity: str, approval: str) -> None:
@@ -775,8 +1174,8 @@ def recover_unpublished(name: str, approval: str) -> None:
     if approval != f"CLEAN UNPUBLISHED {name}":
         raise Refusal("exact recovery cleanup approval is absent")
     target = environment_dir(name)
-    if registration_path(name).exists() or machine_running(name) or not target.is_dir():
-        raise Refusal("recovery target is published, running, or absent")
+    if registration_path(name).exists() or machine_running(name):
+        raise Refusal("recovery target is published or running")
     operation: str | None = None
     action: str | None = None
     if JOURNAL.exists():
@@ -793,6 +1192,14 @@ def recover_unpublished(name: str, approval: str) -> None:
                 break
     if operation is None:
         raise Refusal("no matching uncertain unpublished operation")
+    if not target.exists():
+        append_event(
+            operation, action or "recovery", "operation", "complete", name=name,
+            recovery="confirmed-already-absent",
+        )
+        return
+    if not target.is_dir():
+        raise Refusal("recovery target has an unexpected filesystem type")
     for label in ("home", "root"):
         delete_subvolume_tree(target / label)
     remaining = list(target.iterdir())
@@ -817,6 +1224,12 @@ def parser() -> argparse.ArgumentParser:
     create_plan = sub.add_parser("create-plan")
     create_plan.add_argument("name")
     create_plan.add_argument("--role", required=True, choices=sorted(ROLES))
+    create_plan.add_argument("--exclude-host-updates", action="store_true",
+                             help="opt out of coordinated Host update plans")
+    create_plan.add_argument("--description", default="")
+    create_plan.add_argument("--desktop-preset", default="intermediate",
+                             choices=("basic", "intermediate", "complete"))
+    create_plan.add_argument("--desktop-modules", default="")
     create_apply = sub.add_parser("create")
     create_apply.add_argument("--plan", required=True)
     create_apply.add_argument("--approve", required=True)
@@ -847,7 +1260,11 @@ def main() -> int:
     elif arguments.environment_command == "list":
         list_environments(arguments.json)
     elif arguments.environment_command == "create-plan":
-        print(json.dumps(make_plan("create", arguments.name, arguments.role), sort_keys=True, indent=2))
+        policy = "excluded" if arguments.exclude_host_updates else "follow-host"
+        print(json.dumps(make_plan("create", arguments.name, arguments.role, policy,
+                                   arguments.description, arguments.desktop_preset,
+                                   tuple(filter(None, arguments.desktop_modules.split(",")))),
+                         sort_keys=True, indent=2))
     elif arguments.environment_command == "create":
         create(arguments.plan, arguments.approve)
     elif arguments.environment_command == "start":
