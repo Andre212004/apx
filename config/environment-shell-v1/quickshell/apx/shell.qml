@@ -683,6 +683,7 @@ ShellRoot {
     function closePopup() {
         popup.visible = false
         popupOpening = false
+        popupOpenTimer.stop()
         popupKind = ""
         controlsWifiOpen = false
         controlsBluetoothOpen = false
@@ -697,7 +698,7 @@ ShellRoot {
     function showPopup() {
         popupOpening = true
         popup.visible = true
-        Qt.callLater(function() { popupOpening = false })
+        popupOpenTimer.restart()
     }
 
     function togglePopup(kind, target) {
@@ -2448,6 +2449,13 @@ ShellRoot {
             }
             Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "A preparar a tua sessão…"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
         }
+    }
+
+    Timer {
+        id: popupOpenTimer
+        interval: 180
+        repeat: false
+        onTriggered: root.popupOpening = false
     }
 
     PanelWindow {
