@@ -6,6 +6,23 @@ Brave and hybrid AMD+NVIDIA work.
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
 
+Latest hotfix: the reported `SUPER+A/B/D/E` failure was not a missing bind.
+Hyprland received all four Lua bindings and their exact commands reached
+QuickShell, but `PopupWindow.grabFocus` required an input serial that an IPC
+shortcut does not have. QuickShell logged that it could not create the grabbing
+popup, and each menu immediately returned `visible:false`. The shell now uses
+`HyprlandFocusGrab` for `[bar, popup]`, removes the transparent dismissal
+PanelWindow and keeps keyboard-opened menus visible. Live proofs returned
+`visible:true` for Controls, Calendar, Battery and Environments.
+
+The owner was restored from the old `faculdade` Environment to Hub. Return is
+now enabled even while Host identity is still publishing: the Hub-only Host
+console socket supplies a non-privileged local role proof, and a workload uses
+local compositor exit as the bounded fallback while retaining authenticated
+Host-driven return once identity is ready. The fixed QML is active in Hub,
+copied into `faculdade`, and installed in the future seed. See
+`docs/environment-shortcut-popup-and-return-hotfix-v1-2026-08-14.md`.
+
 Latest physical checkpoint: the Hub is active on tty2 under the supervised
 loading-validation chain. Its watchdog is healthy, QuickShell IPC responds and
 the shared runtime is `/run/apx/session-1000`. `SUPER+A`/`SUPER+E` survived a

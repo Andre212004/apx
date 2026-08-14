@@ -11,6 +11,27 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## Keyboard popup and pre-identity return hotfix — 2026-08-14
+
+The owner-visible `SUPER+A/B/D/E` failure was a Wayland popup focus defect.
+Bindings and QuickShell IPC were healthy, but an IPC-triggered shortcut has no
+pointer input serial. `PopupWindow.grabFocus: true` therefore opened and
+immediately dismissed the menu; QuickShell recorded the missing eligible
+parent/input event. The common shell now uses Quickshell 0.3's native
+`HyprlandFocusGrab` over the bar and popup, with standard popup grab disabled.
+A real outside click clears the grab and dismisses the menu. Physical direct
+proofs kept Controls, Calendar, Battery and Environments visibly open.
+
+Workload return also no longer becomes unavailable during the narrow interval
+before Host-authorized identity publication. The Host-console socket is an
+exact Hub-only local role proof and grants no new operation. In a workload with
+identity not yet ready, both return controls invoke local compositor exit; the
+already authenticated handoff supervisor then performs bounded cleanup and Hub
+restoration. Normal Host-driven return remains preferred after identity is
+ready. The repair is installed in current Hub, current `faculdade`, the future
+Environment seed and the digest-bound creation runtime. Details are in
+`docs/environment-shortcut-popup-and-return-hotfix-v1-2026-08-14.md`.
+
 ## Environment creation, persistent shortcuts, loading, Brave and HDMI — 2026-08-14
 
 The common creation shell now presents explicit Base APX, Daily Use and Work

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 
@@ -63,7 +64,15 @@ ShellRoot {
     property bool environmentManagementBusy: false
     property var environmentManagementState: ({ phase: "idle", progress: 0, message: "" })
     property bool identityReady: false
-    readonly property bool isHub: environmentIdentity.role === "hub"
+    // Identity is normally Host-authorized, but a workload can be visible
+    // before its active descriptor has finished publishing.  The Host-console
+    // socket is mounted only in the official Hub, so it is a safe local role
+    // proof during that startup window and never grants Host authority.
+    property bool sessionKindReady: false
+    property bool sessionHubProof: true
+    readonly property bool isHub: identityReady
+                                  ? environmentIdentity.role === "hub"
+                                  : sessionHubProof
     readonly property string environmentClient: isHub
         ? "/home/.apx-host-bridge/environment-switch-client-v1.py"
         : "/run/apx/environment-switch-client-v1.py"
@@ -1027,6 +1036,20 @@ ShellRoot {
         environmentSwitchProcess.running = true
     }
 
+    function returnToHub() {
+        if (!sessionKindReady || environmentSwitchPending || environmentSwitchProcess.running) return
+        environmentSwitchError = ""
+        environmentSwitchProgress = 8
+        environmentSwitchPending = true
+        // Prefer the authenticated Host return. If startup has not published
+        // identity yet, exiting this workload compositor is the bounded local
+        // fallback; the existing Host supervisor then restores Hub.
+        environmentSwitchProcess.command = identityReady
+                ? [root.environmentClient, "return"]
+                : ["/usr/bin/hyprctl", "eval", "hl.dsp.exit()"]
+        environmentSwitchProcess.running = true
+    }
+
     function createEnvironment(rawName, rawDescription) {
         var visibleName = rawName === undefined ? environmentDraftName : String(rawName)
         var visibleDescription = rawDescription === undefined
@@ -1681,6 +1704,15 @@ ShellRoot {
                     root.identityReady = false
                 }
             }
+        }
+    }
+    Process {
+        id: sessionKindProcess
+        command: ["/usr/bin/test", "-S", "/run/apx/host-console-v1.sock"]
+        running: true
+        onExited: function(exitCode) {
+            root.sessionHubProof = exitCode === 0
+            root.sessionKindReady = true
         }
     }
     Process {
@@ -2382,20 +2414,6 @@ ShellRoot {
     }
 
     PanelWindow {
-        id: popupDismissLayer
-        visible: popup.visible
-        anchors { left: true; right: true; bottom: true }
-        implicitHeight: screen ? Math.max(0, screen.height - bar.implicitHeight) : 0
-        exclusiveZone: 0
-        color: "transparent"
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: root.closePopup()
-        }
-    }
-
-    PanelWindow {
         id: environmentTransitionOverlay
         visible: root.environmentSwitchPending
         anchors { top: true; bottom: true; left: true; right: true }
@@ -2433,10 +2451,11 @@ ShellRoot {
                                                           : (root.popupKind === "model" ? 370 : (root.popupKind === "environments" ? root.environmentPopupHeight : 330)))
         visible: false
         color: "transparent"
-        // Keep the original anchored menu behaviour: every popup opens below
-        // the bar button that invoked it and the compositor dismisses it when
-        // focus moves outside.
-        grabFocus: true
+        // PopupWindow's standard grab needs an input serial. IPC-triggered
+        // shortcuts have no such serial, so the popup was shown and dismissed
+        // immediately. HyprlandFocusGrab below handles both keyboard and mouse
+        // invocation and closes only on a real outside click.
+        grabFocus: false
         anchor.edges: Edges.Bottom
         anchor.gravity: Edges.Bottom
         anchor.margins.top: 34
@@ -3256,8 +3275,8 @@ ShellRoot {
                     MenuButton {
                         visible: !root.isHub
                         width: parent.width; height: visible ? 46 : 0; label: root.environmentSwitchPending ? "A REGRESSAR…" : "VOLTAR AO HUB"; accent: true
-                        enabled: root.identityReady && !root.environmentSwitchPending
-                        onActivated: { root.environmentSwitchError = ""; root.environmentSwitchProgress = 8; root.environmentSwitchPending = true; environmentSwitchProcess.command = [root.environmentClient, "return"]; environmentSwitchProcess.running = true }
+                        enabled: root.sessionKindReady && !root.environmentSwitchPending
+                        onActivated: root.returnToHub()
                     }
                     Text { visible: !root.isHub; width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "O Environment será fechado em segurança antes da troca."; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize }
                     Text { visible: root.environmentSwitchError.length > 0; width: parent.width; wrapMode: Text.WordWrap; text: root.environmentSwitchError; color: "#ff91a4"; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
@@ -4107,14 +4126,14 @@ ShellRoot {
                             BounceMouseArea {
                                 id: poweroffMouse
                                 anchors.fill: parent
-                                enabled: root.identityReady && !environmentSwitchProcess.running
+                                enabled: root.isHub || (root.sessionKindReady && !root.environmentSwitchPending)
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     if (root.isHub)
                                         root.beginPower("poweroff")
                                     else
-                                        environmentSwitchProcess.running = true
+                                        root.returnToHub()
                                 }
                             }
                         }
@@ -4324,5 +4343,12 @@ ShellRoot {
                 }
             }
         }
+    }
+
+    HyprlandFocusGrab {
+        id: popupFocusGrab
+        windows: [bar, popup]
+        active: popup.visible
+        onCleared: if (popup.visible) root.closePopup()
     }
 }
