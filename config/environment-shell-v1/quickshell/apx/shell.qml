@@ -85,6 +85,13 @@ ShellRoot {
              + (environmentDeleteConfirm ? 64 : 0) + (environmentManagementBusy ? 42 : 0))
     property string popupKind: ""
     property Item popupTarget: null
+    readonly property int popupLeftMargin: {
+        if (!popupTarget || !bar) return 8
+        var targetRect = popupTarget.mapToItem(bar.contentItem, 0, 0)
+        var targetCenter = targetRect.x + popupTarget.width / 2
+        return Math.max(8, Math.min(bar.width - popup.implicitWidth - 8,
+                                    Math.round(targetCenter - popup.implicitWidth / 2)))
+    }
     property var hostState: ({})
     property string clockText: ""
     property string volumeText: "--"
@@ -2437,8 +2444,8 @@ ShellRoot {
 
     PanelWindow {
         id: popup
-        anchors { top: true; right: true }
-        margins { top: 52; right: 12 }
+        anchors { top: true; left: true }
+        margins { top: 6; left: root.popupLeftMargin }
         exclusiveZone: 0
         aboveWindows: true
         focusable: visible

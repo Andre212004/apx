@@ -17,8 +17,9 @@ The first popup-focus repair kept IPC-launched menus visible, but the resulting
 xdg popup did not provide reliable pointer/keyboard input on the physical
 session. The shared shell now renders the menu as a focused `PanelWindow` with
 `WlrKeyboardFocus.OnDemand`; the compositor `HyprlandFocusGrab` remains the
-outside-click dismissal boundary. The live layer catalogue shows the menu as a
-340x440 input-capable QuickShell surface above the bar.
+outside-click dismissal boundary. The menu recomputes its horizontal margin
+from the opening bar button, clamps to the monitor edges, and starts directly
+below the bar while remaining an input-capable QuickShell surface.
 
 The duplicate `Atalhos APX` switch was removed from the crowded Control Centre.
 The capability is now an explicit `shortcuts` Environment module with a clear

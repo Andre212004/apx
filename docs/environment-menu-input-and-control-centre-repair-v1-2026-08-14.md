@@ -22,7 +22,7 @@ flat list. The status icons appeared soft on the 150% display.
 
 ## Live proof
 
-The current Hub layer catalogue reports the popup at `x=928, y=98, w=340,
-h=440`, in the QuickShell layer above the bar. The repaired QML is byte-identical
+The popup is positioned from the opening bar button, clamped to the monitor
+edges, and starts immediately below the bar. The repaired QML is byte-identical
 in the source, Hub, `faculdade`, and future Environment seed. The full suite
 passes with 1032 tests and 11 expected skips.

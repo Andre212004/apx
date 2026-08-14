@@ -12,7 +12,8 @@ menu is opened by either a click or a compositor IPC shortcut; the Hyprland
 focus grab still dismisses it on an outside click. The control centre no longer
 duplicates the Atalhos APX toggle; that capability is now a selectable
 `shortcuts` module in the Environment creation catalogue and is included in
-the Intermediate and Complete presets. Control icons retain the native
+the Intermediate and Complete presets. The popup now recomputes its horizontal
+margin from the opening bar button and starts directly below the bar. Control icons retain the native
 symbolic SVG pipeline at an integer size instead of fractional whole-popup
 scaling. The repaired QML is live in Hub, `faculdade`, and the future seed.
 
