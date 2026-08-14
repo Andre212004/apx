@@ -15,7 +15,9 @@ duplicates the Atalhos APX toggle; that capability is now a selectable
 the Intermediate and Complete presets. The popup now recomputes its horizontal
 margin from the opening bar button and starts directly below the bar. Control icons retain the native
 symbolic SVG pipeline at an integer size instead of fractional whole-popup
-scaling. The repaired QML is live in Hub, `faculdade`, and the future seed.
+scaling. The Environment creation form is capped at 620×540 and expands into
+view with a short top-origin animation. The repaired QML is live in Hub,
+`faculdade`, and the future seed.
 
 Latest hotfix: the reported `SUPER+A/B/D/E` failure was not a missing bind.
 Hyprland received all four Lua bindings and their exact commands reached

@@ -17,6 +17,9 @@ flat list. The status icons appeared soft on the 150% display.
   Complete select it by default; Basic remains minimal.
 - The duplicated shortcut switch was removed from the Control Centre, leaving
   the session actions grouped under a compact heading.
+- The Environment creation popup is capped at `620x540`; its feature list
+  remains scrollable and the panel expands from the top edge with a short
+  opacity/scale animation.
 - Control icons keep the native Adwaita symbolic SVG source and render at an
   integer 18px-or-larger target instead of scaling the entire popup fractionally.
 

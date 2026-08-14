@@ -80,11 +80,12 @@ ShellRoot {
         : "/run/apx/environment-switch-client-v1.py"
     readonly property string environmentLabel: isHub ? "HUB" : String(environmentIdentity.display_name || environmentIdentity.name || "ENVIRONMENT").toUpperCase()
     readonly property int environmentPopupHeight: !isHub ? 214
-        : (environmentCreateOpen ? 650 + (environmentManagementBusy ? 42 : 0)
+        : (environmentCreateOpen ? 540 + (environmentManagementBusy ? 42 : 0)
            : 216 + Math.max(1, Math.min(5, environmentCatalog.length)) * 66
              + (environmentDeleteConfirm ? 64 : 0) + (environmentManagementBusy ? 42 : 0))
     property string popupKind: ""
     property Item popupTarget: null
+    property bool popupOpening: false
     readonly property int popupLeftMargin: {
         if (!popupTarget || !bar) return 8
         var targetRect = popupTarget.mapToItem(bar.contentItem, 0, 0)
@@ -681,6 +682,7 @@ ShellRoot {
 
     function closePopup() {
         popup.visible = false
+        popupOpening = false
         popupKind = ""
         controlsWifiOpen = false
         controlsBluetoothOpen = false
@@ -690,6 +692,12 @@ ShellRoot {
         environmentCreateOpen = false
         environmentDeleteConfirm = false
         environmentKeyboardFocus = false
+    }
+
+    function showPopup() {
+        popupOpening = true
+        popup.visible = true
+        Qt.callLater(function() { popupOpening = false })
     }
 
     function togglePopup(kind, target) {
@@ -709,7 +717,7 @@ ShellRoot {
         }
         popupKind = kind
         popupTarget = target
-        popup.visible = true
+        showPopup()
         if (kind === "controls")
             hostAction("wifi-scan")
         if (kind === "model" && !modelStoreStatusProcess.running)
@@ -1880,7 +1888,7 @@ ShellRoot {
         function openControls(): void {
             root.popupKind = "controls"
             root.popupTarget = controlCenterButton
-            popup.visible = true
+            root.showPopup()
         }
 
         function openWifiControls(): void {
@@ -1920,7 +1928,7 @@ ShellRoot {
         function openCalendar(): void {
             root.popupKind = "calendar"
             root.popupTarget = calendarButton
-            popup.visible = true
+            root.showPopup()
         }
 
         function brightnessUp(): void { root.stepDisplayBrightness(5) }
@@ -2451,7 +2459,7 @@ ShellRoot {
         focusable: visible
         WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         implicitWidth: root.popupKind === "calendar" ? 480
-                                                     : (root.popupKind === "environments" ? (root.environmentCreateOpen ? 700 : 430)
+                                                     : (root.popupKind === "environments" ? (root.environmentCreateOpen ? 620 : 430)
                                                         : (root.popupKind === "controls" ? 340 * root.controlCenterScale : 300))
         implicitHeight: root.popupKind === "calendar"
                         ? (root.calendarEditor ? 500
@@ -2481,8 +2489,11 @@ ShellRoot {
             anchors.top: parent.top
             width: root.popupKind === "controls" ? parent.width / root.controlCenterScale : parent.width
             height: root.popupKind === "controls" ? parent.height / root.controlCenterScale : parent.height
-            scale: root.popupKind === "controls" ? root.controlCenterScale : 1
+            scale: (root.popupKind === "controls" ? root.controlCenterScale : 1) * (root.popupOpening ? 0.94 : 1)
+            opacity: root.popupOpening ? 0 : 1
             transformOrigin: Item.TopLeft
+            Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
             radius: 10
             color: root.card
             border.width: 1

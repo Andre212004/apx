@@ -15,7 +15,7 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("(root.isHub ? 440 : 394) * root.controlCenterScale", source)
         self.assertIn("parent.width / root.controlCenterScale", source)
         self.assertIn("parent.height / root.controlCenterScale", source)
-        self.assertIn('scale: root.popupKind === "controls" ? root.controlCenterScale : 1', source)
+        self.assertIn('scale: (root.popupKind === "controls" ? root.controlCenterScale : 1) * (root.popupOpening ? 0.94 : 1)', source)
         self.assertIn("transformOrigin: Item.TopLeft", source)
         self.assertIn("function popupStatus(): string", source)
 

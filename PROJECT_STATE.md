@@ -21,6 +21,10 @@ outside-click dismissal boundary. The menu recomputes its horizontal margin
 from the opening bar button, clamps to the monitor edges, and starts directly
 below the bar while remaining an input-capable QuickShell surface.
 
+The Environment creation popup is intentionally capped at 620×540 so its
+long feature list scrolls inside the form instead of taking over the screen.
+Its content expands from the top edge with a short opacity/scale animation.
+
 The duplicate `Atalhos APX` switch was removed from the crowded Control Centre.
 The capability is now an explicit `shortcuts` Environment module with a clear
 Portuguese title, description, and `SUPER+A/B/D/E` program detail. Intermediate
