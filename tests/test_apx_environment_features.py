@@ -20,11 +20,11 @@ class EnvironmentFeaturesTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         return module
 
-    def test_catalogue_has_three_presets_and_eighteen_modules(self):
+    def test_catalogue_has_three_presets_and_nineteen_modules(self):
         self.assertEqual(tuple(subject.PRESETS), ("basic", "intermediate", "complete"))
-        self.assertEqual(len(subject.MODULES), 18)
+        self.assertEqual(len(subject.MODULES), 19)
         self.assertEqual(subject.PRESETS["basic"], ("system", "cli-aur"))
-        self.assertEqual(len(subject.PRESETS["intermediate"]), 14)
+        self.assertEqual(len(subject.PRESETS["intermediate"]), 15)
         self.assertEqual(subject.PRESETS["complete"], subject.MODULES)
 
     def test_dependencies_are_closed_and_package_plan_is_fixed(self):

@@ -50,13 +50,15 @@ ShellRoot {
         { key: "office", label: "Documentos e folhas de cálculo", detail: "Textos, apresentações, folhas de cálculo e correção ortográfica.", programs: "INSTALA · LibreOffice, Hunspell EN-GB", mib: 620, deps: ["desktop-integration", "locale-input"] },
         { key: "communication", label: "Câmara e videochamadas", detail: "Ferramentas de diagnóstico para webcam e vídeo.", programs: "INSTALA · v4l-utils", mib: 55, deps: ["desktop-integration", "network", "audio", "graphics"] },
         { key: "printing-scanning", label: "Impressoras e scanners", detail: "Configurar, imprimir e digitalizar documentos.", programs: "INSTALA · CUPS, SANE, Simple Scan, system-config-printer", mib: 145, deps: ["desktop-integration", "network", "devices-storage"] },
-        { key: "development", label: "Programação e containers", detail: "Compilar software, desenvolver em várias linguagens e usar containers.", programs: "INSTALA · CMake, Ninja, Node.js, npm, Podman, pip, Rust", mib: 1150, deps: ["cli-aur"] }
+        { key: "development", label: "Programação e containers", detail: "Compilar software, desenvolver em várias linguagens e usar containers.", programs: "INSTALA · CMake, Ninja, Node.js, npm, Podman, pip, Rust", mib: 1150, deps: ["cli-aur"] },
+        { key: "shortcuts", label: "Atalhos APX", detail: "Abrir rapidamente o controlo, calendário, bateria e Environments.", programs: "BASE · ponte de atalhos SUPER+A/B/D/E", mib: 8, deps: ["graphical"] }
     ]
     readonly property var environmentModuleGroups: [
         { key: "base", label: "1 · SISTEMA E AMBIENTE DE TRABALHO", description: "Terminal, janelas, idioma e integração do desktop", modules: ["system", "cli-aur", "graphical", "desktop-integration", "locale-input"] },
         { key: "hardware", label: "2 · INTERNET, SOM E DISPOSITIVOS", description: "Rede, Bluetooth, áudio, gráficos, bateria e USB", modules: ["network", "bluetooth", "audio", "graphics", "power", "devices-storage"] },
         { key: "daily", label: "3 · APLICAÇÕES DO DIA A DIA", description: "Ficheiros, browser, PDF, vídeo e codecs", modules: ["files", "web-documents", "multimedia"] },
-        { key: "extras", label: "4 · TRABALHO E FERRAMENTAS AVANÇADAS", description: "Office, câmara, impressão, programação e containers", modules: ["office", "communication", "printing-scanning", "development"] }
+        { key: "extras", label: "4 · TRABALHO E FERRAMENTAS AVANÇADAS", description: "Office, câmara, impressão, programação e containers", modules: ["office", "communication", "printing-scanning", "development"] },
+        { key: "accessibility", label: "5 · ACESSIBILIDADE E ATALHOS", description: "Atalhos globais para abrir os menus APX", modules: ["shortcuts"] }
     ]
     property bool environmentKeyboardFocus: false
     property int environmentFocusIndex: -1
@@ -173,6 +175,8 @@ ShellRoot {
     property int menuBodySize: 10
     property int menuSmallSize: 9
     property int menuMetaSize: 8
+    readonly property int environmentCreateModuleFocusBase: 6 + environmentModuleGroups.length
+    readonly property int environmentCreateSubmitFocusIndex: environmentCreateModuleFocusBase + environmentModuleCatalog.length
     // Hyprland renders the display at 150%. Present the control centre at a
     // 125% physical compromise: readable on the internal panel while keeping
     // every common 16px icon aligned to an integer 20-device-pixel target.
@@ -698,7 +702,6 @@ ShellRoot {
         }
         popupKind = kind
         popupTarget = target
-        popup.anchor.item = target
         popup.visible = true
         if (kind === "controls")
             hostAction("wifi-scan")
@@ -860,10 +863,10 @@ ShellRoot {
             indices.push(6 + groupIndex)
             if (environmentFeatureDrawer === group.key) group.modules.forEach(function(key) {
                 var moduleIndex = environmentModuleIndex(key)
-                if (moduleIndex >= 0) indices.push(10 + moduleIndex)
+                if (moduleIndex >= 0) indices.push(environmentCreateModuleFocusBase + moduleIndex)
             })
         })
-        indices.push(28)
+        indices.push(environmentCreateSubmitFocusIndex)
         return indices
     }
 
@@ -881,8 +884,8 @@ ShellRoot {
             environmentCreateFocusIndex = direction > 0 ? 3 : 5
         } else if (focusIndex >= 3 && focusIndex <= 5) {
             environmentCreateFocusIndex = 3 + ((focusIndex - 3 + direction + 3) % 3)
-        } else if (focusIndex >= 10 && focusIndex < 28) {
-            var moduleIndex = focusIndex - 10
+        } else if (focusIndex >= environmentCreateModuleFocusBase && focusIndex < environmentCreateSubmitFocusIndex) {
+            var moduleIndex = focusIndex - environmentCreateModuleFocusBase
             for (var groupIndex = 0; groupIndex < environmentModuleGroups.length; ++groupIndex) {
                 var modules = environmentModuleGroups[groupIndex].modules
                 var position = modules.indexOf(environmentModuleCatalog[moduleIndex].key)
@@ -890,7 +893,7 @@ ShellRoot {
                 var neighbour = position + direction
                 if (neighbour >= 0 && neighbour < modules.length
                         && Math.floor(neighbour / 2) === Math.floor(position / 2))
-                    environmentCreateFocusIndex = 10 + environmentModuleIndex(modules[neighbour])
+                    environmentCreateFocusIndex = environmentCreateModuleFocusBase + environmentModuleIndex(modules[neighbour])
                 break
             }
         }
@@ -900,7 +903,7 @@ ShellRoot {
     function moveEnvironmentCreateVertical(direction) {
         var focusIndex = environmentCreateFocusIndex
         if (focusIndex < 0) { moveEnvironmentCreateFocus(direction); return }
-        if (focusIndex === 0) environmentCreateFocusIndex = direction > 0 ? 1 : 28
+        if (focusIndex === 0) environmentCreateFocusIndex = direction > 0 ? 1 : environmentCreateSubmitFocusIndex
         else if (focusIndex === 1) environmentCreateFocusIndex = direction > 0 ? 2 : 0
         else if (focusIndex === 2) environmentCreateFocusIndex = direction > 0 ? 4 : 1
         else if (focusIndex >= 3 && focusIndex <= 5)
@@ -909,23 +912,23 @@ ShellRoot {
             var groupIndex = focusIndex - 6
             var group = environmentModuleGroups[groupIndex]
             if (direction > 0 && environmentFeatureDrawer === group.key && group.modules.length)
-                environmentCreateFocusIndex = 10 + environmentModuleIndex(group.modules[0])
-            else if (direction > 0) environmentCreateFocusIndex = groupIndex < 3 ? focusIndex + 1 : 28
+                environmentCreateFocusIndex = environmentCreateModuleFocusBase + environmentModuleIndex(group.modules[0])
+            else if (direction > 0) environmentCreateFocusIndex = groupIndex < environmentModuleGroups.length - 1 ? focusIndex + 1 : environmentCreateSubmitFocusIndex
             else environmentCreateFocusIndex = groupIndex > 0 ? focusIndex - 1 : 4
-        } else if (focusIndex >= 10 && focusIndex < 28) {
-            var module = environmentModuleCatalog[focusIndex - 10]
+        } else if (focusIndex >= environmentCreateModuleFocusBase && focusIndex < environmentCreateSubmitFocusIndex) {
+            var module = environmentModuleCatalog[focusIndex - environmentCreateModuleFocusBase]
             for (var index = 0; index < environmentModuleGroups.length; ++index) {
                 var groupModules = environmentModuleGroups[index].modules
                 var position = groupModules.indexOf(module.key)
                 if (position < 0) continue
                 var verticalNeighbour = position + direction * 2
                 if (verticalNeighbour >= 0 && verticalNeighbour < groupModules.length)
-                    environmentCreateFocusIndex = 10 + environmentModuleIndex(groupModules[verticalNeighbour])
+                    environmentCreateFocusIndex = environmentCreateModuleFocusBase + environmentModuleIndex(groupModules[verticalNeighbour])
                 else if (direction < 0) environmentCreateFocusIndex = 6 + index
-                else environmentCreateFocusIndex = index < 3 ? 7 + index : 28
+                else environmentCreateFocusIndex = index < environmentModuleGroups.length - 1 ? 7 + index : environmentCreateSubmitFocusIndex
                 break
             }
-        } else if (focusIndex === 28) environmentCreateFocusIndex = direction > 0 ? 0 : 9
+        } else if (focusIndex === environmentCreateSubmitFocusIndex) environmentCreateFocusIndex = direction > 0 ? 0 : environmentModuleGroups.length + 5
         environmentMenu.forceActiveFocus()
     }
 
@@ -945,12 +948,12 @@ ShellRoot {
             environmentFeatureInfo = ""
             return
         }
-        if (focusIndex >= 10 && focusIndex < 28) {
-            var moduleInfo = environmentModuleCatalog[focusIndex - 10]
+        if (focusIndex >= environmentCreateModuleFocusBase && focusIndex < environmentCreateSubmitFocusIndex) {
+            var moduleInfo = environmentModuleCatalog[focusIndex - environmentCreateModuleFocusBase]
             setEnvironmentModule(moduleInfo.key, environmentSelectedModules[moduleInfo.key] !== true)
             return
         }
-        if (focusIndex === 28) createEnvironment(environmentNameInput.text, environmentDescriptionInput.text)
+        if (focusIndex === environmentCreateSubmitFocusIndex) createEnvironment(environmentNameInput.text, environmentDescriptionInput.text)
     }
 
     function handleEnvironmentCreateKey(event) {
@@ -969,7 +972,7 @@ ShellRoot {
     function environmentPresetKeys(preset) {
         if (preset === "basic") return ["system", "cli-aur"]
         if (preset === "complete") return environmentModuleCatalog.map(function(item) { return item.key })
-        return environmentModuleCatalog.slice(0, 14).map(function(item) { return item.key })
+        return environmentModuleCatalog.slice(0, 14).map(function(item) { return item.key }).concat(["shortcuts"])
     }
 
     function applyEnvironmentPreset(preset) {
@@ -1870,7 +1873,6 @@ ShellRoot {
         function openControls(): void {
             root.popupKind = "controls"
             root.popupTarget = controlCenterButton
-            popup.anchor.item = controlCenterButton
             popup.visible = true
         }
 
@@ -1911,7 +1913,6 @@ ShellRoot {
         function openCalendar(): void {
             root.popupKind = "calendar"
             root.popupTarget = calendarButton
-            popup.anchor.item = calendarButton
             popup.visible = true
         }
 
@@ -2334,8 +2335,8 @@ ShellRoot {
             display: AbstractButton.IconOnly
             icon.source: parent.source
             icon.color: parent.tint
-            icon.width: width
-            icon.height: height
+            icon.width: Math.max(18, width)
+            icon.height: Math.max(18, height)
             background: Item {}
         }
     }
@@ -2434,8 +2435,14 @@ ShellRoot {
         }
     }
 
-    PopupWindow {
+    PanelWindow {
         id: popup
+        anchors { top: true; right: true }
+        margins { top: 52; right: 12 }
+        exclusiveZone: 0
+        aboveWindows: true
+        focusable: visible
+        WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         implicitWidth: root.popupKind === "calendar" ? 480
                                                      : (root.popupKind === "environments" ? (root.environmentCreateOpen ? 700 : 430)
                                                         : (root.popupKind === "controls" ? 340 * root.controlCenterScale : 300))
@@ -2451,14 +2458,9 @@ ShellRoot {
                                                           : (root.popupKind === "model" ? 370 : (root.popupKind === "environments" ? root.environmentPopupHeight : 330)))
         visible: false
         color: "transparent"
-        // PopupWindow's standard grab needs an input serial. IPC-triggered
-        // shortcuts have no such serial, so the popup was shown and dismissed
-        // immediately. HyprlandFocusGrab below handles both keyboard and mouse
-        // invocation and closes only on a real outside click.
-        grabFocus: false
-        anchor.edges: Edges.Bottom
-        anchor.gravity: Edges.Bottom
-        anchor.margins.top: 34
+        // A layer-shell surface can accept both pointer and keyboard input
+        // even when opened by an IPC shortcut, which avoids the xdg_popup
+        // input-serial limitation of PopupWindow.
 
         Shortcut {
             sequence: "Escape"
@@ -3252,9 +3254,9 @@ ShellRoot {
                                                 programs: moduleInfo.programs
                                                 checked: root.environmentSelectedModules[moduleInfo.key] === true
                                                 infoVisible: root.environmentFeatureInfo === moduleInfo.key
-                                                keyboardFocused: root.environmentCreateFocusIndex === 10 + root.environmentModuleIndex(moduleInfo.key)
-                                                onActivated: { root.environmentCreateFocusIndex = 10 + root.environmentModuleIndex(moduleInfo.key); root.setEnvironmentModule(moduleInfo.key, !checked) }
-                                                onInfoRequested: { root.environmentCreateFocusIndex = 10 + root.environmentModuleIndex(moduleInfo.key); root.environmentFeatureInfo = infoVisible ? "" : moduleInfo.key }
+                                                keyboardFocused: root.environmentCreateFocusIndex === root.environmentCreateModuleFocusBase + root.environmentModuleIndex(moduleInfo.key)
+                                                onActivated: { root.environmentCreateFocusIndex = root.environmentCreateModuleFocusBase + root.environmentModuleIndex(moduleInfo.key); root.setEnvironmentModule(moduleInfo.key, !checked) }
+                                                onInfoRequested: { root.environmentCreateFocusIndex = root.environmentCreateModuleFocusBase + root.environmentModuleIndex(moduleInfo.key); root.environmentFeatureInfo = infoVisible ? "" : moduleInfo.key }
                                             }
                                         }
                                     }
@@ -3262,7 +3264,7 @@ ShellRoot {
                             }
                         }
                         Text { width: parent.width; text: "A palavra-passe de sudo será herdada do HUB. Dependências são ativadas automaticamente."; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; wrapMode: Text.WordWrap }
-                        MenuButton { width: parent.width; height: 42; label: root.environmentManagementBusy ? "A CRIAR…" : "CRIAR ENVIRONMENT"; accent: true; keyboardFocused: root.environmentCreateFocusIndex === 28; enabled: !root.environmentManagementBusy; onActivated: { root.environmentCreateFocusIndex = 28; root.createEnvironment(environmentNameInput.text, environmentDescriptionInput.text) } }
+                        MenuButton { width: parent.width; height: 42; label: root.environmentManagementBusy ? "A CRIAR…" : "CRIAR ENVIRONMENT"; accent: true; keyboardFocused: root.environmentCreateFocusIndex === root.environmentCreateSubmitFocusIndex; enabled: !root.environmentManagementBusy; onActivated: { root.environmentCreateFocusIndex = root.environmentCreateSubmitFocusIndex; root.createEnvironment(environmentNameInput.text, environmentDescriptionInput.text) } }
                     }
 
                     Rectangle {
@@ -4045,34 +4047,11 @@ ShellRoot {
                             }
                         }
                     }
-                    Rectangle {
+                    Text {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
-                        width: parent.width; height: visible ? 38 : 0; radius: 10
-                        color: shortcutsMouse.containsMouse ? "#203b46" : "#182731"
-                        border.width: 1; border.color: root.apxShortcutsEnabled ? root.cyanDim : "#263941"
-                        Text { anchors.left: parent.left; anchors.leftMargin: 11; anchors.verticalCenter: parent.verticalCenter; text: "Atalhos APX · SUPER+A / SUPER+E"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
-                        Switch {
-                            id: shortcutsSwitch
-                            anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                            enabled: !shortcutApplyProcess.running
-                            Binding { target: shortcutsSwitch; property: "checked"; value: root.apxShortcutsEnabled }
-                            onClicked: {
-                                if (!shortcutApplyProcess.running) {
-                                    shortcutApplyProcess.command = ["/home/apx/.local/bin/apx-shortcuts-v1", "toggle"]
-                                    shortcutApplyProcess.running = true
-                                }
-                            }
-                        }
-                        BounceMouseArea {
-                            id: shortcutsMouse; anchors.left: parent.left; anchors.right: shortcutsSwitch.left; anchors.top: parent.top; anchors.bottom: parent.bottom
-                            hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (!shortcutApplyProcess.running) {
-                                    shortcutApplyProcess.command = ["/home/apx/.local/bin/apx-shortcuts-v1", "toggle"]
-                                    shortcutApplyProcess.running = true
-                                }
-                            }
-                        }
+                        width: parent.width; height: 18
+                        text: "AÇÕES DA SESSÃO"
+                        color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true
                     }
                     Grid {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen

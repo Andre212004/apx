@@ -6,7 +6,7 @@ MODULES = (
     "system", "cli-aur", "graphical", "desktop-integration", "locale-input",
     "network", "bluetooth", "audio", "graphics", "power", "devices-storage",
     "files", "web-documents", "multimedia", "office", "communication",
-    "printing-scanning", "development",
+    "printing-scanning", "development", "shortcuts",
 )
 
 DEPENDENCIES = {
@@ -21,12 +21,12 @@ DEPENDENCIES = {
     "office": ("desktop-integration", "locale-input"),
     "communication": ("desktop-integration", "network", "audio", "graphics"),
     "printing-scanning": ("desktop-integration", "network", "devices-storage"),
-    "development": ("cli-aur",),
+    "development": ("cli-aur",), "shortcuts": ("graphical",),
 }
 
 PRESETS = {
     "basic": ("system", "cli-aur"),
-    "intermediate": MODULES[:14],
+    "intermediate": MODULES[:14] + ("shortcuts",),
     "complete": MODULES,
 }
 
@@ -56,7 +56,7 @@ ESTIMATED_MIB = {
     "bluetooth": 35, "audio": 125, "graphics": 390, "power": 30,
     "devices-storage": 120, "files": 115, "web-documents": 360,
     "multimedia": 240, "office": 620, "communication": 55,
-    "printing-scanning": 145, "development": 1150,
+    "printing-scanning": 145, "development": 1150, "shortcuts": 8,
 }
 
 

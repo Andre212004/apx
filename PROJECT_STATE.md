@@ -11,6 +11,22 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## Interactive popup and shortcut-module repair — 2026-08-14
+
+The first popup-focus repair kept IPC-launched menus visible, but the resulting
+xdg popup did not provide reliable pointer/keyboard input on the physical
+session. The shared shell now renders the menu as a focused `PanelWindow` with
+`WlrKeyboardFocus.OnDemand`; the compositor `HyprlandFocusGrab` remains the
+outside-click dismissal boundary. The live layer catalogue shows the menu as a
+340x440 input-capable QuickShell surface above the bar.
+
+The duplicate `Atalhos APX` switch was removed from the crowded Control Centre.
+The capability is now an explicit `shortcuts` Environment module with a clear
+Portuguese title, description, and `SUPER+A/B/D/E` program detail. Intermediate
+and Complete presets include it; Basic remains the minimal base. The feature
+catalogue, dependency closure, size estimate, creation UI focus map, runtime
+digest, seed, current Hub, and existing `faculdade` are synchronized.
+
 ## Keyboard popup and pre-identity return hotfix — 2026-08-14
 
 The owner-visible `SUPER+A/B/D/E` failure was a Wayland popup focus defect.

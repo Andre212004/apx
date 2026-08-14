@@ -6,6 +6,16 @@ Brave and hybrid AMD+NVIDIA work.
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
 
+Latest UI repair: the popup was moved from an xdg `PopupWindow` to a focused
+`PanelWindow` surface. This keeps pointer and keyboard input available when a
+menu is opened by either a click or a compositor IPC shortcut; the Hyprland
+focus grab still dismisses it on an outside click. The control centre no longer
+duplicates the Atalhos APX toggle; that capability is now a selectable
+`shortcuts` module in the Environment creation catalogue and is included in
+the Intermediate and Complete presets. Control icons retain the native
+symbolic SVG pipeline at an integer size instead of fractional whole-popup
+scaling. The repaired QML is live in Hub, `faculdade`, and the future seed.
+
 Latest hotfix: the reported `SUPER+A/B/D/E` failure was not a missing bind.
 Hyprland received all four Lua bindings and their exact commands reached
 QuickShell, but `PopupWindow.grabFocus` required an input serial that an IPC
