@@ -9,6 +9,7 @@ readonly STATE=/var/lib/apx
 readonly RUNTIME_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-runtime.py
 readonly CLIENT_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-client.py
 readonly EXECUTOR_SOURCE=$REPOSITORY/scripts/virtual-lab/apx-lab-executor.py
+readonly ENVIRONMENT_FEATURES_SOURCE=$REPOSITORY/src/apx_environment_features.py
 
 fail() {
   printf 'APX physical bootstrap refused: %s\n' "$*" >&2
@@ -58,12 +59,13 @@ else:
 [[ $(< /sys/class/dmi/id/product_name) == 82JU ]] || fail 'wrong product identity'
 [[ $(< /sys/class/dmi/id/board_name) == LNVNB161216 ]] || fail 'wrong board identity'
 [[ $(findmnt -n -o FSTYPE "$STATE") == btrfs ]] || fail 'APX state is not Btrfs'
-[[ -f $RUNTIME_SOURCE && -f $CLIENT_SOURCE && -f $EXECUTOR_SOURCE ]] \
+[[ -f $RUNTIME_SOURCE && -f $CLIENT_SOURCE && -f $EXECUTOR_SOURCE && -f $ENVIRONMENT_FEATURES_SOURCE ]] \
   || fail 'runtime source set is incomplete'
 
 install -Dm0755 "$RUNTIME_SOURCE" /usr/lib/apx/apx-lab-runtime.py
 install -Dm0755 "$CLIENT_SOURCE" /usr/lib/apx/apx-lab-client.py
 install -Dm0755 "$EXECUTOR_SOURCE" /usr/lib/apx/apx-lab-executor.py
+install -Dm0644 "$ENVIRONMENT_FEATURES_SOURCE" /usr/lib/apx/apx_environment_features.py
 ln -sfn /usr/lib/apx/apx-lab-runtime.py /usr/bin/apx
 mkdir -p "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
 chmod 0700 "$STATE"/{releases,environments,plans,journal,snapshots,archives,quarantine,catalogue}
