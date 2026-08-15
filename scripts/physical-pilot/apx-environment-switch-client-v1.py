@@ -10,8 +10,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(1, "/usr/lib/apx")
+# The Host-installed contract is authoritative. Do not let stale helper
+# modules beside the bridged client override the current module catalogue.
+sys.path.insert(0, "/usr/lib/apx")
 from apx_environment_switch_contract import MAX_MESSAGE_BYTES, request_bytes  # noqa: E402
 
 

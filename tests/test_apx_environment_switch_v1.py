@@ -96,6 +96,8 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn("Restauro de sessão:", source)
         self.assertIn('"return": "return.to-hub"', source)
         self.assertIn("for endpoint in (PRIMARY_SOCKET, LIVE_SOCKET)", source)
+        self.assertIn('sys.path.insert(0, "/usr/lib/apx")', source)
+        self.assertNotIn("Path(__file__).resolve().parent", source)
         self.assertNotIn('("/usr/bin/hyprctl", "dispatch", "exit")', source)
 
     def test_authenticated_return_is_host_driven_and_observable(self) -> None:
