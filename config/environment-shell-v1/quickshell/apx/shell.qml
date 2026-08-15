@@ -65,6 +65,7 @@ ShellRoot {
     property int environmentCreateFocusIndex: -1
     property bool environmentManagementBusy: false
     property var environmentManagementState: ({ phase: "idle", progress: 0, message: "" })
+    property int environmentProgressReadFailures: 0
     property bool identityReady: false
     // Identity is normally Host-authorized, but a workload can be visible
     // before its active descriptor has finished publishing.  The Host-console
@@ -1776,6 +1777,7 @@ ShellRoot {
                 try {
                     var state = JSON.parse(text)
                     root.environmentManagementState = state
+                    root.environmentProgressReadFailures = 0
                     root.environmentManagementBusy = state.busy === true
                     if (state.phase === "complete") {
                         root.environmentSwitchError = ""
@@ -1792,11 +1794,22 @@ ShellRoot {
                         root.environmentSwitchError = state.message || "A operação falhou."
                     }
                 } catch (error) {
-                    root.environmentSwitchError = "Não foi possível ler o progresso."
-                    root.environmentManagementBusy = false
+                    root.environmentProgressReadFailures += 1
+                    if (root.environmentProgressReadFailures < 5) {
+                        environmentManagementStatusRetryTimer.restart()
+                    } else {
+                        root.environmentSwitchError = "Não foi possível ler o progresso."
+                        root.environmentManagementBusy = false
+                    }
                 }
             }
         }
+    }
+    Timer {
+        id: environmentManagementStatusRetryTimer
+        interval: 350
+        repeat: false
+        onTriggered: if (!environmentManagementStatusProcess.running) environmentManagementStatusProcess.running = true
     }
     Process {
         id: environmentActionProcess

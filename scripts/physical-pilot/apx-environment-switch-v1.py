@@ -304,7 +304,13 @@ def respond(connection: socket.socket) -> None:
                     "error": {"code": "request_rejected", "message": str(error)[:300]}}
         print(f"APX Environment switch rejected operation={operation} peer_pid={pid}: {error}",
               file=sys.stderr, flush=True)
-    connection.sendall((json.dumps(response, sort_keys=True, separators=(",", ":")) + "\n").encode())
+    try:
+        connection.sendall((json.dumps(response, sort_keys=True, separators=(",", ":")) + "\n").encode())
+    except (BrokenPipeError, ConnectionResetError):
+        # A GUI client may close its short-lived status request during a
+        # reload or popup transition. Never let that client take down the
+        # shared Host service and make the next progress read look invalid.
+        print(f"APX Environment switch response dropped peer_pid={pid}", file=sys.stderr, flush=True)
 
 
 def admit_existing_session() -> None:
