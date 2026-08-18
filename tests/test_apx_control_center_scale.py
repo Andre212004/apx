@@ -15,9 +15,67 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("(root.isHub ? 440 : 394) * root.controlCenterScale", source)
         self.assertIn("parent.width / root.controlCenterScale", source)
         self.assertIn("parent.height / root.controlCenterScale", source)
-        self.assertIn('scale: (root.popupKind === "controls" ? root.controlCenterScale : 1) * (root.popupOpening ? 0.94 : 1)', source)
+        self.assertIn('property real popupReveal: 1', source)
+        self.assertIn('* (0.96 + 0.04 * root.popupReveal)', source)
+        self.assertIn('opacity: root.popupReveal', source)
+        self.assertIn('id: popupOpenAnimation', source)
+        self.assertIn('property: "popupReveal"', source)
+        self.assertIn('duration: 160', source)
+        self.assertNotIn('id: popupOpenTimer', source)
+        self.assertNotIn('property bool popupOpening', source)
         self.assertIn("transformOrigin: Item.TopLeft", source)
         self.assertIn("function popupStatus(): string", source)
+
+    def test_popup_opening_uses_one_explicit_forward_animation(self) -> None:
+        source = SHELL.read_text()
+
+        show = source.split("function showPopup()", 1)[1].split("function togglePopup", 1)[0]
+        toggle = source.split("function togglePopup", 1)[1].split("function focusEnvironmentMenuAfterOpen", 1)[0]
+
+        self.assertIn("popupReveal = 0", show)
+        self.assertIn("popup.visible = true", show)
+        self.assertIn("popupOpenAnimation.restart()", show)
+
+        # Switching from one APX menu to another must not destroy/hide the
+        # layer surface for a frame before revealing the next menu.
+        switch_path = toggle.split('if (popupKind === kind && popup.visible)', 1)[1]
+        self.assertEqual(switch_path.count("popup.visible = false"), 1)
+
+    def test_audio_slider_updates_volume_while_dragging(self) -> None:
+        source = SHELL.read_text()
+
+        self.assertIn("property int volumePending: -1", source)
+        self.assertIn("function previewVolume(value)", source)
+        self.assertIn("function dispatchPendingVolume()", source)
+        self.assertIn("onMoved: root.previewVolume(value)", source)
+        self.assertIn("id: volumeSetDebounce", source)
+        self.assertIn("interval: 45", source)
+        self.assertIn("id: volumeSetProcess", source)
+        self.assertIn('"@DEFAULT_AUDIO_SINK@"', source)
+
+        preview = source.split(
+            "function previewVolume(value)", 1
+        )[1].split(
+            "function dispatchPendingVolume()", 1
+        )[0]
+        self.assertIn("volumeValue = nextVolume", preview)
+        self.assertIn('volumeText = nextVolume + "%"', preview)
+        self.assertIn("volumePending = nextVolume", preview)
+
+        dispatch = source.split(
+            "function dispatchPendingVolume()", 1
+        )[1].split(
+            "function commitVolume(value)", 1
+        )[0]
+        self.assertIn("volumeSetProcess.command", dispatch)
+        self.assertIn("volumeSetProcess.running = true", dispatch)
+
+        # The old behaviour explicitly waited for release before reflecting
+        # the selected position. That contract must not return.
+        self.assertNotIn(
+            "Keep the UI at the released position while wpctl confirms it.",
+            source,
+        )
 
     def test_control_icons_use_qt_icon_rendering_without_post_effect(self) -> None:
         source = SHELL.read_text()

@@ -11,6 +11,26 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## NVIDIA control-node Hub boot repair — 2026-08-15
+
+The physical Host booted NVIDIA 610.43.03 successfully and published its GPU,
+KMS and UVM device nodes, but `nvidia-modprobe -c 0` returned success without
+publishing `/dev/nvidiactl`. The exact Hub therefore failed closed before
+starting, retried three times and reached the autostart start limit. With no
+authenticated Hub, Environment creation was unavailable by design.
+
+The exact Hub launcher now repairs only the missing NVIDIA control character
+device after proving that the running kernel exposes one unambiguous
+`195 nvidiactl` registration in `/proc/devices`. The result is still checked as
+major 195, minor 255 before it is leased. Missing, wrong or duplicate kernel
+registrations remain a refusal. The repaired launcher is installed with a
+backup and physically progressed through NVIDIA admission into Hyprland and
+the Hub login surface. The current session is intentionally waiting at that
+login surface; authenticated QuickShell management proof remains pending the
+owner's local unlock. The repository passes 1034 tests with 11 expected skips.
+Details are in
+`docs/nvidia-control-hub-boot-repair-v1-2026-08-15.md`.
+
 ## Interactive popup and shortcut-module repair — 2026-08-14
 
 The first popup-focus repair kept IPC-launched menus visible, but the resulting
@@ -3357,3 +3377,134 @@ remain scoped by the Environment-specific `--root` and `--dbpath`; repository
 signature verification remains enabled. This is a deliberate constrained
 exception for creation-time installation, not permission for Environment
 package operations to reach another root.
+
+## Graphical Environment handoff runtime contract — 2026-08-18
+
+The physical graphical Environment automatic-return investigation is closed.
+The roughly 25-second return was not caused by Hypridle, the 120-second switch
+failsafe, an explicit owner return, or Hub watchdog recovery.
+
+The workload Hyprland itself was healthy: the expected graphical cgroup,
+Hyprland IPC socket, `eDP-1` output and two keyboards were independently
+observed.
+
+The root cause was deployment drift between duplicate graphical-engine copies.
+`/usr/lib/apx/apx-graphical-environment-v1.py` preferentially loads the
+adjacent `/usr/lib/apx/apx-official-hub-graphical-v1.py`. That selected copy
+was stale and still expected `/run/user/1000`.
+
+The current APX graphical runtime contract is:
+
+`SESSION_RUNTIME=/run/apx/session-1000`
+
+The stale `/usr/lib/apx` engine was replaced with the current repository
+engine. `/usr/lib`, `/var/lib` and the repository engine then matched SHA256
+`3ea93c79492b9b3b6808f980e1c9dd11a9bef2c2b80fa917a77975b41a31f0d4`.
+
+A subsequent `faculdade` graphical session remained active instead of
+automatically returning to Hub.
+
+The timer/watchdog investigation should not be reopened without new evidence.
+Future hardening should prevent duplicate engine copies from silently
+diverging and directly test the `/run/apx/session-1000` runtime contract.
+
+Detailed record:
+`docs/environment-handoff-runtime-readiness-fix-2026-08-18.md`.
+
+## Host automatic timezone policy — 2026-08-18
+
+APX now has a separate Host-only `apx-timezone-v1` service. It does not use
+external geolocation, GeoClue, SSID/BSSID uploads or Environment authority.
+A root-owned `0600` policy at `/var/lib/apx/timezone-v1/networks.json` maps
+explicitly trusted Wi-Fi SSIDs to validated IANA timezone names.
+
+The current physical policy maps `Casa` to `America/Sao_Paulo`. An initial
+`Europe/Lisbon` mapping was rejected after physical local-time verification and
+corrected while preserving `NTP=yes` and `NTPSynchronized=yes`.
+
+Unknown networks, absent or malformed policy, invalid timezone names and
+unavailable Host evidence fail closed by retaining the current timezone.
+The service owns only Host timezone selection; kernel time and NTP remain
+systemd Host responsibilities. Graphical Environments inherit the Host
+timezone on new launches through the separately installed
+`systemd-nspawn --timezone=bind` contract.
+
+## Graphical Environment timezone propagation — 2026-08-18
+
+The Host remains the sole authority for kernel time, NTP and graphical-session
+timezone. The production graphical nspawn command now uses
+`--timezone=bind`, making `/etc/localtime` inside a running Hub or workload
+follow the Host rather than relying on the Environment root's possibly stale
+timezone symlink.
+
+This does not grant workloads location, Wi-Fi or time-setting authority and
+does not yet implement automatic Host timezone discovery. Automatic geographic
+timezone selection is a separate Host-side policy decision and must be reviewed
+before any location data or external service is introduced.
+
+Repository source and both installed graphical-engine copies are now
+byte-identical with the `--timezone=bind` contract. The currently running Hub
+has not been restarted, so this policy is installed but not yet physically
+proven in a newly launched graphical session.
+
+
+## Host-owned physical audio master initialization — 2026-08-18
+
+Physical diagnosis of the shared internal analog audio path established that
+Environment-local PipeWire was healthy and successfully opened the leased
+ALC287 analog PCM, while the Host ALSA `Master Playback Switch` remained off.
+The individual Speaker and Headphone controls reported enabled, but the HDA
+speaker/headphone pins remained hardware-muted until the Host master control
+was enabled.
+
+The graphical lifecycle now establishes the physical playback prerequisite on
+the Host after the exact internal audio identity is resolved and validated and
+before any device lease is prepared. `ensure_audio_master_playback()` opens the
+resolved Host ALSA control card through `libasound.so.2`, requires one exact
+boolean `Master Playback Switch` at index 0, enables it when necessary, reads
+the value back, and fails closed on missing, ambiguous, malformed, or
+unverifiable state.
+
+This does not transfer physical mixer authority to an Environment. Environments
+continue to own only their local PipeWire output/input volume and mute state via
+the existing audio-state handoff. No HDA verb, whole `/dev/snd` bind, package
+installation, or persistent ALSA state file was introduced.
+
+Physical diagnosis proved `pw-play` reached the leased PCM successfully and
+that enabling the Host master changed the ALC287 speaker/headphone HDA amp state
+from muted (`0x80`) to enabled (`0x00`).
+
+## Trusted-network timezone correction — 2026-08-18
+
+The current trusted `Casa` Wi-Fi mapping was corrected from
+`America/Sao_Paulo` to `Europe/Lisbon` after physical observation showed that
+the former mapping did not match the owner's current location. The Host remains
+the sole timezone authority; the graphical Environment receives the Host
+timezone through the existing `--timezone=bind` contract.
+
+`apx-timezone-v1` still uses only the trusted local SSID mapping. No BSSID/IP
+geolocation, GeoClue, external geolocation service, or Environment-side
+location authority was introduced.
+
+## Physical audio master-volume completion — 2026-08-18
+
+The ALC287 diagnosis also exposed `Master Playback Volume` at its minimum while
+Environment-local PipeWire output was at 100%. The Host-owned graphical audio
+initialization now establishes both physical prerequisites before device lease:
+`Master Playback Switch` enabled and `Master Playback Volume` at the hardware
+maximum/neutral level. Logical user volume and mute remain Environment-local
+PipeWire state.
+
+
+## Live QuickShell output-volume interaction — 2026-08-18
+
+The control-centre output-volume slider no longer waits for pointer release.
+During a drag, QuickShell updates the displayed percentage immediately and
+coalesces real `wpctl set-volume` writes through a dedicated serialized process
+with a 45 ms debounce. Pointer release guarantees the exact final slider value
+is eventually applied. This preserves Environment-local PipeWire authority and
+avoids flooding the audio server with one subprocess per pointer pixel.
+
+The owner physically confirmed working internal audio after the Host physical
+Master switch/volume repair. Host and active Hub local time are also physically
+aligned to `Europe/Lisbon`, and the QuickShell clock displays the correct time.

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import fcntl
 import json
 import os
@@ -214,6 +215,299 @@ def resolve_audio_devices() -> dict[str, str]:
     }
 
 
+def ensure_audio_master_playback(audio: dict[str, str]) -> None:
+    """Enable only the Host-owned physical playback master before device lease.
+
+    Environments retain authority over their PipeWire volume/mute state.  This
+    function only establishes the physical codec route required for that
+    Environment-local logical state to reach the internal audio hardware.
+    """
+    match = re.fullmatch(r"/dev/snd/controlC([0-9]+)", audio["audio_control"])
+    if match is None:
+        raise OfficialHubGraphicalError("resolved audio control identity is malformed")
+
+    card = match.group(1)
+
+    try:
+        alsa = ctypes.CDLL("libasound.so.2")
+    except OSError as error:
+        raise OfficialHubGraphicalError("Host ALSA control library is unavailable") from error
+
+    pointer = ctypes.c_void_p
+    integer = ctypes.c_int
+    unsigned = ctypes.c_uint
+    long_integer = ctypes.c_long
+    string = ctypes.c_char_p
+
+    alsa.snd_ctl_open.argtypes = [ctypes.POINTER(pointer), string, integer]
+    alsa.snd_ctl_open.restype = integer
+    alsa.snd_ctl_close.argtypes = [pointer]
+    alsa.snd_ctl_close.restype = integer
+
+    alsa.snd_ctl_elem_list_malloc.argtypes = [ctypes.POINTER(pointer)]
+    alsa.snd_ctl_elem_list_malloc.restype = integer
+    alsa.snd_ctl_elem_list_free.argtypes = [pointer]
+    alsa.snd_ctl_elem_list_free.restype = None
+    alsa.snd_ctl_elem_list.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_list.restype = integer
+    alsa.snd_ctl_elem_list_get_count.argtypes = [pointer]
+    alsa.snd_ctl_elem_list_get_count.restype = unsigned
+    alsa.snd_ctl_elem_list_get_used.argtypes = [pointer]
+    alsa.snd_ctl_elem_list_get_used.restype = unsigned
+    alsa.snd_ctl_elem_list_alloc_space.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_list_alloc_space.restype = integer
+    alsa.snd_ctl_elem_list_free_space.argtypes = [pointer]
+    alsa.snd_ctl_elem_list_free_space.restype = None
+    alsa.snd_ctl_elem_list_get_numid.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_list_get_numid.restype = unsigned
+    alsa.snd_ctl_elem_list_get_name.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_list_get_name.restype = string
+    alsa.snd_ctl_elem_list_get_index.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_list_get_index.restype = unsigned
+
+    alsa.snd_ctl_elem_id_malloc.argtypes = [ctypes.POINTER(pointer)]
+    alsa.snd_ctl_elem_id_malloc.restype = integer
+    alsa.snd_ctl_elem_id_free.argtypes = [pointer]
+    alsa.snd_ctl_elem_id_free.restype = None
+    alsa.snd_ctl_elem_id_set_numid.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_id_set_numid.restype = None
+
+    alsa.snd_ctl_elem_info_malloc.argtypes = [ctypes.POINTER(pointer)]
+    alsa.snd_ctl_elem_info_malloc.restype = integer
+    alsa.snd_ctl_elem_info_free.argtypes = [pointer]
+    alsa.snd_ctl_elem_info_free.restype = None
+    alsa.snd_ctl_elem_info_set_id.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_info_set_id.restype = None
+    alsa.snd_ctl_elem_info.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_info.restype = integer
+    alsa.snd_ctl_elem_info_get_type.argtypes = [pointer]
+    alsa.snd_ctl_elem_info_get_type.restype = integer
+    alsa.snd_ctl_elem_info_get_count.argtypes = [pointer]
+    alsa.snd_ctl_elem_info_get_count.restype = unsigned
+    alsa.snd_ctl_elem_info_get_min.argtypes = [pointer]
+    alsa.snd_ctl_elem_info_get_min.restype = long_integer
+    alsa.snd_ctl_elem_info_get_max.argtypes = [pointer]
+    alsa.snd_ctl_elem_info_get_max.restype = long_integer
+
+    alsa.snd_ctl_elem_value_malloc.argtypes = [ctypes.POINTER(pointer)]
+    alsa.snd_ctl_elem_value_malloc.restype = integer
+    alsa.snd_ctl_elem_value_free.argtypes = [pointer]
+    alsa.snd_ctl_elem_value_free.restype = None
+    alsa.snd_ctl_elem_value_set_id.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_value_set_id.restype = None
+    alsa.snd_ctl_elem_read.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_read.restype = integer
+    alsa.snd_ctl_elem_write.argtypes = [pointer, pointer]
+    alsa.snd_ctl_elem_write.restype = integer
+    alsa.snd_ctl_elem_value_get_boolean.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_value_get_boolean.restype = long_integer
+    alsa.snd_ctl_elem_value_set_boolean.argtypes = [pointer, unsigned, long_integer]
+    alsa.snd_ctl_elem_value_set_boolean.restype = None
+    alsa.snd_ctl_elem_value_get_integer.argtypes = [pointer, unsigned]
+    alsa.snd_ctl_elem_value_get_integer.restype = long_integer
+    alsa.snd_ctl_elem_value_set_integer.argtypes = [pointer, unsigned, long_integer]
+    alsa.snd_ctl_elem_value_set_integer.restype = None
+
+    snd_ctl_elem_type_boolean = 1
+    snd_ctl_elem_type_integer = 2
+
+    def checked(label: str, result: int) -> None:
+        if result < 0:
+            raise OfficialHubGraphicalError(
+                f"Host ALSA physical playback initialization failed at {label}: {result}"
+            )
+
+    control = pointer()
+    elements = pointer()
+    element_id = pointer()
+    element_info = pointer()
+    element_value = pointer()
+    list_space = False
+
+    try:
+        checked(
+            "control-open",
+            alsa.snd_ctl_open(ctypes.byref(control), f"hw:{card}".encode(), 0),
+        )
+
+        checked(
+            "element-list-allocation",
+            alsa.snd_ctl_elem_list_malloc(ctypes.byref(elements)),
+        )
+        checked("element-list-count", alsa.snd_ctl_elem_list(control, elements))
+
+        count = alsa.snd_ctl_elem_list_get_count(elements)
+        if not 1 <= count <= 1024:
+            raise OfficialHubGraphicalError(
+                "Host ALSA physical playback control catalogue differs"
+            )
+
+        checked(
+            "element-list-space",
+            alsa.snd_ctl_elem_list_alloc_space(elements, count),
+        )
+        list_space = True
+        checked("element-list-read", alsa.snd_ctl_elem_list(control, elements))
+
+        master_numid = None
+        master_volume_numid = None
+
+        for index in range(alsa.snd_ctl_elem_list_get_used(elements)):
+            raw_name = alsa.snd_ctl_elem_list_get_name(elements, index)
+            name = raw_name.decode("utf-8", "replace") if raw_name else ""
+            control_index = alsa.snd_ctl_elem_list_get_index(elements, index)
+
+            if name == "Master Playback Switch" and control_index == 0:
+                if master_numid is not None:
+                    raise OfficialHubGraphicalError(
+                        "Host ALSA Master Playback Switch is ambiguous"
+                    )
+                master_numid = alsa.snd_ctl_elem_list_get_numid(elements, index)
+
+            if name == "Master Playback Volume" and control_index == 0:
+                if master_volume_numid is not None:
+                    raise OfficialHubGraphicalError(
+                        "Host ALSA Master Playback Volume is ambiguous"
+                    )
+                master_volume_numid = alsa.snd_ctl_elem_list_get_numid(elements, index)
+
+        if master_numid is None:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Switch is unavailable"
+            )
+        if master_volume_numid is None:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Volume is unavailable"
+            )
+
+        checked(
+            "element-id-allocation",
+            alsa.snd_ctl_elem_id_malloc(ctypes.byref(element_id)),
+        )
+        alsa.snd_ctl_elem_id_set_numid(element_id, master_numid)
+
+        checked(
+            "element-info-allocation",
+            alsa.snd_ctl_elem_info_malloc(ctypes.byref(element_info)),
+        )
+        alsa.snd_ctl_elem_info_set_id(element_info, element_id)
+        checked("element-info-read", alsa.snd_ctl_elem_info(control, element_info))
+
+        if alsa.snd_ctl_elem_info_get_type(element_info) != snd_ctl_elem_type_boolean:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Switch type differs"
+            )
+
+        channels = alsa.snd_ctl_elem_info_get_count(element_info)
+        if not 1 <= channels <= 8:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Switch channel count differs"
+            )
+
+        checked(
+            "element-value-allocation",
+            alsa.snd_ctl_elem_value_malloc(ctypes.byref(element_value)),
+        )
+        alsa.snd_ctl_elem_value_set_id(element_value, element_id)
+        checked("master-read", alsa.snd_ctl_elem_read(control, element_value))
+
+        if not all(
+            alsa.snd_ctl_elem_value_get_boolean(element_value, channel)
+            for channel in range(channels)
+        ):
+            for channel in range(channels):
+                alsa.snd_ctl_elem_value_set_boolean(element_value, channel, 1)
+
+            checked("master-write", alsa.snd_ctl_elem_write(control, element_value))
+            checked("master-verify-read", alsa.snd_ctl_elem_read(control, element_value))
+
+        if not all(
+            alsa.snd_ctl_elem_value_get_boolean(element_value, channel) == 1
+            for channel in range(channels)
+        ):
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Switch did not enable"
+            )
+
+        # Keep the physical codec path neutral (0 dB / maximum hardware level);
+        # Environment-local PipeWire remains the sole logical volume authority.
+        alsa.snd_ctl_elem_id_set_numid(element_id, master_volume_numid)
+        alsa.snd_ctl_elem_info_set_id(element_info, element_id)
+        checked(
+            "master-volume-info-read",
+            alsa.snd_ctl_elem_info(control, element_info),
+        )
+
+        if alsa.snd_ctl_elem_info_get_type(element_info) != snd_ctl_elem_type_integer:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Volume type differs"
+            )
+
+        volume_channels = alsa.snd_ctl_elem_info_get_count(element_info)
+        if not 1 <= volume_channels <= 8:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Volume channel count differs"
+            )
+
+        volume_min = alsa.snd_ctl_elem_info_get_min(element_info)
+        volume_max = alsa.snd_ctl_elem_info_get_max(element_info)
+
+        if volume_min < 0 or volume_max < volume_min or volume_max > 255:
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Volume range differs"
+            )
+
+        alsa.snd_ctl_elem_value_set_id(element_value, element_id)
+        checked(
+            "master-volume-read",
+            alsa.snd_ctl_elem_read(control, element_value),
+        )
+
+        if not all(
+            alsa.snd_ctl_elem_value_get_integer(element_value, channel)
+            == volume_max
+            for channel in range(volume_channels)
+        ):
+            for channel in range(volume_channels):
+                alsa.snd_ctl_elem_value_set_integer(
+                    element_value,
+                    channel,
+                    volume_max,
+                )
+
+            checked(
+                "master-volume-write",
+                alsa.snd_ctl_elem_write(control, element_value),
+            )
+            checked(
+                "master-volume-verify-read",
+                alsa.snd_ctl_elem_read(control, element_value),
+            )
+
+        if not all(
+            alsa.snd_ctl_elem_value_get_integer(element_value, channel)
+            == volume_max
+            for channel in range(volume_channels)
+        ):
+            raise OfficialHubGraphicalError(
+                "Host ALSA Master Playback Volume did not reach neutral maximum"
+            )
+
+    finally:
+        if element_value:
+            alsa.snd_ctl_elem_value_free(element_value)
+        if element_info:
+            alsa.snd_ctl_elem_info_free(element_info)
+        if element_id:
+            alsa.snd_ctl_elem_id_free(element_id)
+        if elements:
+            if list_space:
+                alsa.snd_ctl_elem_list_free_space(elements)
+            alsa.snd_ctl_elem_list_free(elements)
+        if control:
+            alsa.snd_ctl_close(control)
+
+
 def effective_gpu_policy() -> str:
     try:
         value = json.loads(HARDWARE_PROFILE.read_text())
@@ -248,6 +542,36 @@ def resolve_drm_device(pci: str, kind: str, vendor: str, device: str) -> str:
     return str(target)
 
 
+def ensure_nvidia_control_device(
+    node: Path = Path("/dev/nvidiactl"),
+    proc_devices: Path = Path("/proc/devices"),
+) -> None:
+    """Repair the exact control node when nvidia-modprobe omits it.
+
+    NVIDIA 610 can return success after creating the GPU and modeset nodes
+    while leaving the registered nvidiactl character device unpublished.  Do
+    not infer a dynamic device identity: require the kernel's exact fixed
+    registration before creating only major 195, minor 255.
+    """
+    try:
+        node.lstat()
+        return
+    except FileNotFoundError:
+        pass
+    registrations = []
+    for line in proc_devices.read_text().splitlines():
+        fields = line.split()
+        if len(fields) == 2 and fields[1] == "nvidiactl":
+            registrations.append(fields[0])
+    if registrations != ["195"]:
+        raise OfficialHubGraphicalError("the NVIDIA control device registration differs")
+    try:
+        os.mknod(node, stat.S_IFCHR | 0o666, os.makedev(195, 255))
+    except FileExistsError:
+        pass
+    os.chmod(node, 0o666)
+
+
 def resolve_nvidia_auxiliary_devices() -> dict[str, str]:
     """Create and admit the proprietary NVIDIA userspace control nodes."""
     helper = Path("/usr/bin/nvidia-modprobe")
@@ -257,6 +581,7 @@ def resolve_nvidia_auxiliary_devices() -> dict[str, str]:
         raise OfficialHubGraphicalError("the NVIDIA device helper is untrusted")
     run((str(helper), "-c", "0"))
     run((str(helper), "-m"))
+    ensure_nvidia_control_device()
     expected = {
         "nvidia_device": ("/dev/nvidia0", 195, 0),
         "nvidia_control": ("/dev/nvidiactl", 195, 255),
@@ -594,7 +919,8 @@ def start_outer(
         "--", "systemd-nspawn", "--quiet",
         "--keep-unit", "--boot", f"--directory={ROOT}", f"--machine={MACHINE}",
         f"--hostname={MACHINE}", "--register=yes", "--settings=no", "--private-network",
-        "--network-veth", "--link-journal=no", "--console=pipe", "--private-users=pick",
+        "--network-veth", "--timezone=bind", "--link-journal=no", "--console=pipe",
+        "--private-users=pick",
         "--private-users-ownership=chown", f"--bind={HOME}:/home:idmap",
         f"--bind-ro={SESSION}:/run/apx/official-hub-session",
         f"--bind={HOST_SERVICES_SOCKET}:{HOST_SERVICES_SOCKET}",
@@ -1114,6 +1440,7 @@ def launch(test_mode: bool, authenticated_handoff: bool = False) -> dict[str, ob
     audio = resolve_audio_devices()
     graphics = resolve_graphics()
     validate_devices(inputs, audio, graphics)
+    ensure_audio_master_playback(audio)
     device_nodes = tuple(dict.fromkeys((
         *inputs.values(), *audio.values(), graphics["display_card"], graphics["display_render"],
         *((graphics["offload_card"], graphics["offload_render"])

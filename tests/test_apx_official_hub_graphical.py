@@ -1,5 +1,7 @@
 import importlib.util
+import os
 from pathlib import Path
+import stat
 from types import SimpleNamespace
 import tempfile
 import unittest
@@ -34,6 +36,7 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             "open_and_verify_kitty", "Kitty did not create a Hyprland window",
             "verify_desktop_shell", 'process_pids(b"quickshell")',
             '"--private-users=pick"', '"--private-users-ownership=chown"',
+            '"--timezone=bind"',
             'f"--bind={HOME}:/home:idmap"', "resolve_user_namespace",
             "prepare_device_leases", "activate_device_leases", "cleanup_device_leases",
             "official-hub-recovery-v1.lock", "fcntl.flock(descriptor, fcntl.LOCK_EX)",
@@ -113,6 +116,33 @@ class OfficialHubGraphicalTests(unittest.TestCase):
                 "nvidia_modeset": "/dev/nvidia-modeset",
             })
 
+    def test_missing_nvidia_control_node_is_rebuilt_only_from_exact_kernel_registration(self) -> None:
+        subject = load_launcher()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            node = root / "nvidiactl"
+            proc_devices = root / "devices"
+            proc_devices.write_text("Character devices:\n195 nvidia\n195 nvidiactl\n")
+            with mock.patch.object(subject.os, "mknod") as mknod, \
+                    mock.patch.object(subject.os, "chmod") as chmod:
+                subject.ensure_nvidia_control_device(node, proc_devices)
+            mknod.assert_called_once_with(
+                node, stat.S_IFCHR | 0o666, os.makedev(195, 255),
+            )
+            chmod.assert_called_once_with(node, 0o666)
+
+    def test_nvidia_control_repair_rejects_ambiguous_or_wrong_registration(self) -> None:
+        subject = load_launcher()
+        for contents in ("195 nvidia\n", "511 nvidiactl\n", "195 nvidiactl\n195 nvidiactl\n"):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                proc_devices = root / "devices"
+                proc_devices.write_text(contents)
+                with mock.patch.object(subject.os, "mknod") as mknod:
+                    with self.assertRaises(subject.OfficialHubGraphicalError):
+                        subject.ensure_nvidia_control_device(root / "nvidiactl", proc_devices)
+                mknod.assert_not_called()
+
     def test_launcher_leases_only_internal_analog_playback_and_capture_audio(self) -> None:
         source = LAUNCHER.read_text()
         for required in (
@@ -121,10 +151,25 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             'r"/dev/snd/pcmC[0-9]+D0p"', 'r"/dev/snd/pcmC[0-9]+D0c"',
             "verify_audio_playback", '"wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"',
             '"wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"', 'glob("pcm*C*c")',
+            "ensure_audio_master_playback", '"Master Playback Switch"',
+            '"Master Playback Volume"',
         ):
             self.assertIn(required, source)
         for forbidden in ('"--bind=/dev/snd"', '"--property=DeviceAllow=/dev/snd rw"'):
             self.assertNotIn(forbidden, source)
+
+    def test_audio_master_is_initialized_before_device_lease(self) -> None:
+        source = LAUNCHER.read_text()
+        validation = source.index("validate_devices(inputs, audio, graphics)")
+        master = source.index("ensure_audio_master_playback(audio)")
+        lease = source.index("prepare_device_leases(device_nodes)")
+        outer = source.index("start_outer(inputs, audio, graphics, bindings, authenticated_handoff)")
+        self.assertLess(validation, master)
+        self.assertLess(master, lease)
+        self.assertLess(lease, outer)
+        self.assertIn('ctypes.CDLL("libasound.so.2")', source)
+        self.assertIn('"Master Playback Switch"', source)
+        self.assertNotIn('hda-verb', source)
 
     def test_session_runs_owner_config_as_apx_not_root(self) -> None:
         source = SESSION.read_text()

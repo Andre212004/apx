@@ -86,7 +86,7 @@ ShellRoot {
              + (environmentDeleteConfirm ? 64 : 0) + (environmentManagementBusy ? 42 : 0))
     property string popupKind: ""
     property Item popupTarget: null
-    property bool popupOpening: false
+    property real popupReveal: 1
     readonly property int popupLeftMargin: {
         if (!popupTarget || !bar) return 8
         var targetRect = popupTarget.mapToItem(bar.contentItem, 0, 0)
@@ -682,9 +682,9 @@ ShellRoot {
     }
 
     function closePopup() {
+        popupOpenAnimation.stop()
         popup.visible = false
-        popupOpening = false
-        popupOpenTimer.stop()
+        popupReveal = 1
         popupKind = ""
         controlsWifiOpen = false
         controlsBluetoothOpen = false
@@ -697,9 +697,10 @@ ShellRoot {
     }
 
     function showPopup() {
-        popupOpening = true
+        popupOpenAnimation.stop()
+        popupReveal = 0
         popup.visible = true
-        popupOpenTimer.restart()
+        popupOpenAnimation.restart()
     }
 
     function togglePopup(kind, target) {
@@ -709,7 +710,7 @@ ShellRoot {
             if (kind === "environments") environmentKeyboardFocus = false
             return
         }
-        popup.visible = false
+        popupOpenAnimation.stop()
         if (kind === "controls") {
             controlsWifiOpen = false
             controlsBluetoothOpen = false
@@ -2464,11 +2465,14 @@ ShellRoot {
         }
     }
 
-    Timer {
-        id: popupOpenTimer
-        interval: 180
-        repeat: false
-        onTriggered: root.popupOpening = false
+    NumberAnimation {
+        id: popupOpenAnimation
+        target: root
+        property: "popupReveal"
+        from: 0
+        to: 1
+        duration: 160
+        easing.type: Easing.OutCubic
     }
 
     PanelWindow {
@@ -2510,11 +2514,10 @@ ShellRoot {
             anchors.top: parent.top
             width: root.popupKind === "controls" ? parent.width / root.controlCenterScale : parent.width
             height: root.popupKind === "controls" ? parent.height / root.controlCenterScale : parent.height
-            scale: (root.popupKind === "controls" ? root.controlCenterScale : 1) * (root.popupOpening ? 0.94 : 1)
-            opacity: root.popupOpening ? 0 : 1
+            scale: (root.popupKind === "controls" ? root.controlCenterScale : 1)
+                   * (0.96 + 0.04 * root.popupReveal)
+            opacity: root.popupReveal
             transformOrigin: Item.TopLeft
-            Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
             radius: 10
             color: root.card
             border.width: 1

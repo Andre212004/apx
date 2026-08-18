@@ -1,10 +1,49 @@
 # APX Current Handoff
 
+Latest Host timezone automation — 2026-08-18: `apx-timezone-v1` is installed
+as a separate Host-only service using a root-owned local SSID-to-IANA-timezone
+map. No Wi-Fi identifiers are sent externally. The current `Casa` mapping is `Europe/Lisbon`, physically verified against
+the owner's current local time without disturbing NTP synchronization. Unknown
+networks fail closed by retaining the current zone. New graphical launches
+inherit Host `/etc/localtime` through `--timezone=bind`; the already-running
+Hub was also repaired in place and verified at the same `Europe/Lisbon` time.
+
+Latest staged Environment timezone change — 2026-08-18: the graphical engine
+now requests `systemd-nspawn --timezone=bind`, so future Hub/workload launches
+are intended to use the Host's `/etc/localtime` instead of each root's stale
+timezone copy. This preserves Host authority and grants no workload location or
+clock-setting capability. Repository, `/usr/lib/apx` and `/var/lib/apx/official-hub-v1` engine copies
+match byte-for-byte. The Host-side trusted-network timezone service is installed
+and active; the current `Casa` policy maps to `Europe/Lisbon`. The active Hub
+was repaired in place after its older user-namespaced mount could not be
+re-bound dynamically. Future graphical launches use `--timezone=bind`.
+
+
 Last updated: 2026-08-14 after Environment UI, shortcut lifetime, loading,
 Brave and hybrid AMD+NVIDIA work.
 
 Read this file together with `AGENTS.md` and `PROJECT_STATE.md`. This is a short
 continuity bridge, not a replacement for the canonical project state.
+
+Latest physical repair: the 2026-08-15 boot failure was caused by NVIDIA
+610.43.03's `nvidia-modprobe` returning success without creating
+`/dev/nvidiactl`. The Hub launcher now creates only that exact ephemeral node
+after confirming the kernel's unique `195 nvidiactl` registration, then checks
+major 195/minor 255 as before. The installed launcher matches source and its
+pre-change copy is under
+`/var/lib/apx/backups/20260815-nvidia-control-hub-repair-v1/`.
+
+Physical launch now passes NVIDIA admission and reaches the Hub login surface
+on tty2. Two owner-unlocked observations loaded QuickShell and obtained an
+accepted `identity.get`, then the compositor received a clean exit a few
+seconds later; the evidence is consistent with the configured `SUPER+M` exit
+binding rather than another launcher refusal. A third launch is currently
+stable at the password surface. Do not bypass or automate the credential. The
+next proof is a normal local unlock without pressing `SUPER+M`, followed by an
+authenticated catalogue/management-status read and sustained Hub observation.
+Environment creation remains unavailable until that authoritative Hub session
+is active, which is expected policy rather than an independent creation fault.
+The repository passes 1034 tests with 11 expected skips.
 
 Latest UI repair: the popup was moved from an xdg `PopupWindow` to a focused
 `PanelWindow` surface. This keeps pointer and keyboard input available when a
@@ -1632,3 +1671,75 @@ are registered locally. The `apx` account is password-enabled, in `wheel`, has
 the local sudo policy, and its password hash exactly matches the active Hub.
 No uncertain operation remains. The complete suite passes: 1028 tests, 11
 skipped.
+
+## Graphical Environment automatic-return resolution — 2026-08-18
+
+The unexpected Environment-to-Hub return is resolved in the physical pilot.
+Do not continue timer/watchdog debugging unless the symptom is reproduced.
+
+The definitive fault was a stale common graphical engine at
+`/usr/lib/apx/apx-official-hub-graphical-v1.py`.
+
+The workload wrapper selects that adjacent engine before the `/var/lib`
+fallback. The stale copy expected the obsolete `/run/user/1000` Hyprland
+runtime, while current APX graphical sessions use `/run/apx/session-1000`.
+
+Live investigation proved the affected `faculdade` Hyprland process was
+healthy: correct cgroup, valid `.socket.sock`, successful `hyprctl` monitor and
+device queries, active `eDP-1`, and two keyboards.
+
+The `/usr/lib` copy was synchronised with the current repository and
+`/var/lib` engine. All three then matched SHA256
+`3ea93c79492b9b3b6808f980e1c9dd11a9bef2c2b80fa917a77975b41a31f0d4`.
+
+The following interactive `faculdade` run remained stable.
+
+The 120-second failsafe, Hypridle, explicit return, missing input/display and
+Hub watchdog recovery were ruled out.
+
+Next development focus: improvements to the Environments themselves.
+
+Later hardening should remove or validate duplicate engine deployment paths
+and add direct runtime-contract tests.
+
+Detailed incident:
+`docs/environment-handoff-runtime-readiness-fix-2026-08-18.md`.
+
+
+Latest physical audio repair — 2026-08-18: shared internal analog playback was
+traced through Environment-local PipeWire to the leased ALC287 PCM. The failure
+was below PipeWire: the Host ALSA `Master Playback Switch` was off even though
+the Speaker/Headphone per-route controls were on. Enabling the Host master
+changed the physical HDA output pins from muted `0x80` to enabled `0x00`.
+
+The common graphical engine now calls Host-owned
+`ensure_audio_master_playback()` after exact audio identity/device validation
+and before device-lease preparation. It uses the raw ALSA control interface via
+`libasound.so.2`, requires the exact boolean `Master Playback Switch`, enables
+and verifies it, and fails closed otherwise. Environment-local PipeWire remains
+the authority for logical volume/mute; Environments gain no new physical mixer
+authority.
+
+Timezone correction — 2026-08-18: trusted network `Casa` now maps to
+`Europe/Lisbon`, replacing the incorrect `America/Sao_Paulo` mapping. The Host
+remains authoritative and graphical Environments inherit `/etc/localtime`
+through `--timezone=bind`.
+
+
+## APX 2026-08-18 final desktop/time/audio checkpoint
+
+The physical internal-audio failure is closed. The Host graphical lifecycle
+now enables `Master Playback Switch` and raises `Master Playback Volume` to the
+codec's neutral hardware maximum before the narrow ALSA device lease. The owner
+physically confirmed audible output. Environment-local PipeWire remains the
+logical volume/mute authority.
+
+The Host and active Hub are both on `Europe/Lisbon`; the QuickShell clock was
+physically observed at the correct local time after the active Hub's stale
+`/etc/localtime` link was repaired. New graphical lifecycles use
+`systemd-nspawn --timezone=bind`.
+
+QuickShell popup opening animations are owner-approved. The control-centre
+output-volume slider now previews its percentage immediately and applies
+coalesced real PipeWire volume changes continuously while being dragged, with
+the exact release position guaranteed as the final write.
