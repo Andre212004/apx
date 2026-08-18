@@ -99,6 +99,8 @@ ShellRoot {
     property string volumeText: "--"
     property int volumeValue: 0
     property int volumePending: -1
+    property int volumeInFlight: -1
+    property int volumeLastSent: -1
     property bool volumeMuted: false
     property bool apxShortcutsEnabled: true
     property string batteryText: "--"
@@ -1150,26 +1152,27 @@ ShellRoot {
     }
 
     function previewVolume(value) {
-        var nextVolume = Math.max(0, Math.min(100, Math.round(value)))
-
-        // The UI follows the pointer immediately.
-        volumeValue = nextVolume
+        volumeValue = Math.max(0, Math.min(100, Math.round(value)))
         if (!volumeMuted)
-            volumeText = nextVolume + "%"
+            volumeText = volumeValue + "%"
 
-        // Keep only the newest desired PipeWire value.
-        volumePending = nextVolume
+        volumePending = volumeValue
 
-        // First movement does not wait for the periodic pump.
-        if (!volumeSetProcess.running)
-            dispatchPendingVolume()
+        if (!volumeSetProcess.running && !volumeSetDebounce.running)
+            volumeSetDebounce.start()
     }
 
-    function dispatchPendingVolume() {
-        if (volumePending < 0 || volumeSetProcess.running)
+    function dispatchVolume() {
+        if (volumeSetProcess.running || volumePending < 0)
             return
 
-        var nextVolume = volumePending
+        if (volumePending === volumeLastSent) {
+            volumePending = -1
+            return
+        }
+
+        volumeInFlight = volumePending
+        volumeLastSent = volumePending
         volumePending = -1
 
         volumeSetProcess.command = [
@@ -1178,17 +1181,15 @@ ShellRoot {
             "-l",
             "1",
             "@DEFAULT_AUDIO_SINK@",
-            nextVolume + "%"
+            volumeInFlight + "%"
         ]
         volumeSetProcess.running = true
     }
 
     function commitVolume(value) {
-        // Preserve the exact release position as the final pending target.
         previewVolume(value)
-
-        if (!volumeSetProcess.running)
-            dispatchPendingVolume()
+        volumeSetDebounce.stop()
+        dispatchVolume()
     }
 
     function commitMicrophoneVolume(value) {
@@ -1562,25 +1563,20 @@ ShellRoot {
     }
 
     Timer {
-        id: volumeSetPump
-        interval: 40
-        repeat: true
-        running: volumeSlider.pressed || root.volumePending >= 0
-
-        onTriggered: {
-            if (!volumeSetProcess.running && root.volumePending >= 0)
-                root.dispatchPendingVolume()
-        }
+        id: volumeSetDebounce
+        interval: 20
+        repeat: false
+        onTriggered: root.dispatchVolume()
     }
 
     Process {
         id: volumeSetProcess
 
         onExited: {
-            // Do not wait for pointer release. If movement happened while
-            // wpctl was running, immediately send the newest queued value.
+            root.volumeInFlight = -1
+
             if (root.volumePending >= 0)
-                root.dispatchPendingVolume()
+                volumeSetDebounce.restart()
             else if (!volumeSlider.pressed && !volumeProcess.running)
                 volumeProcess.running = true
         }
@@ -1592,14 +1588,14 @@ ShellRoot {
         stdout: StdioCollector {
             onStreamFinished: {
                 var match = text.match(/Volume:\s+([0-9.]+)/)
-                if (match && !volumeSlider.pressed
-                        && root.volumePending < 0 && !volumeSetProcess.running)
+                if (match && root.volumePending < 0
+                        && !volumeSetProcess.running && !volumeSlider.pressed)
                     root.volumeValue = Math.round(parseFloat(match[1]) * 100)
 
                 root.volumeMuted = text.indexOf("MUTED") >= 0
 
-                if (!volumeSlider.pressed && root.volumePending < 0
-                        && !volumeSetProcess.running)
+                if (root.volumePending < 0
+                        && !volumeSetProcess.running && !volumeSlider.pressed)
                     root.volumeText = match
                             ? (root.volumeMuted ? "MUTE"
                                                : root.volumeValue + "%")

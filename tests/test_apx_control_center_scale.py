@@ -46,25 +46,32 @@ class ControlCenterScaleTests(unittest.TestCase):
 
         self.assertIn("property int volumePending: -1", source)
         self.assertIn("function previewVolume(value)", source)
-        self.assertIn("function dispatchPendingVolume()", source)
+        self.assertIn("function dispatchVolume()", source)
         self.assertIn("onMoved: root.previewVolume(value)", source)
-        self.assertIn("id: volumeSetPump", source)
-        self.assertIn("interval: 40", source)
-        self.assertIn("repeat: true", source)
+        self.assertIn("id: volumeSetDebounce", source)
+        self.assertIn("interval: 20", source)
         self.assertIn("id: volumeSetProcess", source)
+        self.assertIn("property int volumeInFlight: -1", source)
+        self.assertIn("property int volumeLastSent: -1", source)
+        self.assertIn("volumeLastSent = volumePending", source)
+        self.assertIn("root.volumeInFlight = -1", source)
+        self.assertIn("volumeSetDebounce.restart()", source)
         self.assertIn('"@DEFAULT_AUDIO_SINK@"', source)
 
         preview = source.split(
             "function previewVolume(value)", 1
         )[1].split(
-            "function dispatchPendingVolume()", 1
+            "function dispatchVolume()", 1
         )[0]
-        self.assertIn("volumeValue = nextVolume", preview)
-        self.assertIn('volumeText = nextVolume + "%"', preview)
-        self.assertIn("volumePending = nextVolume", preview)
+        self.assertIn(
+            "volumeValue = Math.max(0, Math.min(100, Math.round(value)))",
+            preview,
+        )
+        self.assertIn('volumeText = volumeValue + "%"', preview)
+        self.assertIn("volumePending = volumeValue", preview)
 
         dispatch = source.split(
-            "function dispatchPendingVolume()", 1
+            "function dispatchVolume()", 1
         )[1].split(
             "function commitVolume(value)", 1
         )[0]
