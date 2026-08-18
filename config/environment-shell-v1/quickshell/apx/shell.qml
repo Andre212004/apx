@@ -98,6 +98,7 @@ ShellRoot {
     property string clockText: ""
     property string volumeText: "--"
     property int volumeValue: 0
+    property int volumePending: -1
     property bool volumeMuted: false
     property bool apxShortcutsEnabled: true
     property string batteryText: "--"
@@ -1148,13 +1149,47 @@ ShellRoot {
         }
     }
 
-    function commitVolume(value) {
-        var nextVolume = Math.round(value)
-        // Keep the UI at the released position while wpctl confirms it.
+    function previewVolume(value) {
+        var nextVolume = Math.max(0, Math.min(100, Math.round(value)))
+
+        // Immediate visual feedback.
         volumeValue = nextVolume
         if (!volumeMuted)
             volumeText = nextVolume + "%"
-        localAction(["/usr/bin/wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", nextVolume + "%"])
+
+        // Only the newest physical target matters.
+        volumePending = nextVolume
+
+        // Coalesce pointer movement instead of spawning wpctl per pixel.
+        if (!volumeSetProcess.running && !volumeSetDebounce.running)
+            volumeSetDebounce.start()
+    }
+
+    function dispatchPendingVolume() {
+        if (volumePending < 0 || volumeSetProcess.running)
+            return
+
+        var nextVolume = volumePending
+        volumePending = -1
+
+        volumeSetProcess.command = [
+            "/usr/bin/wpctl",
+            "set-volume",
+            "-l",
+            "1",
+            "@DEFAULT_AUDIO_SINK@",
+            nextVolume + "%"
+        ]
+        volumeSetProcess.running = true
+    }
+
+    function commitVolume(value) {
+        previewVolume(value)
+        volumeSetDebounce.stop()
+
+        // Pointer release guarantees the exact final value.
+        if (!volumeSetProcess.running)
+            dispatchPendingVolume()
     }
 
     function commitMicrophoneVolume(value) {
@@ -1527,15 +1562,44 @@ ShellRoot {
         onTriggered: powerConfirmProcess.running = true
     }
 
+    Timer {
+        id: volumeSetDebounce
+        interval: 45
+        repeat: false
+        onTriggered: root.dispatchPendingVolume()
+    }
+
+    Process {
+        id: volumeSetProcess
+
+        onExited: {
+            // If the pointer moved while wpctl was running, send only the
+            // newest target. Otherwise refresh from PipeWire.
+            if (root.volumePending >= 0)
+                volumeSetDebounce.restart()
+            else if (!volumeSlider.pressed && !volumeProcess.running)
+                volumeProcess.running = true
+        }
+    }
+
     Process {
         id: volumeProcess
         command: ["/usr/bin/wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
         stdout: StdioCollector {
             onStreamFinished: {
                 var match = text.match(/Volume:\s+([0-9.]+)/)
-                if (match) root.volumeValue = Math.round(parseFloat(match[1]) * 100)
+                if (match && !volumeSlider.pressed
+                        && root.volumePending < 0 && !volumeSetProcess.running)
+                    root.volumeValue = Math.round(parseFloat(match[1]) * 100)
+
                 root.volumeMuted = text.indexOf("MUTED") >= 0
-                root.volumeText = match ? (root.volumeMuted ? "MUTE" : root.volumeValue + "%") : "--"
+
+                if (!volumeSlider.pressed && root.volumePending < 0
+                        && !volumeSetProcess.running)
+                    root.volumeText = match
+                            ? (root.volumeMuted ? "MUTE"
+                                               : root.volumeValue + "%")
+                            : "--"
             }
         }
     }
@@ -3923,6 +3987,7 @@ ShellRoot {
                                 height: 28; from: 0; to: 100; stepSize: 1
                                 activeFocusOnTab: true
                                 enabled: !localActionProcess.running
+                                onMoved: root.previewVolume(value)
                                 onPressedChanged: {
                                     if (pressed)
                                         forceActiveFocus()
