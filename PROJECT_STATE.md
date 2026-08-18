@@ -3418,9 +3418,10 @@ external geolocation, GeoClue, SSID/BSSID uploads or Environment authority.
 A root-owned `0600` policy at `/var/lib/apx/timezone-v1/networks.json` maps
 explicitly trusted Wi-Fi SSIDs to validated IANA timezone names.
 
-The current physical policy maps `Casa` to `America/Sao_Paulo`. An initial
-`Europe/Lisbon` mapping was rejected after physical local-time verification and
-corrected while preserving `NTP=yes` and `NTPSynchronized=yes`.
+The current physical policy maps `Casa` to `Europe/Lisbon`, verified against
+the owner's current local time while preserving `NTP=yes` and
+`NTPSynchronized=yes`. The earlier `America/Sao_Paulo` mapping was incorrect
+for the current physical location and was replaced.
 
 Unknown networks, absent or malformed policy, invalid timezone names and
 unavailable Host evidence fail closed by retaining the current timezone.
@@ -3437,15 +3438,16 @@ timezone. The production graphical nspawn command now uses
 follow the Host rather than relying on the Environment root's possibly stale
 timezone symlink.
 
-This does not grant workloads location, Wi-Fi or time-setting authority and
-does not yet implement automatic Host timezone discovery. Automatic geographic
-timezone selection is a separate Host-side policy decision and must be reviewed
-before any location data or external service is introduced.
+This does not grant workloads location, Wi-Fi or time-setting authority.
+Host timezone selection is implemented through the local trusted-network
+`apx-timezone-v1` policy; it does not perform geographic geolocation or send
+location/network identifiers to an external service.
 
-Repository source and both installed graphical-engine copies are now
-byte-identical with the `--timezone=bind` contract. The currently running Hub
-has not been restarted, so this policy is installed but not yet physically
-proven in a newly launched graphical session.
+Repository source and both installed graphical-engine copies carry the
+`--timezone=bind` contract. The already-running Hub could not have its
+user-namespaced `/etc/localtime` mount rebound dynamically, so its stale link
+was repaired in place and physically verified at `Europe/Lisbon`. Future
+graphical sessions receive the Host timezone through `--timezone=bind`.
 
 
 ## Host-owned physical audio master initialization — 2026-08-18
