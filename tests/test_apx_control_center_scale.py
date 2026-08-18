@@ -48,8 +48,9 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("function previewVolume(value)", source)
         self.assertIn("function dispatchPendingVolume()", source)
         self.assertIn("onMoved: root.previewVolume(value)", source)
-        self.assertIn("id: volumeSetDebounce", source)
-        self.assertIn("interval: 45", source)
+        self.assertIn("id: volumeSetPump", source)
+        self.assertIn("interval: 40", source)
+        self.assertIn("repeat: true", source)
         self.assertIn("id: volumeSetProcess", source)
         self.assertIn('"@DEFAULT_AUDIO_SINK@"', source)
 

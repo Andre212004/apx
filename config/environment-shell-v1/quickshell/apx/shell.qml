@@ -1152,17 +1152,17 @@ ShellRoot {
     function previewVolume(value) {
         var nextVolume = Math.max(0, Math.min(100, Math.round(value)))
 
-        // Immediate visual feedback.
+        // The UI follows the pointer immediately.
         volumeValue = nextVolume
         if (!volumeMuted)
             volumeText = nextVolume + "%"
 
-        // Only the newest physical target matters.
+        // Keep only the newest desired PipeWire value.
         volumePending = nextVolume
 
-        // Coalesce pointer movement instead of spawning wpctl per pixel.
-        if (!volumeSetProcess.running && !volumeSetDebounce.running)
-            volumeSetDebounce.start()
+        // First movement does not wait for the periodic pump.
+        if (!volumeSetProcess.running)
+            dispatchPendingVolume()
     }
 
     function dispatchPendingVolume() {
@@ -1184,10 +1184,9 @@ ShellRoot {
     }
 
     function commitVolume(value) {
+        // Preserve the exact release position as the final pending target.
         previewVolume(value)
-        volumeSetDebounce.stop()
 
-        // Pointer release guarantees the exact final value.
         if (!volumeSetProcess.running)
             dispatchPendingVolume()
     }
@@ -1563,20 +1562,25 @@ ShellRoot {
     }
 
     Timer {
-        id: volumeSetDebounce
-        interval: 45
-        repeat: false
-        onTriggered: root.dispatchPendingVolume()
+        id: volumeSetPump
+        interval: 40
+        repeat: true
+        running: volumeSlider.pressed || root.volumePending >= 0
+
+        onTriggered: {
+            if (!volumeSetProcess.running && root.volumePending >= 0)
+                root.dispatchPendingVolume()
+        }
     }
 
     Process {
         id: volumeSetProcess
 
         onExited: {
-            // If the pointer moved while wpctl was running, send only the
-            // newest target. Otherwise refresh from PipeWire.
+            // Do not wait for pointer release. If movement happened while
+            // wpctl was running, immediately send the newest queued value.
             if (root.volumePending >= 0)
-                volumeSetDebounce.restart()
+                root.dispatchPendingVolume()
             else if (!volumeSlider.pressed && !volumeProcess.running)
                 volumeProcess.running = true
         }
