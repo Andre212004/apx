@@ -1,5 +1,20 @@
 # APX Current Handoff
 
+Final AC-powered performance closure — 2026-08-21: Host power reports
+`ADP0=1`. Three alternating 256 MiB direct-I/O passes measured ~638 MB/s Host
+versus ~655 MB/s Hub writes and ~3.07 versus ~2.97 GB/s reads, so the earlier
+apparent 19% storage deficit did not reproduce. Weekly `fstrim.timer` is now
+enabled; Btrfs CoW, compression, checksums, snapshots and qgroups were retained.
+For GPU isolation, the exact same `vkmark 2025.01` binary, NVIDIA ICD, RTX UUID,
+Hyprland, Wayland socket and resolution were used inside APX and from a Host
+process outside the APX user namespace/cgroup. Warm-up was 691/691. Three 4K
+pairs scored APX 93/192/192 versus Host 92/191/192: 159.0 versus 158.3 average,
+about 0.4% nominally in APX's favour and therefore no measurable overhead.
+The benchmark-only `vkmark` and `assimp` packages were removed. Structural
+performance acceptance is closed; per-game Proton, 1% lows, gamepad, paired
+Bluetooth and LAN `iperf3` are optional title/peripheral acceptance because no
+game or those external fixtures are currently available.
+
 Latest physical performance remediation — 2026-08-20: the apparent 49%
 multi-core loss was the launcher's `CPUQuota=600%`, not nspawn overhead. Hub
 and workloads now use `1200%`; the physical outer cgroup reports

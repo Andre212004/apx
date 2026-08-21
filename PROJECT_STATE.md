@@ -11,6 +11,34 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## AC-powered native performance closure — 2026-08-21
+
+The owner connected AC power (`ADP0=1`) and authorized final performance
+closure. Three alternating direct-I/O passes with 256 MiB incompressible data
+measured Host/APX writes of ~638/~655 MB/s and reads of ~3.07/~2.97 GB/s. The
+earlier apparent 19% Steam storage deficit did not reproduce; the remaining
+~3% spread is normal measurement variance. Weekly `fstrim.timer` is enabled.
+Btrfs CoW, zstd compression, checksums, snapshots and full qgroup accounting
+remain because there is no evidence that trading those guarantees away would
+improve this workload.
+
+GPU overhead was isolated without changing monitor, compositor or userspace.
+The same `vkmark 2025.01` binary and NVIDIA ICD rendered through the same RTX
+3060 UUID, Hyprland, Wayland socket and 1920×1080 NVIDIA-connected BenQ. One
+process ran normally inside APX; the comparator entered only the Hub mount
+namespace to reach that socket and remained a Host process outside APX's user
+namespace and cgroup. Both scored 691 at 1080p. Three 3840×2160 pairs scored
+APX 93/192/192 and Host 92/191/192, averages 159.0 and 158.3. The simultaneous
+cold-to-boost ramp and ~0.4% final spread establish no measurable APX Vulkan
+overhead. Benchmark-only `vkmark` and `assimp` were removed afterward.
+
+CPU, direct storage and Vulkan/RTX structural performance are now accepted as
+native-equivalent for this Arch/Hyprland hardware and software stack. No Steam
+games or manifests exist, so per-title Proton FPS, 1% lows and frametime tails
+cannot be measured yet; those are title acceptance, not an open APX performance
+defect. Gamepad, paired Bluetooth and LAN `iperf3` likewise require external
+fixtures that are not currently available.
+
 ## Host/HUB/Steam physical performance remediation — 2026-08-20
 
 The physical Ryzen 5 5600H pilot initially measured 14.62–14.93 GB/s native

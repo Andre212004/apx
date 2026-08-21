@@ -15,7 +15,9 @@ O ensaio inicial encontrou dois bloqueios graves para considerar o perfil Gaming
 
 Estes bloqueios foram corrigidos e fisicamente revalidados no mesmo dia. A causa CPU era a quota externa `CPUQuota=600%`, que limitava cada Environment a seis CPUs apesar de os cgroups descendentes mostrarem `cpu.max=max`. A quota é agora `1200%` e o cgroup físico mostrou `1200000 100000`. A validação pós-correção mediu 15,06 GB/s numa passagem Steam autenticada e 20,62 GB/s numa passagem administrativa curta, eliminando o teto anterior de ~7,2–7,6 GB/s.
 
-A RTX 3060 é agora enumerada por NVML e Vulkan dentro do Steam. O launcher cria e admite os dois nós UVM, e expõe somente `/sys/module/nvidia` em modo read-only: com `--private-network`, o nspawn ocultava `nvidia/initstate`, levando o userspace a declarar falsamente que o driver estava bloqueado. O Steam tem agora a pilha Vulkan 64/32-bit coerente, incluindo `lib32-nvidia-utils 610.43.03-1`, correspondente ao driver Host 610.43.03. O APX deixou de ter os dois bloqueios funcionais que invalidavam a comparação gaming; um benchmark real de FPS/frametime ligado à corrente continua a ser trabalho de aceitação, não uma correção em falta.
+A RTX 3060 é agora enumerada por NVML e Vulkan dentro do Steam. O launcher cria e admite os dois nós UVM, e expõe somente `/sys/module/nvidia` em modo read-only: com `--private-network`, o nspawn ocultava `nvidia/initstate`, levando o userspace a declarar falsamente que o driver estava bloqueado. O Steam tem agora a pilha Vulkan 64/32-bit coerente, incluindo `lib32-nvidia-utils 610.43.03-1`, correspondente ao driver Host 610.43.03.
+
+A validação final de 21 de agosto, já ligada à corrente, não encontrou overhead mensurável no disco nem na RTX. I/O direto de 256 MiB deu médias de ~638 MB/s Host contra ~655 MB/s HUB em escrita e ~3,07 contra ~2,97 GB/s em leitura. No mesmo Hyprland, socket Wayland, rootfs, binário, ICD, RTX e resolução, `vkmark` comparou o processo APX normal com um processo Host fora do user namespace/cgroup APX. O aquecimento marcou 691 em ambos; três pares a 3840×2160 marcaram APX 93/192/192 e Host 92/191/192, médias 159,0 e 158,3. A diferença de ~0,4% favorece nominalmente o APX e é apenas ruído de medição. A fase de performance estrutural fica encerrada sem bloqueio conhecido; performance específica de um jogo continua dependente do próprio título.
 
 ## Remediação física aplicada
 
@@ -25,6 +27,7 @@ A RTX 3060 é agora enumerada por NVML e Vulkan dentro do Steam. O launcher cria
 - Steam/Proton: multilib ativado e `lib32-mesa`, `lib32-vulkan-radeon`, `lib32-vulkan-icd-loader`, `lib32-nvidia-utils`, `egl-gbm` e `vulkan-tools` instalados;
 - imagem futura: runtime e construtor físico passam a ativar multilib e instalar a mesma base gráfica;
 - input: Hyprland final enumerou os dois teclados internos, rato ELAN e touchpad ELAN. As mensagens seatd remanescentes são recusas esperadas durante descoberta de dispositivos fora da allowlist, não perda dos dispositivos admitidos.
+- armazenamento: `fstrim.timer` semanal ativado; CoW, compressão, checksums, snapshots e qgroups foram preservados porque o teste AC não justificou enfraquecer essas garantias.
 
 O sistema Steam ficou coerente (`pacman -Dk` sem erros), os QML temporários foram restaurados byte a byte e o HUB voltou a ser o único Environment ativo. A suíte completa passou 1043 testes, com 11 skips esperados.
 
@@ -37,6 +40,7 @@ O sistema Steam ficou coerente (`pacman -Dk` sem erros), os QML temporários for
 - Rede medida contra Cloudflare e por ping no Host. O Wi‑Fi físico pertence ao Host; os Environments usam rede privada com NAT.
 - Vulkan validado no Steam diretamente contra `libvulkan.so.1`, sem depender de `vulkaninfo`.
 - As transições foram feitas pelo caminho autenticado da QuickShell. No fim, apenas `apx-hub` ficou ativo e os QML de HUB e Steam foram restaurados byte a byte.
+- A validação final de 21 de agosto foi feita com `ADP0=1`. O teste Vulkan usou `vkmark 2025.01`, seis cenas a 3840×2160 e apresentação imediata. O processo Host entrou somente no mount namespace do HUB para alcançar o mesmo socket Wayland; permaneceu fora do user namespace e do cgroup APX.
 
 ## Resultados
 
@@ -59,6 +63,19 @@ O sistema Steam ficou coerente (`pacman -Dk` sem erros), os QML temporários for
 | Snapshot completo Host, p50 | — | 116,13 ms | 116,50 ms | Mesmo custo |
 | Entrada no Steam | — | pedido | pronto em 10,35 s | Passagens observadas: ~10–17 s |
 | Regresso ao HUB | — | pronto em 8,55 s | pedido | Outras passagens: ~10 s |
+
+### Validação final ligada à corrente — 21 de agosto
+
+| Prova | Host | APX/HUB | Diferença observada |
+|---|---:|---:|---:|
+| Escrita direta incompressível, 256 MiB, média de 3 | ~638 MB/s | ~655 MB/s | APX +2,7%; variação normal |
+| Leitura direta, 256 MiB, média de 3 | ~3,07 GB/s | ~2,97 GB/s | APX -3,3%; variação normal |
+| `vkmark` 1080p, aquecimento completo | 691 | 691 | 0,0% |
+| `vkmark` 4K, par frio | 92 | 93 | APX +1 ponto |
+| `vkmark` 4K, dois pares estabilizados | 191 / 192 | 192 / 192 | 0–1 ponto |
+| `vkmark` 4K, média dos três pares | 158,3 | 159,0 | APX +0,4%; sem overhead mensurável |
+
+O salto do primeiro par 4K para os pares seguintes ocorreu simultaneamente nos dois contextos e representa o ramp de power-state/boost da RTX, não isolamento. Nos pares estabilizados, cada cena APX/Host ficou igual ou separada por apenas 1 FPS, com frametimes de 5,10–5,59 ms.
 
 ### CPU e escalonamento
 
@@ -84,7 +101,7 @@ AMD Radeon Graphics (RADV RENOIR), vendor 0x1002, device 0x1638
 
 O Environment recebe `/dev/dri/card0`, `card1`, `renderD128`, `renderD129` e `/dev/nvidia{0,ctl,-modeset}`, mas não recebe `/dev/nvidia-uvm` nem `/dev/nvidia-uvm-tools`. Tem `nvidia-utils 610.43.03`, `mesa`, `vulkan-radeon` e `vulkan-icd-loader`, mas não tem `vulkan-tools` nem os equivalentes `lib32-mesa`, `lib32-vulkan-radeon`, `lib32-vulkan-icd-loader` e `lib32-nvidia-utils`.
 
-No estado corrigido, `nvidia-smi` dentro do Steam devolve `NVIDIA GeForce RTX 3060 Laptop GPU, 610.43.03, 6144 MiB`, e `vulkaninfo` forçado ao ICD NVIDIA enumera a mesma GPU com `driverName=NVIDIA`. A pilha 32-bit está instalada. Não foi produzido um número de FPS porque falta ainda escolher e executar um jogo/benchmark reproduzível ligado à corrente.
+No estado corrigido, `nvidia-smi` dentro do Steam devolve `NVIDIA GeForce RTX 3060 Laptop GPU, 610.43.03, 6144 MiB`, e `vulkaninfo` forçado ao ICD NVIDIA enumera a mesma GPU com `driverName=NVIDIA`. A pilha 32-bit está instalada. O `vkmark` ligado à corrente prova paridade do caminho Vulkan/RTX; não existem jogos nem manifests instalados no Steam, pelo que não há ainda um resultado específico de um título.
 
 Os logs seatd continuam a mostrar `Operation not permitted` quando libinput tenta descobrir hardware que a política APX não arrendou. Não se abriu a allowlist para silenciar logs. A prova final de `hyprctl devices` enumerou os quatro caminhos de input pretendidos, pelo que estas recusas são o efeito esperado da fronteira fechada, não uma falha funcional de teclado/rato/touchpad.
 
@@ -102,11 +119,9 @@ O caminho áudio local responde em cerca de 10,7 ms tanto no HUB como no Steam. 
 
 ## Prioridades recomendadas
 
-1. **P1 — benchmark gaming:** medir um workload reproduzível na Radeon e na RTX, com FPS médio, 1% low, frametime p95/p99, potência e temperatura, ligado à corrente.
-2. **P1 — gamepad:** ligar um comando real e provar input/hotplug no Steam sem alargar a allowlist além da identidade escolhida.
-3. **P1 — rede:** repetir com `iperf3` para um servidor LAN por cabo e Wi‑Fi, em 5/6 GHz, separando RTT, jitter, perda e throughput de WAN.
-4. **P1 — Bluetooth:** emparelhar um dispositivo HID e uns auscultadores, medir ligação, reconexão, áudio e handoff.
+1. **Aceitação por título:** quando existir um jogo instalado, recolher FPS médio, 1% low e frametime p95/p99; isto valida o jogo/Proton, não um bloqueio APX atualmente conhecido.
+2. **Hardware opcional:** ligar um comando, um dispositivo Bluetooth e um servidor LAN `iperf3` quando estiverem fisicamente disponíveis.
 
 ## Estado final e limites
 
-Depois da avaliação inicial foram instaladas as dependências gráficas 32-bit no Steam e alteradas as políticas de CPU e admissão NVIDIA descritas acima. A fronteira de dispositivos continua fechada e a rede continua privada. O HUB voltou a ser o único Environment ativo, no ecrã de login normal; nenhuma credencial foi automatizada. Esta avaliação compara o APX ao Host nativo no mesmo hardware e na mesma janela; não compara com outro portátil. Por ter sido feita em bateria, os números finais de gaming devem ser recolhidos ligado à corrente.
+Depois da avaliação inicial foram instaladas as dependências gráficas 32-bit no Steam e alteradas as políticas de CPU e admissão NVIDIA descritas acima. A fronteira de dispositivos continua fechada e a rede continua privada. A repetição ligada à corrente mede disco dentro de ~3% e Vulkan dentro de ~0,4% do processo Host equivalente; não há penalização estrutural relevante face a Arch+Hyprland no mesmo hardware e stack. `vkmark` e `assimp` foram removidos depois da prova. O HUB voltou a ser o único Environment ativo, no ecrã de login normal; nenhuma credencial foi automatizada. Um jogo real continua necessário apenas para caracterizar esse título, Proton e os seus 1% lows.
