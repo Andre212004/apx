@@ -31,6 +31,8 @@ install -d -m0700 "$ROOT/etc/pacman.d/gnupg"
 # read-only bind from the Host lets signature checks pass during the build but
 # prevents archlinux-keyring's post-transaction hook from updating the image.
 cp -a /etc/pacman.d/gnupg/. "$ROOT/etc/pacman.d/gnupg/"
+sed -i '/^#\[multilib\]$/,/^#Include = \/etc\/pacman.d\/mirrorlist$/ s/^#//' \
+  "$ROOT/etc/pacman.conf"
 
 # The build is intentionally low-priority: creating a base must not make the
 # interactive HUB feel frozen. A failed build remains writable and unpublished
@@ -41,8 +43,9 @@ cp -a /etc/pacman.d/gnupg/. "$ROOT/etc/pacman.d/gnupg/"
   base base-devel bash-completion ca-certificates dbus-broker egl-gbm fastfetch \
   file-roller flatpak git gnome-keyring gvfs gvfs-gphoto2 gvfs-mtp gvfs-smb \
   hyprland hypridle hyprlock hyprpolkitagent kitty less libnotify mako man-db \
+  lib32-mesa lib32-nvidia-utils lib32-vulkan-icd-loader lib32-vulkan-radeon \
   mousepad nano noto-fonts nvidia-utils pacman-contrib pipewire pipewire-pulse quickshell \
-  ristretto rofi sudo thunar tumbler udiskie udisks2 vulkan-radeon waybar \
+  ristretto rofi sudo thunar tumbler udiskie udisks2 vulkan-radeon vulkan-tools waybar \
   wireplumber xdg-desktop-portal xdg-desktop-portal-gtk \
   xdg-desktop-portal-hyprland xdg-user-dirs xdg-utils
 

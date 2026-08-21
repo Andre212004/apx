@@ -45,45 +45,100 @@ class ControlCenterScaleTests(unittest.TestCase):
         source = SHELL.read_text()
 
         self.assertIn("property int volumePending: -1", source)
-        self.assertIn("function previewVolume(value)", source)
-        self.assertIn("function dispatchVolume()", source)
-        self.assertIn("onMoved: root.previewVolume(value)", source)
-        self.assertIn("id: volumeSetDebounce", source)
-        self.assertIn("interval: 20", source)
-        self.assertIn("id: volumeSetProcess", source)
         self.assertIn("property int volumeInFlight: -1", source)
         self.assertIn("property int volumeLastSent: -1", source)
-        self.assertIn("volumeLastSent = volumePending", source)
-        self.assertIn("root.volumeInFlight = -1", source)
-        self.assertIn("volumeSetDebounce.restart()", source)
-        self.assertIn('"@DEFAULT_AUDIO_SINK@"', source)
+
+        self.assertIn("function previewVolume(value)", source)
+        self.assertIn("function dispatchVolume()", source)
+        # Both the compact overview slider and the expanded audio slider must
+        # update the visible percentage and real PipeWire volume during drag.
+        self.assertEqual(source.count("onMoved: root.previewVolume(value)"), 2)
 
         preview = source.split(
             "function previewVolume(value)", 1
         )[1].split(
             "function dispatchVolume()", 1
         )[0]
+
         self.assertIn(
             "volumeValue = Math.max(0, Math.min(100, Math.round(value)))",
             preview,
         )
-        self.assertIn('volumeText = volumeValue + "%"', preview)
         self.assertIn("volumePending = volumeValue", preview)
+        self.assertIn(
+            "if (!volumeSetProcess.running)",
+            preview,
+        )
+        self.assertIn("dispatchVolume()", preview)
 
         dispatch = source.split(
             "function dispatchVolume()", 1
         )[1].split(
             "function commitVolume(value)", 1
         )[0]
-        self.assertIn("volumeSetProcess.command", dispatch)
-        self.assertIn("volumeSetProcess.running = true", dispatch)
 
-        # The old behaviour explicitly waited for release before reflecting
-        # the selected position. That contract must not return.
-        self.assertNotIn(
-            "Keep the UI at the released position while wpctl confirms it.",
-            source,
-        )
+        self.assertIn("var nextVolume = volumePending", dispatch)
+        self.assertIn("volumePending = -1", dispatch)
+        self.assertIn("volumeInFlight = nextVolume", dispatch)
+        self.assertIn("volumeLastSent = nextVolume", dispatch)
+        self.assertIn("volumeSetProcess.running = true", dispatch)
+        self.assertIn('"@DEFAULT_AUDIO_SINK@"', dispatch)
+
+        process = source.split(
+            "id: volumeSetProcess", 1
+        )[1].split(
+            "id: volumeProcess", 1
+        )[0]
+
+        self.assertIn("if (root.volumePending >= 0)", process)
+        self.assertIn("root.dispatchVolume()", process)
+
+        # Audio dragging must not depend on a debounce/pump timer. A timer can
+        # defer the real write until movement stops or the pointer is released.
+        self.assertNotIn("id: volumeSetDebounce", source)
+        self.assertNotIn("id: volumeSetPump", source)
+
+    def test_calendar_is_fully_reachable_from_the_keyboard(self) -> None:
+        source = SHELL.read_text()
+
+        self.assertIn('property var calendarFocusAction:', source)
+        self.assertIn("function calendarKeyboardActions()", source)
+        self.assertIn("function moveCalendarKeyboardFocus(step)", source)
+        self.assertIn("function activateCalendarKeyboardFocus()", source)
+        self.assertIn("function handleCalendarKey(event)", source)
+        self.assertIn("id: calendarMenu", source)
+        self.assertIn("Keys.onPressed: function(event) { root.handleCalendarKey(event) }", source)
+        self.assertIn("calendarMenu.forceActiveFocus()", source)
+
+        handler = source.split(
+            "function handleCalendarKey(event)", 1
+        )[1].split(
+            "function focusCalendarMenuAfterOpen()", 1
+        )[0]
+        for key in (
+            "Qt.Key_Left", "Qt.Key_Right", "Qt.Key_Up", "Qt.Key_Down",
+            "Qt.Key_Tab", "Qt.Key_Backtab", "Qt.Key_Return", "Qt.Key_Enter",
+            "Qt.Key_Space", "Qt.Key_PageUp", "Qt.Key_PageDown", "Qt.Key_Home",
+        ):
+            self.assertIn(key, handler)
+
+        # Enter can reach every action class in the calendar overview.
+        activation = source.split(
+            "function activateCalendarKeyboardFocus()", 1
+        )[1].split(
+            "function handleCalendarKey(event)", 1
+        )[0]
+        for kind in (
+            '"previous"', '"next"', '"view"', '"date"', '"month"',
+            '"today"', '"new"', '"edit"', '"delete"',
+        ):
+            self.assertIn(kind, activation)
+
+        # The editor starts in its first text field and exposes the remaining
+        # text and action controls through the normal Tab focus chain.
+        self.assertIn("calendarTitleField.focusInput()", source)
+        self.assertIn("activeFocusOnTab: true", source)
+        self.assertIn("function cancelCalendarEditor()", source)
 
     def test_control_icons_use_qt_icon_rendering_without_post_effect(self) -> None:
         source = SHELL.read_text()

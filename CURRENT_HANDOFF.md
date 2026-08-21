@@ -1,5 +1,36 @@
 # APX Current Handoff
 
+Latest physical performance remediation — 2026-08-20: the apparent 49%
+multi-core loss was the launcher's `CPUQuota=600%`, not nspawn overhead. Hub
+and workloads now use `1200%`; the physical outer cgroup reports
+`1200000 100000`, and Steam post-fix SHA-256 measured 15.06 GB/s in the full
+transition proof and 20.62 GB/s in a short administrative proof instead of
+7.15–7.64 GB/s. NVIDIA UVM and UVM-tools are now created, identity-validated
+and leased. Because nspawn `--private-network` hides the module catalogue, the
+launcher exposes only `/sys/module/nvidia` read-only; NVML and Vulkan now both
+enumerate the RTX 3060 inside Hub and Steam while `DevicePolicy=closed`
+remains active. Steam has matching 610.43.03 64/32-bit NVIDIA userspace plus
+Mesa/RADV/Vulkan 32-bit and `vulkan-tools`; future graphical roots enable
+multilib and install the same base. Hyprland enumerated both admitted internal
+keyboards, ELAN mouse and touchpad. seatd still logs denied discovery attempts
+for devices outside the fixed lease, which is intentional and not an input
+failure. Hub and Steam QML were restored byte-for-byte, only Hub is active at
+the normal login surface, and 1043 tests pass with 11 expected skips. See
+`docs/apx-host-hub-steam-performance-assessment-2026-08-20.md`.
+
+Latest QuickShell interaction change — 2026-08-20: the canonical
+calendar menu is fully keyboard reachable, including view/period navigation,
+date/month selection, Today/New Event, event edit/delete, and all event-editor
+fields and actions. Arrow keys and Tab traverse, Enter/Space activate, Page
+Up/Page Down change period, Home selects today, and Escape first leaves the
+editor. The compact and expanded output-volume sliders now both update the
+visible percentage and serialized Environment-local `wpctl` volume while
+dragging. The source and focused tests are updated. The same source is active
+in Hub after a successful QuickShell hot reload; IPC confirmed the calendar
+surface visible and the Hub-local PipeWire sink remained readable. No graphical
+Environment restart was needed. The exact old Hub QML is backed up under
+`/var/lib/apx/backups/20260820-quickshell-calendar-volume-v1/`.
+
 Latest Host timezone automation — 2026-08-18: `apx-timezone-v1` is installed
 as a separate Host-only service using a root-owned local SSID-to-IANA-timezone
 map. No Wi-Fi identifiers are sent externally. The current `Casa` mapping is `Europe/Lisbon`, physically verified against

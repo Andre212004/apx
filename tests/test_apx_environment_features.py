@@ -36,7 +36,9 @@ class EnvironmentFeaturesTests(unittest.TestCase):
         for required in ("evince", "libreoffice-fresh", "cups", "podman", "rust"):
             self.assertIn(required, packages)
         self.assertNotIn("firefox", packages)
-        self.assertIn("egl-gbm", packages)
+        for required in ("egl-gbm", "lib32-mesa", "lib32-nvidia-utils",
+                         "lib32-vulkan-icd-loader", "lib32-vulkan-radeon", "vulkan-tools"):
+            self.assertIn(required, packages)
         self.assertEqual(subject.local_packages_for(["web-documents"]),
                          ("brave-bin", "nvidia-utils"))
         self.assertGreater(subject.estimated_mib(subject.PRESETS["complete"]), 4000)
@@ -52,6 +54,7 @@ class EnvironmentFeaturesTests(unittest.TestCase):
         self.assertIn('"--disable-sandbox", "-Sy", "--needed", "--noconfirm"', source)
         self.assertIn('"--root", str(root)', source)
         self.assertIn('"--dbpath", str(root / "var/lib/pacman")', source)
+        self.assertIn('disabled = "#[multilib]\\n#Include = /etc/pacman.d/mirrorlist\\n"', source)
 
     def test_brave_artifact_is_host_owned_and_digest_pinned(self):
         runtime = self.runtime()

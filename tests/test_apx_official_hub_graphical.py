@@ -86,6 +86,9 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             "offload_card", "verify_nvidia_render", '"DRI_PRIME=1!"',
             "resolve_nvidia_auxiliary_devices", '"/dev/nvidia0"',
             '"/dev/nvidiactl"', '"/dev/nvidia-modeset"',
+            '"/dev/nvidia-uvm"', '"/dev/nvidia-uvm-tools"',
+            'run((str(helper), "-u"))', 'HUB_CPU_QUOTA = "1200%"',
+            '"--bind-ro=/sys/module/nvidia:/sys/module/nvidia"',
             'HOST_SERVICES_UI_V3 = Path("/usr/lib/apx/apx-host-services-ui-v3.py")',
             'BRIGHTNESS_KEYS = Path("/usr/lib/apx/apx-legion-brightness-keys-v1.py")',
         ):
@@ -104,6 +107,8 @@ class OfficialHubGraphicalTests(unittest.TestCase):
                     "nvidia_device": "/dev/nvidia0",
                     "nvidia_control": "/dev/nvidiactl",
                     "nvidia_modeset": "/dev/nvidia-modeset",
+                    "nvidia_uvm": "/dev/nvidia-uvm",
+                    "nvidia_uvm_tools": "/dev/nvidia-uvm-tools",
                 }):
             self.assertEqual(subject.resolve_graphics(), {
                 "policy": "hybrid",
@@ -114,6 +119,8 @@ class OfficialHubGraphicalTests(unittest.TestCase):
                 "nvidia_device": "/dev/nvidia0",
                 "nvidia_control": "/dev/nvidiactl",
                 "nvidia_modeset": "/dev/nvidia-modeset",
+                "nvidia_uvm": "/dev/nvidia-uvm",
+                "nvidia_uvm_tools": "/dev/nvidia-uvm-tools",
             })
 
     def test_missing_nvidia_control_node_is_rebuilt_only_from_exact_kernel_registration(self) -> None:

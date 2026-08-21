@@ -70,7 +70,7 @@ ENVIRONMENT_SHELL_ASSETS = {
     "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
     "local/bin/apx-shell-v1": "fb11d72639b6784bfeb6eb4e0004c20ecf7d88b1e22ef0655092a69bdbc25710",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "b6bb9878acd3ad8572ec55036f7e5bdae52337d05433fbc1ef1381e1b0b0aa7c",
+    "quickshell/apx/shell.qml": "3b2b56ac7d4ba400b8f76be67dc4b6bc136b0d9fb8e370a34ff5f9d113390637",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 RELEASE_IDS = {
@@ -618,6 +618,24 @@ def configure_environment_features(root: Path, plan: dict[str, object]) -> None:
 
     packages = packages_for(modules)
     if packages:
+        if any(package.startswith("lib32-") for package in packages):
+            pacman_config = root / "etc/pacman.conf"
+            metadata = pacman_config.lstat()
+            content = pacman_config.read_text()
+            disabled = "#[multilib]\n#Include = /etc/pacman.d/mirrorlist\n"
+            enabled = "[multilib]\nInclude = /etc/pacman.d/mirrorlist\n"
+            if pacman_config.is_symlink() or not pacman_config.is_file() \
+                    or metadata.st_uid != 0 or metadata.st_gid != 0 or metadata.st_mode & 0o022 \
+                    or (disabled not in content and enabled not in content):
+                raise Refusal("Environment multilib configuration differs")
+            if disabled in content:
+                content = content.replace(disabled, enabled, 1)
+                descriptor = os.open(pacman_config, os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW)
+                try:
+                    os.write(descriptor, content.encode())
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
         run(["pacman", "--root", str(root), "--dbpath", str(root / "var/lib/pacman"),
              "--cachedir", "/var/cache/pacman/pkg", "--config", str(root / "etc/pacman.conf"),
              "--disable-sandbox", "-Sy", "--needed", "--noconfirm", *packages])

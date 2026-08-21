@@ -138,6 +138,7 @@ ShellRoot {
     property var calendarEvents: []
     property var calendarCategories: []
     property bool calendarEditor: false
+    property var calendarFocusAction: ({ kind: "", key: "" })
     property string editingEventId: ""
     property bool categoryPickerOpen: false
     property bool newCategoryOpen: false
@@ -496,6 +497,7 @@ ShellRoot {
         categoryPickerOpen = false
         newCategoryOpen = false
         calendarEditor = true
+        Qt.callLater(function() { calendarTitleField.focusInput() })
     }
 
     function beginEditEvent(event) {
@@ -513,6 +515,7 @@ ShellRoot {
         categoryPickerOpen = false
         newCategoryOpen = false
         calendarEditor = true
+        Qt.callLater(function() { calendarTitleField.focusInput() })
     }
 
     function createCategory() {
@@ -623,6 +626,7 @@ ShellRoot {
         editingEventId = ""
         calendarEditor = false
         persistEvents()
+        focusCalendarMenuAfterOpen()
     }
 
     function toggleEvent(id) {
@@ -684,6 +688,127 @@ ShellRoot {
         return monthNames[calendarDate.getMonth()] + " " + calendarDate.getFullYear()
     }
 
+    function calendarKeyboardActions() {
+        var actions = [
+            { kind: "previous", key: "previous" },
+            { kind: "next", key: "next" },
+            { kind: "view", key: "day" },
+            { kind: "view", key: "month" },
+            { kind: "view", key: "year" }
+        ]
+        var i
+        if (calendarView === "month") {
+            var days = monthDays()
+            for (i = 0; i < days.length; ++i)
+                if (days[i] !== null)
+                    actions.push({ kind: "date", key: dateKey(days[i]) })
+        } else if (calendarView === "year") {
+            for (i = 0; i < monthNames.length; ++i)
+                actions.push({ kind: "month", key: "" + i })
+        } else {
+            var timelineEvents = sortedEventsForDate(calendarDate)
+            for (i = 0; i < timelineEvents.length; ++i) {
+                actions.push({ kind: "edit", key: timelineEvents[i].id })
+                actions.push({ kind: "delete", key: timelineEvents[i].id })
+            }
+        }
+        actions.push({ kind: "today", key: "today" })
+        actions.push({ kind: "new", key: "new" })
+        if (calendarView !== "day") {
+            var selectedEvents = eventsForDate(calendarDate)
+            for (i = 0; i < selectedEvents.length; ++i) {
+                actions.push({ kind: "edit", key: selectedEvents[i].id })
+                actions.push({ kind: "delete", key: selectedEvents[i].id })
+            }
+        }
+        return actions
+    }
+
+    function calendarActionIsFocused(kind, key) {
+        return calendarFocusAction.kind === kind
+                && calendarFocusAction.key === String(key)
+    }
+
+    function moveCalendarKeyboardFocus(step) {
+        var actions = calendarKeyboardActions()
+        if (!actions.length) return
+        var current = -1
+        for (var i = 0; i < actions.length; ++i) {
+            if (calendarActionIsFocused(actions[i].kind, actions[i].key)) {
+                current = i
+                break
+            }
+        }
+        var next = current < 0 ? (step < 0 ? actions.length - 1 : 0)
+                               : (current + step + actions.length) % actions.length
+        calendarFocusAction = actions[next]
+    }
+
+    function calendarEventById(id) {
+        for (var i = 0; i < calendarEvents.length; ++i)
+            if (calendarEvents[i].id === id) return calendarEvents[i]
+        return null
+    }
+
+    function activateCalendarKeyboardFocus() {
+        var action = calendarFocusAction
+        if (!action.kind) {
+            moveCalendarKeyboardFocus(1)
+            return
+        }
+        if (action.kind === "previous") moveCalendar(-1)
+        else if (action.kind === "next") moveCalendar(1)
+        else if (action.kind === "view") calendarView = action.key
+        else if (action.kind === "date") {
+            var parts = action.key.split("-")
+            calendarDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+        } else if (action.kind === "month") {
+            calendarDate = new Date(calendarDate.getFullYear(), Number(action.key), 1)
+            calendarView = "month"
+        } else if (action.kind === "today") {
+            calendarDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+        } else if (action.kind === "new") beginEvent()
+        else if (action.kind === "edit") {
+            var event = calendarEventById(action.key)
+            if (event) beginEditEvent(event)
+        } else if (action.kind === "delete") deleteEvent(action.key)
+    }
+
+    function handleCalendarKey(event) {
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_Up
+                || event.key === Qt.Key_Backtab) {
+            moveCalendarKeyboardFocus(-1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Down
+                   || event.key === Qt.Key_Tab) {
+            moveCalendarKeyboardFocus(1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                   || event.key === Qt.Key_Space) {
+            activateCalendarKeyboardFocus()
+            event.accepted = true
+        } else if (event.key === Qt.Key_PageUp || event.key === Qt.Key_PageDown) {
+            moveCalendar(event.key === Qt.Key_PageUp ? -1 : 1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Home) {
+            calendarDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+            event.accepted = true
+        }
+    }
+
+    function focusCalendarMenuAfterOpen() {
+        Qt.callLater(function() {
+            if (root.popupKind !== "calendar" || !popup.visible || root.calendarEditor) return
+            root.calendarFocusAction = ({ kind: "", key: "" })
+            calendarMenu.forceActiveFocus()
+        })
+    }
+
+    function cancelCalendarEditor() {
+        calendarEditor = false
+        focusCalendarMenuAfterOpen()
+    }
+
     function closePopup() {
         popupOpenAnimation.stop()
         popup.visible = false
@@ -697,6 +822,7 @@ ShellRoot {
         environmentCreateOpen = false
         environmentDeleteConfirm = false
         environmentKeyboardFocus = false
+        calendarFocusAction = ({ kind: "", key: "" })
     }
 
     function showPopup() {
@@ -711,6 +837,7 @@ ShellRoot {
             popup.visible = false
             popupKind = ""
             if (kind === "environments") environmentKeyboardFocus = false
+            if (kind === "calendar") calendarFocusAction = ({ kind: "", key: "" })
             return
         }
         popupOpenAnimation.stop()
@@ -738,6 +865,8 @@ ShellRoot {
             if (!environmentManagementStatusProcess.running) environmentManagementStatusProcess.running = true
             focusEnvironmentMenuAfterOpen()
         }
+        if (kind === "calendar")
+            focusCalendarMenuAfterOpen()
     }
 
     function focusEnvironmentMenuAfterOpen() {
@@ -1153,27 +1282,32 @@ ShellRoot {
 
     function previewVolume(value) {
         volumeValue = Math.max(0, Math.min(100, Math.round(value)))
+
         if (!volumeMuted)
             volumeText = volumeValue + "%"
 
+        // Always keep the newest pointer position.
         volumePending = volumeValue
 
-        if (!volumeSetProcess.running && !volumeSetDebounce.running)
-            volumeSetDebounce.start()
+        // The first movement is applied immediately. There is deliberately
+        // no debounce timer here: audio must change while the pointer moves.
+        if (!volumeSetProcess.running)
+            dispatchVolume()
     }
 
     function dispatchVolume() {
         if (volumeSetProcess.running || volumePending < 0)
             return
 
-        if (volumePending === volumeLastSent) {
-            volumePending = -1
-            return
-        }
-
-        volumeInFlight = volumePending
-        volumeLastSent = volumePending
+        var nextVolume = volumePending
         volumePending = -1
+
+        // Avoid repeating the exact same physical value.
+        if (nextVolume === volumeLastSent)
+            return
+
+        volumeInFlight = nextVolume
+        volumeLastSent = nextVolume
 
         volumeSetProcess.command = [
             "/usr/bin/wpctl",
@@ -1181,15 +1315,19 @@ ShellRoot {
             "-l",
             "1",
             "@DEFAULT_AUDIO_SINK@",
-            volumeInFlight + "%"
+            nextVolume + "%"
         ]
+
         volumeSetProcess.running = true
     }
 
     function commitVolume(value) {
+        // Release uses the same path. It does not unlock or trigger a
+        // separate deferred mechanism.
         previewVolume(value)
-        volumeSetDebounce.stop()
-        dispatchVolume()
+
+        if (!volumeSetProcess.running && volumePending >= 0)
+            dispatchVolume()
     }
 
     function commitMicrophoneVolume(value) {
@@ -1562,21 +1700,17 @@ ShellRoot {
         onTriggered: powerConfirmProcess.running = true
     }
 
-    Timer {
-        id: volumeSetDebounce
-        interval: 20
-        repeat: false
-        onTriggered: root.dispatchVolume()
-    }
-
     Process {
         id: volumeSetProcess
 
         onExited: {
             root.volumeInFlight = -1
 
+            // Pointer movement that happened while wpctl was running is
+            // represented by volumePending. Send that newest value now,
+            // without waiting for release and without any timer.
             if (root.volumePending >= 0)
-                volumeSetDebounce.restart()
+                root.dispatchVolume()
             else if (!volumeSlider.pressed && !volumeProcess.running)
                 volumeProcess.running = true
         }
@@ -2008,6 +2142,7 @@ ShellRoot {
             root.popupKind = "calendar"
             root.popupTarget = calendarButton
             root.showPopup()
+            root.focusCalendarMenuAfterOpen()
         }
 
         function brightnessUp(): void { root.stepDisplayBrightness(5) }
@@ -2288,6 +2423,7 @@ ShellRoot {
         id: field
         property alias text: input.text
         property string placeholder: ""
+        function focusInput() { input.forceActiveFocus() }
         width: parent ? parent.width : 300
         height: 34
         radius: 6
@@ -2296,6 +2432,7 @@ ShellRoot {
         border.color: root.cyan
         TextInput {
             id: input
+            activeFocusOnTab: true
             anchors.fill: parent
             anchors.leftMargin: 10
             anchors.rightMargin: 10
@@ -2321,11 +2458,18 @@ ShellRoot {
         property bool checked: false
         property bool keyboardFocused: false
         signal activated()
+        activeFocusOnTab: true
         height: 30
         radius: 6
         color: keyboardFocused ? "#1d4650" : (checked ? root.cyanDim : "#101920")
-        border.width: checked || keyboardFocused ? 1 : 0
-        border.color: keyboardFocused ? "#a6f3ff" : root.cyan
+        border.width: checked || keyboardFocused || activeFocus ? 1 : 0
+        border.color: keyboardFocused || activeFocus ? "#a6f3ff" : root.cyan
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                toggle.activated()
+                event.accepted = true
+            }
+        }
         Text {
             anchors.left: parent.left
             anchors.leftMargin: 12
@@ -2569,7 +2713,12 @@ ShellRoot {
         Shortcut {
             sequence: "Escape"
             enabled: popup.visible && !root.wifiPasswordVisible
-            onActivated: root.closePopup()
+            onActivated: {
+                if (root.popupKind === "calendar" && root.calendarEditor)
+                    root.cancelCalendarEditor()
+                else
+                    root.closePopup()
+            }
         }
 
         Rectangle {
@@ -2625,15 +2774,20 @@ ShellRoot {
                     spacing: 5
 
                     Column {
+                        id: calendarMenu
                         width: parent.width
                         spacing: 5
                         visible: root.popupKind === "calendar" && !root.calendarEditor
+                        focus: visible
+                        Keys.onPressed: function(event) { root.handleCalendarKey(event) }
 
                         Row {
                             width: parent.width
                             spacing: 4
                             Rectangle {
-                                    width: 32; height: 28; radius: 6; color: previousMouse.containsMouse ? root.cyanDim : "#101920"
+                                    width: 32; height: 28; radius: 6
+                                    color: root.calendarActionIsFocused("previous", "previous") ? "#244b55" : (previousMouse.containsMouse ? root.cyanDim : "#101920")
+                                    border.width: root.calendarActionIsFocused("previous", "previous") ? 1 : 0; border.color: "#a6f3ff"
                                 Text { anchors.centerIn: parent; text: "‹"; color: root.cyan; font.pixelSize: 22 }
                                 BounceMouseArea { id: previousMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.moveCalendar(-1) }
                             }
@@ -2643,7 +2797,9 @@ ShellRoot {
                                 font.family: "Adwaita Mono"; font.pixelSize: root.menuTitleSize; font.bold: true
                             }
                             Rectangle {
-                                    width: 32; height: 28; radius: 6; color: nextMouse.containsMouse ? root.cyanDim : "#101920"
+                                    width: 32; height: 28; radius: 6
+                                    color: root.calendarActionIsFocused("next", "next") ? "#244b55" : (nextMouse.containsMouse ? root.cyanDim : "#101920")
+                                    border.width: root.calendarActionIsFocused("next", "next") ? 1 : 0; border.color: "#a6f3ff"
                                 Text { anchors.centerIn: parent; text: "›"; color: root.cyan; font.pixelSize: 22 }
                                 BounceMouseArea { id: nextMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.moveCalendar(1) }
                             }
@@ -2657,8 +2813,9 @@ ShellRoot {
                                 Rectangle {
                                     required property var modelData
                                     width: (menuContent.width - 10) / 3; height: 25; radius: 6
-                                    color: root.calendarView === modelData.key ? "#15343d" : "#080d11"
-                                    border.width: root.calendarView === modelData.key ? 1 : 0; border.color: root.cyan
+                                    color: root.calendarActionIsFocused("view", modelData.key) ? "#244b55" : (root.calendarView === modelData.key ? "#15343d" : "#080d11")
+                                    border.width: root.calendarView === modelData.key || root.calendarActionIsFocused("view", modelData.key) ? 1 : 0
+                                    border.color: root.calendarActionIsFocused("view", modelData.key) ? "#a6f3ff" : root.cyan
                                     Text { anchors.centerIn: parent; text: modelData.label; color: root.calendarView === modelData.key ? root.cyan : root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                     BounceMouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.calendarView = modelData.key }
                                 }
@@ -2684,8 +2841,9 @@ ShellRoot {
                                     property bool today: modelData !== null && root.sameDay(modelData, root.currentDate)
                                     property bool selected: modelData !== null && root.sameDay(modelData, root.calendarDate)
                                     width: (menuContent.width - 18) / 7; height: 30; radius: 6
-                                    color: selected ? "#15343d" : (dayMouse.containsMouse && modelData !== null ? "#20313a" : "transparent")
-                                    border.width: selected ? 2 : 0; border.color: root.cyan
+                                    color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#244b55" : (selected ? "#15343d" : (dayMouse.containsMouse && modelData !== null ? "#20313a" : "transparent"))
+                                    border.width: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? 2 : (selected ? 2 : 0)
+                                    border.color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#a6f3ff" : root.cyan
                                     Rectangle {
                                         visible: parent.today && !parent.selected
                                         anchors.fill: parent; anchors.margins: parent.selected ? 4 : 2
@@ -2722,8 +2880,9 @@ ShellRoot {
                                     required property int index
                                     property bool currentMonth: index === root.currentDate.getMonth() && root.calendarDate.getFullYear() === root.currentDate.getFullYear()
                                     width: (menuContent.width - 8) / 3; height: 44; radius: 7
-                                    color: currentMonth ? root.cyanDim : (monthMouse.containsMouse ? "#20313a" : "#101920")
-                                    border.width: currentMonth ? 1 : 0; border.color: root.cyan
+                                    color: root.calendarActionIsFocused("month", index) ? "#244b55" : (currentMonth ? root.cyanDim : (monthMouse.containsMouse ? "#20313a" : "#101920"))
+                                    border.width: currentMonth || root.calendarActionIsFocused("month", index) ? 1 : 0
+                                    border.color: root.calendarActionIsFocused("month", index) ? "#a6f3ff" : root.cyan
                                     Text { anchors.centerIn: parent; text: modelData.slice(0, 3); color: parent.currentMonth ? root.cyan : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                     BounceMouseArea {
                                         id: monthMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -2796,14 +2955,18 @@ ShellRoot {
                                         Rectangle {
                                             id: timelineEdit
                                             anchors.right: timelineRemove.left; anchors.rightMargin: 5; anchors.verticalCenter: parent.verticalCenter
-                                            width: 54; height: 28; radius: 5; color: timelineEditMouse.containsMouse ? root.cyanDim : "#18242b"
+                                            width: 54; height: 28; radius: 5
+                                            color: root.calendarActionIsFocused("edit", modelData.id) ? "#244b55" : (timelineEditMouse.containsMouse ? root.cyanDim : "#18242b")
+                                            border.width: root.calendarActionIsFocused("edit", modelData.id) ? 1 : 0; border.color: "#a6f3ff"
                                             Text { anchors.centerIn: parent; text: "EDITAR"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                             BounceMouseArea { id: timelineEditMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.beginEditEvent(modelData) }
                                         }
                                         Rectangle {
                                             id: timelineRemove
                                             anchors.right: parent.right; anchors.rightMargin: 7; anchors.verticalCenter: parent.verticalCenter
-                                            width: 28; height: 28; radius: 5; color: timelineRemoveMouse.containsMouse ? "#743541" : "#18242b"
+                                            width: 28; height: 28; radius: 5
+                                            color: root.calendarActionIsFocused("delete", modelData.id) ? "#743541" : (timelineRemoveMouse.containsMouse ? "#743541" : "#18242b")
+                                            border.width: root.calendarActionIsFocused("delete", modelData.id) ? 1 : 0; border.color: "#ffd3da"
                                             Text { anchors.centerIn: parent; text: "×"; color: "#ff91a4"; font.pixelSize: 16 }
                                             BounceMouseArea { id: timelineRemoveMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.deleteEvent(modelData.id) }
                                         }
@@ -2816,12 +2979,16 @@ ShellRoot {
                             width: parent.width
                             spacing: 6
                             Rectangle {
-                                width: (parent.width - 6) / 2; height: 34; radius: 6; color: todayMouse.containsMouse ? root.cyanDim : "#101920"
+                                width: (parent.width - 6) / 2; height: 34; radius: 6
+                                color: root.calendarActionIsFocused("today", "today") ? "#244b55" : (todayMouse.containsMouse ? root.cyanDim : "#101920")
+                                border.width: root.calendarActionIsFocused("today", "today") ? 1 : 0; border.color: "#a6f3ff"
                                 Text { anchors.centerIn: parent; text: "[ HOJE ]"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                 BounceMouseArea { id: todayMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.calendarDate = new Date(root.currentDate.getFullYear(), root.currentDate.getMonth(), root.currentDate.getDate()) }
                             }
                             Rectangle {
-                                width: (parent.width - 6) / 2; height: 34; radius: 6; color: addMouse.containsMouse ? root.cyanDim : "#101920"
+                                width: (parent.width - 6) / 2; height: 34; radius: 6
+                                color: root.calendarActionIsFocused("new", "new") ? "#244b55" : (addMouse.containsMouse ? root.cyanDim : "#101920")
+                                border.width: root.calendarActionIsFocused("new", "new") ? 1 : 0; border.color: "#a6f3ff"
                                 Text { anchors.centerIn: parent; text: "[ + ] NOVO EVENTO"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                 BounceMouseArea { id: addMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.beginEvent() }
                             }
@@ -2863,14 +3030,18 @@ ShellRoot {
                                 Rectangle {
                                     id: editEvent
                                     anchors.right: removeEvent.left; anchors.rightMargin: 5; anchors.verticalCenter: parent.verticalCenter
-                                    width: 54; height: 28; radius: 5; color: editMouse.containsMouse ? root.cyanDim : "#18242b"
+                                    width: 54; height: 28; radius: 5
+                                    color: root.calendarActionIsFocused("edit", modelData.id) ? "#244b55" : (editMouse.containsMouse ? root.cyanDim : "#18242b")
+                                    border.width: root.calendarActionIsFocused("edit", modelData.id) ? 1 : 0; border.color: "#a6f3ff"
                                     Text { anchors.centerIn: parent; text: "EDITAR"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                     BounceMouseArea { id: editMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.beginEditEvent(modelData) }
                                 }
                                 Rectangle {
                                     id: removeEvent
                                     anchors.right: parent.right; anchors.rightMargin: 6; anchors.verticalCenter: parent.verticalCenter
-                                    width: 28; height: 28; radius: 5; color: removeMouse.containsMouse ? "#743541" : "#18242b"
+                                    width: 28; height: 28; radius: 5
+                                    color: root.calendarActionIsFocused("delete", modelData.id) ? "#743541" : (removeMouse.containsMouse ? "#743541" : "#18242b")
+                                    border.width: root.calendarActionIsFocused("delete", modelData.id) ? 1 : 0; border.color: "#ffd3da"
                                     Text { anchors.centerIn: parent; text: "×"; color: "#ff91a4"; font.pixelSize: 16 }
                                     BounceMouseArea { id: removeMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.deleteEvent(modelData.id) }
                                 }
@@ -2893,31 +3064,39 @@ ShellRoot {
                             Rectangle {
                                 width: 34; height: 30; radius: 6; color: cancelTopMouse.containsMouse ? "#743541" : "#101920"
                                 Text { anchors.centerIn: parent; text: "×"; color: "#ff91a4"; font.pixelSize: 18 }
-                                BounceMouseArea { id: cancelTopMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.calendarEditor = false }
+                                BounceMouseArea { id: cancelTopMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.cancelCalendarEditor() }
                             }
                         }
                         Text { text: "TÍTULO"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                        EventField { text: root.draftTitle; placeholder: "Nome do evento"; onTextChanged: root.draftTitle = text }
+                        EventField { id: calendarTitleField; text: root.draftTitle; placeholder: "Nome do evento"; onTextChanged: root.draftTitle = text }
 
                         Row {
                             width: parent.width; spacing: 6
                             Column {
                                 width: (parent.parent.width - 6) * 0.62; spacing: 4
                                 Text { text: "DATA (AAAA-MM-DD)"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                                EventField { width: parent.width; text: root.draftDate; placeholder: "2026-08-02"; onTextChanged: root.draftDate = text }
+                                EventField { id: calendarDateField; width: parent.width; text: root.draftDate; placeholder: "2026-08-02"; onTextChanged: root.draftDate = text }
                             }
                             Column {
                                 width: (parent.parent.width - 6) * 0.38; spacing: 4
                                 Text { text: "HORA"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                                EventField { width: parent.width; text: root.draftTime; placeholder: "09:00"; onTextChanged: root.draftTime = text }
+                                EventField { id: calendarTimeField; width: parent.width; text: root.draftTime; placeholder: "09:00"; onTextChanged: root.draftTime = text }
                             }
                         }
 
                         Text { text: "CATEGORIA"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
                         Rectangle {
+                            id: categoryButton
                             width: parent.width; height: 34; radius: 6
-                            color: categoryButtonMouse.containsMouse ? root.cyanDim : "#101920"
-                            border.width: root.categoryPickerOpen ? 1 : 0; border.color: root.cyan
+                            activeFocusOnTab: true
+                            color: activeFocus ? "#244b55" : (categoryButtonMouse.containsMouse ? root.cyanDim : "#101920")
+                            border.width: root.categoryPickerOpen || activeFocus ? 1 : 0; border.color: activeFocus ? "#a6f3ff" : root.cyan
+                            Keys.onPressed: function(event) {
+                                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                    root.categoryPickerOpen = !root.categoryPickerOpen
+                                    event.accepted = true
+                                }
+                            }
                             Text {
                                 anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
                                 text: root.draftCategory || "ESCOLHER CATEGORIA"
@@ -2941,7 +3120,16 @@ ShellRoot {
                                 delegate: Rectangle {
                                     required property string modelData
                                     width: ListView.view.width; height: 27; radius: 5
-                                    color: root.draftCategory === modelData ? root.cyanDim : "#101920"
+                                    activeFocusOnTab: true
+                                    color: activeFocus ? "#244b55" : (root.draftCategory === modelData ? root.cyanDim : "#101920")
+                                    border.width: activeFocus ? 1 : 0; border.color: "#a6f3ff"
+                                    Keys.onPressed: function(event) {
+                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                            root.draftCategory = modelData
+                                            root.categoryPickerOpen = false
+                                            event.accepted = true
+                                        }
+                                    }
                                     Text { anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter; text: modelData; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
                                     BounceMouseArea {
                                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
@@ -2950,23 +3138,39 @@ ShellRoot {
                                 }
                             }
                             Rectangle {
-                                width: parent.width; height: 30; radius: 5; color: newCategoryMouse.containsMouse ? root.cyanDim : "#101920"
+                                width: parent.width; height: 30; radius: 5; activeFocusOnTab: true
+                                color: activeFocus ? "#244b55" : (newCategoryMouse.containsMouse ? root.cyanDim : "#101920")
+                                border.width: activeFocus ? 1 : 0; border.color: "#a6f3ff"
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                        root.newCategoryOpen = true
+                                        event.accepted = true
+                                    }
+                                }
                                 Text { anchors.centerIn: parent; text: "[ + ] CRIAR NOVA CATEGORIA"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                 BounceMouseArea { id: newCategoryMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.newCategoryOpen = true }
                             }
                         }
                         Row {
                             width: parent.width; spacing: 6; visible: root.newCategoryOpen
-                            EventField { width: parent.width - 86; text: root.newCategoryName; placeholder: "NOME DA CATEGORIA"; onTextChanged: root.newCategoryName = text }
+                            EventField { id: newCategoryField; width: parent.width - 86; text: root.newCategoryName; placeholder: "NOME DA CATEGORIA"; onTextChanged: root.newCategoryName = text }
                             Rectangle {
-                                width: 80; height: 34; radius: 6; color: createCategoryMouse.containsMouse ? "#317f91" : root.cyanDim
+                                width: 80; height: 34; radius: 6; activeFocusOnTab: true
+                                color: activeFocus ? "#317f91" : (createCategoryMouse.containsMouse ? "#317f91" : root.cyanDim)
+                                border.width: activeFocus ? 1 : 0; border.color: "#a6f3ff"
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                        root.createCategory()
+                                        event.accepted = true
+                                    }
+                                }
                                 Text { anchors.centerIn: parent; text: "CRIAR"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                 BounceMouseArea { id: createCategoryMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.createCategory() }
                             }
                         }
 
                         Text { text: "NOTAS (OPCIONAL)"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                        EventField { text: root.draftNotes; placeholder: "Local, descrição, ligação…"; onTextChanged: root.draftNotes = text }
+                        EventField { id: calendarNotesField; text: root.draftNotes; placeholder: "Local, descrição, ligação…"; onTextChanged: root.draftNotes = text }
 
                         Text { text: "PARTILHA"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
                         EventToggle {
@@ -2990,8 +3194,15 @@ ShellRoot {
                                 Rectangle {
                                     required property string modelData
                                     width: (menuContent.width - 73) / 4; height: 34; radius: 5
-                                    color: root.draftReminderUnit === modelData ? root.cyanDim : "#101920"
-                                    border.width: root.draftReminderUnit === modelData ? 1 : 0; border.color: root.cyan
+                                    activeFocusOnTab: true
+                                    color: activeFocus ? "#244b55" : (root.draftReminderUnit === modelData ? root.cyanDim : "#101920")
+                                    border.width: root.draftReminderUnit === modelData || activeFocus ? 1 : 0; border.color: activeFocus ? "#a6f3ff" : root.cyan
+                                    Keys.onPressed: function(event) {
+                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                            root.draftReminderUnit = modelData
+                                            event.accepted = true
+                                        }
+                                    }
                                     Text {
                                         anchors.centerIn: parent; text: modelData
                                         color: root.draftReminderUnit === modelData ? root.cyan : root.textDim
@@ -3002,9 +3213,15 @@ ShellRoot {
                             }
                         }
                         Rectangle {
-                            width: parent.width; height: 34; radius: 6
-                            color: addReminderMouse.containsMouse ? "#317f91" : root.cyanDim
-                            border.width: 1; border.color: root.cyan
+                            width: parent.width; height: 34; radius: 6; activeFocusOnTab: true
+                            color: activeFocus ? "#317f91" : (addReminderMouse.containsMouse ? "#317f91" : root.cyanDim)
+                            border.width: 1; border.color: activeFocus ? "#a6f3ff" : root.cyan
+                            Keys.onPressed: function(event) {
+                                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                    root.addDraftReminder()
+                                    event.accepted = true
+                                }
+                            }
                             Text {
                                 anchors.centerIn: parent
                                 text: "[ + ] ADICIONAR LEMBRETE"
@@ -3030,8 +3247,15 @@ ShellRoot {
                                     required property int modelData
                                     height: 30
                                     width: reminderText.implicitWidth + 42
-                                    radius: 6; color: "#101920"
-                                    border.width: 1; border.color: root.cyanDim
+                                    radius: 6; color: activeFocus ? "#49242c" : "#101920"
+                                    activeFocusOnTab: true
+                                    border.width: 1; border.color: activeFocus ? "#ffd3da" : root.cyanDim
+                                    Keys.onPressed: function(event) {
+                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space || event.key === Qt.Key_Delete) {
+                                            root.removeDraftReminder(modelData)
+                                            event.accepted = true
+                                        }
+                                    }
                                     Text {
                                         id: reminderText
                                         anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter
@@ -3057,13 +3281,28 @@ ShellRoot {
                         Row {
                             width: parent.width; spacing: 6
                             Rectangle {
-                                width: (parent.width - 6) / 2; height: 36; radius: 6; color: cancelMouse.containsMouse ? "#293840" : "#101920"
+                                width: (parent.width - 6) / 2; height: 36; radius: 6; activeFocusOnTab: true
+                                color: activeFocus ? "#244b55" : (cancelMouse.containsMouse ? "#293840" : "#101920")
+                                border.width: activeFocus ? 1 : 0; border.color: "#a6f3ff"
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                        root.cancelCalendarEditor()
+                                        event.accepted = true
+                                    }
+                                }
                                 Text { anchors.centerIn: parent; text: "CANCELAR"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                                BounceMouseArea { id: cancelMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.calendarEditor = false }
+                                BounceMouseArea { id: cancelMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.cancelCalendarEditor() }
                             }
                             Rectangle {
-                                width: (parent.width - 6) / 2; height: 36; radius: 6; color: saveMouse.containsMouse ? "#317f91" : root.cyanDim
-                                border.width: 1; border.color: root.cyan
+                                width: (parent.width - 6) / 2; height: 36; radius: 6; activeFocusOnTab: true
+                                color: activeFocus ? "#317f91" : (saveMouse.containsMouse ? "#317f91" : root.cyanDim)
+                                border.width: 1; border.color: activeFocus ? "#a6f3ff" : root.cyan
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                                        root.saveDraftEvent()
+                                        event.accepted = true
+                                    }
+                                }
                                 Text { anchors.centerIn: parent; text: root.editingEventId ? "GUARDAR ALTERAÇÕES" : "GUARDAR EVENTO"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                                 BounceMouseArea { id: saveMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.saveDraftEvent() }
                             }
@@ -3832,6 +4071,7 @@ ShellRoot {
                                 anchors.left: parent.left; anchors.leftMargin: 12; anchors.right: parent.right; anchors.rightMargin: 12
                                 anchors.bottom: parent.bottom; anchors.bottomMargin: 3
                                 height: 22; from: 0; to: 100; stepSize: 1; enabled: !localActionProcess.running
+                                onMoved: root.previewVolume(value)
                                 onPressedChanged: { if (!pressed) root.commitVolume(value) }
                                 Binding { target: volumeSummarySlider; property: "value"; value: root.volumeValue; when: !volumeSummarySlider.pressed }
                                 background: Rectangle {

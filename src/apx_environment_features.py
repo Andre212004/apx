@@ -32,7 +32,10 @@ PRESETS = {
 
 # Additional packages beyond the admitted graphical base. Hardware-facing
 # capabilities remain Host-mediated and are represented in registration.
-BASE_PACKAGES = ("egl-gbm",)
+BASE_PACKAGES = (
+    "egl-gbm", "lib32-mesa", "lib32-nvidia-utils", "lib32-vulkan-icd-loader",
+    "lib32-vulkan-radeon", "vulkan-tools",
+)
 PACKAGES = {
     "web-documents": ("evince",),
     "multimedia": ("ffmpeg", "gst-libav", "gst-plugins-good", "mpv"),

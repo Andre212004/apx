@@ -73,7 +73,7 @@ DEVICE_LEASE_STATE = DEVICE_LEASE_DIR / "state.json"
 USER_NAMESPACE_LENGTH = 65536
 LOCAL_ADMIN_PROOF = "/etc/sudoers.d/11-apx-graphical-proof"
 SEATD_SOCKET = Path("/run/seatd.sock")
-HUB_CPU_QUOTA = "600%"
+HUB_CPU_QUOTA = "1200%"
 HUB_CPU_WEIGHT = "200"
 HUB_IO_WEIGHT = "200"
 HUB_MEMORY_HIGH = "10G"
@@ -581,11 +581,22 @@ def resolve_nvidia_auxiliary_devices() -> dict[str, str]:
         raise OfficialHubGraphicalError("the NVIDIA device helper is untrusted")
     run((str(helper), "-c", "0"))
     run((str(helper), "-m"))
+    run((str(helper), "-u"))
     ensure_nvidia_control_device()
+    uvm_registrations = [
+        fields[0]
+        for line in Path("/proc/devices").read_text().splitlines()
+        if len(fields := line.split()) == 2 and fields[1] == "nvidia-uvm"
+    ]
+    if len(uvm_registrations) != 1 or not uvm_registrations[0].isdecimal():
+        raise OfficialHubGraphicalError("the NVIDIA UVM device registration differs")
+    uvm_major = int(uvm_registrations[0])
     expected = {
         "nvidia_device": ("/dev/nvidia0", 195, 0),
         "nvidia_control": ("/dev/nvidiactl", 195, 255),
         "nvidia_modeset": ("/dev/nvidia-modeset", 195, 254),
+        "nvidia_uvm": ("/dev/nvidia-uvm", uvm_major, 0),
+        "nvidia_uvm_tools": ("/dev/nvidia-uvm-tools", uvm_major, 1),
     }
     resolved: dict[str, str] = {}
     for label, (name, major, minor) in expected.items():
@@ -651,7 +662,9 @@ def validate_devices(inputs: dict[str, str], audio: dict[str, str], graphics: di
         raise OfficialHubGraphicalError("resolved NVIDIA display/offload nodes differ")
     if tuple(graphics.get(label) for label in (
             "nvidia_device", "nvidia_control", "nvidia_modeset",
-    )) != ("/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-modeset"):
+            "nvidia_uvm", "nvidia_uvm_tools",
+    )) != ("/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-modeset",
+            "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools"):
         raise OfficialHubGraphicalError("resolved NVIDIA auxiliary catalogue differs")
 
 
@@ -701,12 +714,12 @@ def _device_lease_state() -> tuple[dict[str, object], ...]:
     if type(value) is not dict:
         raise OfficialHubGraphicalError("graphical device lease state is not an object")
     leases = value.get("leases")
-    if value.get("schema") != 1 or type(leases) is not list or not 1 <= len(leases) <= 16:
+    if value.get("schema") != 1 or type(leases) is not list or not 1 <= len(leases) <= 20:
         raise OfficialHubGraphicalError("graphical device lease state is malformed")
     for index, lease in enumerate(leases):
         if type(lease) is not dict or set(lease) != {"node", "proxy", "major", "minor"} \
                 or not re.fullmatch(
-                    r"/dev/(?:dri/(?:card|renderD)[0-9]+|input/event[0-9]+|snd/(?:controlC[0-9]+|pcmC[0-9]+D0[pc]|timer)|nvidia(?:[0-9]+|ctl|-modeset)|tty2)",
+                    r"/dev/(?:dri/(?:card|renderD)[0-9]+|input/event[0-9]+|snd/(?:controlC[0-9]+|pcmC[0-9]+D0[pc]|timer)|nvidia(?:[0-9]+|ctl|-modeset|-uvm(?:-tools)?)|tty2)",
                     str(lease.get("node")),
                 ) or lease.get("proxy") != str(DEVICE_LEASE_DIR / f"device-{index}") \
                 or type(lease.get("major")) is not int or type(lease.get("minor")) is not int:
@@ -959,6 +972,12 @@ def start_outer(
           if HOST_CONSOLE_ENABLED else ()),
         f"--bind={SEATD_SOCKET}:/run/seatd.sock",
         "--bind-ro=/run/udev/data:/run/udev/data",
+        # A private network namespace gives nspawn a filtered sysfs view that
+        # omits loaded kernel modules. NVIDIA userspace treats an absent
+        # nvidia/initstate as an unloaded driver and refuses the otherwise
+        # admitted control device. Expose only this module's read-only sysfs
+        # subtree; do not expose the Host module catalogue or module loader.
+        "--bind-ro=/sys/module/nvidia:/sys/module/nvidia",
         *(f"--bind={proxy}:{node}" for node, proxy in bindings.items()),
     )
     run(command)
@@ -1446,6 +1465,7 @@ def launch(test_mode: bool, authenticated_handoff: bool = False) -> dict[str, ob
         *((graphics["offload_card"], graphics["offload_render"])
           if "offload_render" in graphics else ()),
         graphics["nvidia_device"], graphics["nvidia_control"], graphics["nvidia_modeset"],
+        graphics["nvidia_uvm"], graphics["nvidia_uvm_tools"],
         "/dev/tty2",
     )))
     bindings = prepare_device_leases(device_nodes)

@@ -11,6 +11,40 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
+## Host/HUB/Steam physical performance remediation — 2026-08-20
+
+The physical Ryzen 5 5600H pilot initially measured 14.62–14.93 GB/s native
+versus 7.15–7.64 GB/s in graphical Environments. The root cause was the outer
+launcher's explicit `CPUQuota=600%`: the namespace showed 12 logical CPUs and
+unlimited descendant cgroups, but its parent allowed only six CPUs of runtime.
+Hub and generic workloads now use `CPUQuota=1200%`; the physical outer cgroup
+reports `1200000 100000`. Post-fix Steam proofs measured 15.06 GB/s and
+20.62 GB/s, so the structural 49% ceiling is removed.
+
+NVIDIA admission now runs `nvidia-modprobe -u`, proves the unique dynamic UVM
+major, and leases both `/dev/nvidia-uvm` and `nvidia-uvm-tools`. A second cause
+was nspawn's filtered sysfs under `--private-network`: NVIDIA userspace could
+open `nvidiactl` but could not see `/sys/module/nvidia/initstate`, then returned
+`NVML_ERROR_OPERATING_SYSTEM`. The launcher now bind-mounts only that NVIDIA
+module subtree read-only. Hub and Steam physically return RTX 3060 through
+both NVML and Vulkan while network isolation and `DevicePolicy=closed` remain.
+
+Steam's multilib repository is enabled and its current root has matching
+`nvidia-utils 610.43.03-3` / `lib32-nvidia-utils 610.43.03-1`, plus
+`lib32-mesa`, `lib32-vulkan-radeon`, `lib32-vulkan-icd-loader`, `egl-gbm` and
+`vulkan-tools`. Runtime creation and the physical base builder install the
+same stack for future roots. `pacman -Dk` is clean. Hyprland physically
+enumerated the four admitted internal input identities. seatd's remaining
+EPERM messages are failed discovery attempts for non-leased hardware; the
+policy was deliberately not widened merely to silence them.
+
+Exact Hub and Steam QuickShell files were restored, only Hub is active at its
+normal login surface, and no credential was automated. The complete repository
+suite passes 1043 tests with 11 expected skips. A real game FPS/frametime test,
+LAN `iperf3`, paired Bluetooth peripheral and gamepad remain hardware acceptance
+work rather than known performance blockers. Full evidence is in
+`docs/apx-host-hub-steam-performance-assessment-2026-08-20.md`.
+
 ## NVIDIA control-node Hub boot repair — 2026-08-15
 
 The physical Host booted NVIDIA 610.43.03 successfully and published its GPU,
@@ -3510,3 +3544,25 @@ avoids flooding the audio server with one subprocess per pointer pixel.
 The owner physically confirmed working internal audio after the Host physical
 Master switch/volume repair. Host and active Hub local time are also physically
 aligned to `Europe/Lisbon`, and the QuickShell clock displays the correct time.
+
+## Staged QuickShell calendar keyboard access and volume parity — 2026-08-20
+
+The canonical Environment shell now exposes every calendar overview action to
+the keyboard. Arrow keys and Tab/Shift+Tab traverse the period controls, view
+selectors, dates or months, Today/New Event, and event edit/delete actions;
+Enter or Space activates the focused action. Page Up/Page Down change the
+displayed period and Home returns to today. The event editor starts in its title
+field and includes its fields, category controls, sharing toggle, reminder
+controls, Save and Cancel in the Tab focus chain. Escape leaves the editor
+before a subsequent Escape closes the calendar.
+
+The compact control-centre volume slider now uses the same immediate preview
+and serialized `wpctl` path as the expanded audio slider. Both the displayed
+percentage and Environment-local PipeWire volume therefore change during the
+drag, while the existing newest-value coalescing prevents concurrent `wpctl`
+processes. The source was installed into the active Hub on 2026-08-20 with an
+exact pre-change backup under
+`/var/lib/apx/backups/20260820-quickshell-calendar-volume-v1/`. QuickShell hot
+reloaded it without restarting the graphical Environment, logged
+`Configuration Loaded`, and its IPC then reported the calendar surface visible
+at 480×390. The Hub-local PipeWire sink also remained readable after reload.
