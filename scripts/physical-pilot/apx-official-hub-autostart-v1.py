@@ -15,6 +15,7 @@ HOSTNAME = "apx-host"
 HUB = "/var/lib/apx/official-hub-v1/apx-official-hub-graphical-v1.py"
 GENERAL = "/usr/lib/apx/apx-graphical-environment-v1.py"
 ENVIRONMENTS = Path("/var/lib/apx/environments")
+HANDOFF_LOCK = Path("/run/apx/environment-handoff-v1.lock")
 REQUIRED_SOCKETS = tuple(Path("/run/apx") / name for name in (
     "host-services-v1.sock", "host-services-v2.sock", "host-services-v3.sock",
     "audio-state-v1.sock", "coordinated-update-v1.sock", "host-console-v1.sock",
@@ -56,6 +57,16 @@ def wait_for_host_services() -> None:
     raise RuntimeError(f"Host service sockets did not become ready: {missing}")
 
 
+def handoff_active() -> bool:
+    """Recognize only the root-owned supervisor lock for an active handoff."""
+    try:
+        metadata = HANDOFF_LOCK.lstat()
+    except FileNotFoundError:
+        return False
+    return HANDOFF_LOCK.is_file() and not HANDOFF_LOCK.is_symlink() \
+        and metadata.st_uid == 0 and metadata.st_gid == 0
+
+
 def interrupted_workloads() -> list[str]:
     running: list[str] = []
     for directory in sorted(ENVIRONMENTS.iterdir()):
@@ -90,6 +101,11 @@ def reconcile_interrupted_workloads() -> None:
 def main() -> int:
     if os.geteuid() != 0 or Path("/etc/hostname").read_text().strip() != HOSTNAME:
         raise RuntimeError("official Hub autostart requires APX Host root")
+    # The handoff supervisor, not boot autostart, owns Hub restoration after
+    # an Environment switch. Returning success prevents Restart=on-failure
+    # from launching a competing Hub while the RTX is still leased to VFIO.
+    if handoff_active():
+        return 0
     wait_for_tty1()
     clear_recovery_console()
     wait_for_host_services()
@@ -100,6 +116,8 @@ def main() -> int:
         raise RuntimeError("official Hub autostart refuses an existing Environment")
     reconcile_interrupted_workloads()
     result = run((HUB, "--interactive"), False)
+    if result.returncode and handoff_active():
+        return 0
     if result.returncode:
         print(result.stderr.strip() or result.stdout.strip(), flush=True)
     return result.returncode

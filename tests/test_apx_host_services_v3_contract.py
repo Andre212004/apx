@@ -51,6 +51,13 @@ class HostServicesV3ContractTests(unittest.TestCase):
             with self.assertRaises(subject.HostServicesV3ContractError):
                 subject.request_bytes(operation, {"url": "https://attacker.invalid/"})
 
+    def test_radio_status_is_read_only_and_takes_no_payload(self):
+        request_id, operation, payload = subject.parse_request(
+            subject.request_bytes("radio.status", {}, request_id="radio-test"))
+        self.assertEqual((request_id, operation, payload), ("radio-test", "radio.status", {}))
+        with self.assertRaises(subject.HostServicesV3ContractError):
+            subject.request_bytes("radio.status", {"blocked": True})
+
     def test_bluetooth_pairing_is_typed_and_pin_stays_in_the_socket_body(self):
         address = "AA:BB:CC:DD:EE:FF"
         for operation, payload in (

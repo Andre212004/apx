@@ -36,11 +36,9 @@ class EnvironmentFeaturesTests(unittest.TestCase):
         for required in ("evince", "libreoffice-fresh", "cups", "podman", "rust"):
             self.assertIn(required, packages)
         self.assertNotIn("firefox", packages)
-        for required in ("egl-gbm", "lib32-mesa", "lib32-nvidia-utils",
-                         "lib32-vulkan-icd-loader", "lib32-vulkan-radeon", "vulkan-tools"):
-            self.assertIn(required, packages)
+        self.assertEqual(subject.packages_for(subject.PRESETS["basic"]), ())
         self.assertEqual(subject.local_packages_for(["web-documents"]),
-                         ("brave-bin", "nvidia-utils"))
+                         ("brave-bin",))
         self.assertGreater(subject.estimated_mib(subject.PRESETS["complete"]), 4000)
 
     def test_unknown_and_empty_selections_fail_closed(self):
@@ -48,10 +46,11 @@ class EnvironmentFeaturesTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 subject.normalize_modules(values)
 
-    def test_alternate_private_root_disables_only_pacman_downloader_sandbox(self):
+    def test_alternate_private_root_uses_a_complete_arch_upgrade(self):
         source = (Path(__file__).resolve().parents[1]
                   / "scripts/virtual-lab/apx-lab-runtime.py").read_text()
-        self.assertIn('"--disable-sandbox", "-Sy", "--needed", "--noconfirm"', source)
+        self.assertIn('"--disable-sandbox", "-Syu", "--needed", "--noconfirm"', source)
+        self.assertNotIn('"--disable-sandbox", "-Sy", "--needed", "--noconfirm"', source)
         self.assertIn('"--root", str(root)', source)
         self.assertIn('"--dbpath", str(root / "var/lib/pacman")', source)
         self.assertIn('disabled = "#[multilib]\\n#Include = /etc/pacman.d/mirrorlist\\n"', source)

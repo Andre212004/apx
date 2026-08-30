@@ -17,6 +17,7 @@ DAEMON = ROOT / "scripts/physical-pilot/apx-host-console-v1.py"
 CLIENT = ROOT / "scripts/physical-pilot/apx-host-console-client-v1.py"
 LAUNCHER = ROOT / "scripts/physical-pilot/apx-official-hub-graphical-v1.py"
 OPEN = ROOT / "config/environment-shell-v1/local/bin/apx-host-console-open"
+TERMINAL = ROOT / "config/environment-shell-v1/local/bin/apx-host-console-terminal"
 QML = ROOT / "config/environment-shell-v1/quickshell/apx/shell.qml"
 
 
@@ -42,13 +43,15 @@ class HostConsoleV1Tests(unittest.TestCase):
         for required in (
             "authorize_official_hub_peer", "quickshell_ancestor", "console.open",
             "pty.fork()", 'os.execve("/usr/bin/bash"', "TIOCSWINSZ",
-            "SIGWINCH", "PersistentConsole", "SESSION_LOCK", "console-detach",
-            "DETACHED_OUTPUT_LIMIT", "REPLAY_OUTPUT_LIMIT", '"TERM": "xterm-256color"',
-            'connection.sendall(b"\\x1bc" + snapshot)',
+            "SIGWINCH", "RootConsole", "console-detach", "console.ticket",
+            "DETACHED_OUTPUT_LIMIT", "TICKET_TTL_SECONDS", '"TERM": "xterm-256color"',
+            "secrets.token_urlsafe", "consume_ticket",
         ):
             self.assertIn(required, source)
-        self.assertIn('"reattach_on_open": True', source)
-        self.assertNotIn("os.kill(child, signal.SIGHUP)", source)
+        self.assertIn('"persistent_pty": False', source)
+        self.assertIn("os.killpg(self.child, signal.SIGHUP)", source)
+        self.assertNotIn("SESSION:", source)
+        self.assertNotIn("ConsoleReplaced", source)
         self.assertNotIn('"TERM": "xterm-kitty"', source)
         self.assertNotIn('payload.get("command")', source)
         self.assertNotIn("host.tty.activate", source)
@@ -58,8 +61,8 @@ class HostConsoleV1Tests(unittest.TestCase):
         source = CLIENT.read_text(); compile(source, str(CLIENT), "exec")
         self.assertIn("os.get_terminal_size", source)
         self.assertIn('"rows": size.lines', source)
-        self.assertIn("SESSÃO ANTERIOR REANEXADA", source)
-        self.assertIn("fechar a janela apenas desanexa", source)
+        self.assertIn('os.environ.pop("APX_HOST_CONSOLE_TICKET"', source)
+        self.assertIn("fechar a janela termina esta consola", source)
         self.assertNotIn('add_argument("--token"', source)
         self.assertNotIn("input(", source)
         self.assertNotIn("subprocess", source)
@@ -71,18 +74,27 @@ class HostConsoleV1Tests(unittest.TestCase):
         self.assertIn("HOST_CONSOLE_SOCKET", exact)
         self.assertIn("engine.HOST_CONSOLE_ENABLED = False", generic)
 
-    def test_hub_console_shortcut_focuses_or_reattaches_the_single_pty(self):
-        source = OPEN.read_text(); compile(CLIENT.read_text(), str(CLIENT), "exec")
-        self.assertIn("hyprctl clients", source)
+    def test_hub_console_shortcut_focuses_or_opens_one_fresh_pty(self):
+        source = OPEN.read_text(); compile(source, str(OPEN), "exec"); compile(CLIENT.read_text(), str(CLIENT), "exec")
+        self.assertIn('request_bytes("console.ticket", {})', source)
+        self.assertIn("hyprctl\", \"clients", source)
         self.assertIn("hl.get_window", source)
         self.assertIn("hl.dsp.focus", source)
         self.assertIn("APX HOST ROOT", source)
+        self.assertIn('f"class: {WINDOW_CLASS}"', source)
+        self.assertIn('"--class", WINDOW_CLASS', source)
         self.assertIn("apx-host-console-terminal", source)
+        self.assertIn("APX_HOST_CONSOLE_TICKET", source)
+        self.assertIn("start_new_session=True", source)
+        self.assertIn("for _ in range(60)", source)
+        self.assertNotIn("Já existe uma consola", TERMINAL.read_text())
         self.assertIn('command: ["/home/apx/.local/bin/apx-host-console-open"]', QML.read_text())
+        hyprland = (ROOT / "config/environment-shell-v1/hypr/hyprland.lua").read_text()
+        self.assertIn('mainMod .. " + H", hl.dsp.exec_cmd("quickshell -c apx ipc call host openTerminal")', hyprland)
 
-    def test_pty_survives_detach_and_accepts_a_second_attachment(self):
+    def test_pty_is_new_and_ends_with_its_window(self):
         daemon = self.load_daemon()
-        session = daemon.PersistentConsole(24, 80, 0)
+        session = daemon.RootConsole(24, 80, 0)
 
         def output_until(marker: bytes) -> bytes:
             deadline = time.monotonic() + 3
@@ -96,14 +108,7 @@ class HostConsoleV1Tests(unittest.TestCase):
             session.write_input(b"printf 'APX-FIRST\\n'\n")
             self.assertIn(b"APX-FIRST", output_until(b"APX-FIRST"))
             session.release(0)
-            self.assertTrue(session.alive)
-
-            snapshot = session.claim(31, 100, reattached=True)
-            self.assertIn(b"APX-FIRST", snapshot)
-            session.write_input(b"printf 'APX-REATTACHED\\n'\n")
-            self.assertIn(b"APX-REATTACHED", output_until(b"APX-REATTACHED"))
-            session.release(0)
-            session.write_input(b"exit\n")
+            session.terminate()
             deadline = time.monotonic() + 3
             while session.alive and time.monotonic() < deadline:
                 time.sleep(0.02)
@@ -114,6 +119,18 @@ class HostConsoleV1Tests(unittest.TestCase):
                     os.kill(session.child, signal.SIGHUP)
                 except ProcessLookupError:
                     pass
+
+    def test_ticket_is_short_lived_and_single_use(self):
+        daemon = self.load_daemon()
+        daemon.quickshell_ancestor = lambda _pid: 123
+        peer = daemon.HostServicesPeer(200, 5000, 5000)
+        token = daemon.issue_ticket(peer)
+        daemon.consume_ticket(token, peer)
+        with self.assertRaises(PermissionError):
+            daemon.consume_ticket(token, peer)
+        token = daemon.issue_ticket(peer)
+        with self.assertRaises(PermissionError):
+            daemon.consume_ticket(token, daemon.HostServicesPeer(201, 5001, 5001))
 
 
 if __name__ == "__main__":

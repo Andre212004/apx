@@ -235,7 +235,7 @@ def _environment_actions(
             "destroy",
             "Apagar",
             system_ready,
-            "No aviso seguinte escolhes preservar as cópias ou apagar completamente o Environment, snapshots e arquivos." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
+            "Apaga definitivamente o Environment, todos os dados, snapshots e arquivos; não fica uma cópia recuperável." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
             "destroy" if system_ready else None,
             "strong-confirmation" if system_ready else "none",
         ),

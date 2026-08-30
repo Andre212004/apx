@@ -13,6 +13,7 @@ import time
 
 
 APX = "/usr/bin/apx"
+SYSTEM_PROVISIONER = "/usr/lib/apx/apx-system-environment-provision-v1.py"
 STATE = Path("/run/apx/environment-management-v1.json")
 LOCK = Path("/run/apx/environment-management-v1.lock")
 ENVIRONMENTS = Path("/var/lib/apx/environments")
@@ -79,6 +80,7 @@ def main() -> int:
     parser.add_argument("--desktop-preset", default="intermediate",
                         choices=("basic", "intermediate", "complete"))
     parser.add_argument("--desktop-modules", default="")
+    parser.add_argument("--system", default="arch", choices=("arch", "windows11", "ubuntu"))
     parser.add_argument("--lock-token", required=True)
     arguments = parser.parse_args()
     action, target = arguments.action, arguments.environment
@@ -101,15 +103,32 @@ def main() -> int:
             write_state(action, target, "planning", 4, "A verificar uma criação anterior…")
             recover_failed_create(target)
         write_state(action, target, "planning", 8, "A validar o plano…")
-        operation_plan = plan(action, target, arguments.description,
-                              arguments.desktop_preset, arguments.desktop_modules)
+        # A system guest is not a Linux desktop behind a VM. Its root receives
+        # only the base system selection; the atomic provisioner then adds the
+        # VM engine, minimal compositor boundary and on-demand return menu.
+        preset = "basic" if action == "create" and arguments.system != "arch" \
+            else arguments.desktop_preset
+        modules = "system" if action == "create" and arguments.system != "arch" \
+            else arguments.desktop_modules
+        operation_plan = plan(action, target, arguments.description, preset, modules)
         if action == "destroy" and operation_plan.get("generation") != arguments.generation:
             raise RuntimeError("o Environment selecionado mudou; atualiza a lista")
         write_state(action, target, "applying", 28,
-                    "A criar o Environment…" if action == "create" else "A apagar os dados do Environment…")
+                    "A criar o Environment…" if action == "create" else "A executar a purga completa do Environment…")
         approval = f"CREATE {target} AS graphical-base" if action == "create" else f"DESTROY {target}"
         run((APX, "environment", action, "--plan", str(operation_plan["digest"]),
              "--approve", approval))
+        if action == "create" and arguments.system != "arch":
+            write_state(action, target, "applying", 82, "A instalar o sistema isolado…")
+            try:
+                run((SYSTEM_PROVISIONER, "--environment", target, "--system", arguments.system))
+            except Exception:
+                # A system Environment is atomic from the user's perspective:
+                # never publish a half-provisioned VM or leave its disk behind.
+                rollback = plan("destroy", target)
+                run((APX, "environment", "destroy", "--plan", str(rollback["digest"]),
+                     "--approve", f"DESTROY {target}"))
+                raise
         write_state(action, target, "complete", 100,
                     "Environment criado." if action == "create" else "Environment apagado.")
     except Exception as error:

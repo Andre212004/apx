@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import pty
 import select
+import secrets
 import signal
 import socket
 import struct
@@ -27,10 +28,10 @@ ACTIVE = Path("/run/apx/official-hub-graphical-v1.json")
 STATE_DIR = Path("/var/lib/apx/host-console-v1")
 AUDIT = STATE_DIR / "audit.jsonl"
 OFFICIAL_UNIT = "/system.slice/apx-official-hub-graphical-6f63f9a9.service"
-SESSION_LOCK = threading.Lock()
 DETACHED_OUTPUT_LIMIT = 1024 * 1024
-REPLAY_OUTPUT_LIMIT = 16 * 1024 * 1024
-SESSION: "PersistentConsole | None" = None
+TICKET_LOCK = threading.Lock()
+TICKETS: dict[str, tuple[int, float]] = {}
+TICKET_TTL_SECONDS = 10
 
 
 def audit(event: str, result: str, uid: int | None = None) -> None:
@@ -81,18 +82,13 @@ def response(connection: socket.socket, ok: bool, result: object = None, error: 
                                    separators=(",", ":")) + "\n").encode())
 
 
-class PersistentConsole:
-    """One Host-root PTY that may outlive and accept a replacement Hub client."""
+class RootConsole:
+    """One Host-root PTY whose lifetime is exactly one Kitty window."""
 
     def __init__(self, rows: int, columns: int, peer_uid: int) -> None:
         self.peer_uid = peer_uid
         self.condition = threading.Condition()
         self.output = bytearray()
-        # A replacement terminal starts with an empty renderer. Keep a bounded
-        # copy of the PTY stream so it can reconstruct the current full-screen
-        # TUI instead of receiving only the next few changed cells.
-        self.replay = bytearray()
-        self.attached = False
         self.alive = True
         self.child, self.master = pty.fork()
         if self.child == 0:
@@ -136,11 +132,8 @@ class PersistentConsole:
                     break
                 with self.condition:
                     self.output.extend(data)
-                    self.replay.extend(data)
                     if len(self.output) > DETACHED_OUTPUT_LIMIT:
                         del self.output[:-DETACHED_OUTPUT_LIMIT]
-                    if len(self.replay) > REPLAY_OUTPUT_LIMIT:
-                        del self.replay[:-REPLAY_OUTPUT_LIMIT]
                     self.condition.notify_all()
         finally:
             with self.condition:
@@ -156,25 +149,12 @@ class PersistentConsole:
                 pass
             audit("console-close", "closed", self.peer_uid)
 
-    def claim(self, rows: int, columns: int, reattached: bool = False) -> bytes:
-        with self.condition:
-            if not self.alive:
-                raise RuntimeError("the previous Host console has ended")
-            if self.attached:
-                raise RuntimeError("another Host console is active")
-            self.attached = True
-            snapshot = bytes(self.replay) if reattached else b""
-            if reattached:
-                # The snapshot contains every byte pending during detachment;
-                # clear the delivery queue so those bytes are not sent twice.
-                self.output.clear()
+    def claim(self, rows: int, columns: int) -> None:
+        if not self.alive:
+            raise RuntimeError("the Host console has ended")
         self.resize(rows, columns)
-        return snapshot
 
     def release(self, peer_uid: int) -> None:
-        with self.condition:
-            self.attached = False
-            self.condition.notify_all()
         audit("console-detach", "detached", peer_uid)
 
     def take_output(self) -> bytes:
@@ -188,30 +168,45 @@ class PersistentConsole:
     def write_input(self, data: bytes) -> None:
         os.write(self.master, data)
 
+    def terminate(self) -> None:
+        with self.condition:
+            if not self.alive:
+                return
+        try:
+            os.killpg(self.child, signal.SIGHUP)
+        except ProcessLookupError:
+            pass
 
-def active_session(rows: int, columns: int, peer_uid: int) -> tuple[PersistentConsole, bool, bytes]:
-    global SESSION
-    with SESSION_LOCK:
-        reattached = SESSION is not None and SESSION.alive
-        if not reattached:
-            SESSION = PersistentConsole(rows, columns, peer_uid)
-        assert SESSION is not None
-        snapshot = SESSION.claim(rows, columns, reattached)
-        return SESSION, reattached, snapshot
+
+def issue_ticket(peer: HostServicesPeer) -> str:
+    quickshell_ancestor(peer.pid)
+    token = secrets.token_urlsafe(32)
+    now = time.monotonic()
+    with TICKET_LOCK:
+        expired = [value for value, (_uid, deadline) in TICKETS.items() if deadline <= now]
+        for value in expired:
+            del TICKETS[value]
+        TICKETS[token] = (peer.uid, now + TICKET_TTL_SECONDS)
+    return token
+
+
+def consume_ticket(token: object, peer: HostServicesPeer) -> None:
+    if type(token) is not str or not 32 <= len(token) <= 128:
+        raise PermissionError("Host-console one-time ticket differs")
+    with TICKET_LOCK:
+        admitted = TICKETS.pop(token, None)
+    if admitted is None or admitted[0] != peer.uid or admitted[1] <= time.monotonic():
+        raise PermissionError("Host-console one-time ticket is invalid or expired")
 
 
 def bridge_root_console(connection: socket.socket, peer: HostServicesPeer,
                         rows: int, columns: int) -> None:
-    session, reattached, snapshot = active_session(rows, columns, peer.uid)
+    session = RootConsole(rows, columns, peer.uid)
+    session.claim(rows, columns)
     try:
         response(connection, True, {"opened": True, "identity": "HOST root",
-                                    "reattached": reattached, "persistent": True})
-        if snapshot:
-            # Reset the replacement emulator, replay the terminal state, then
-            # resize once more so a full-screen foreground app redraws too.
-            connection.sendall(b"\x1bc" + snapshot)
-            session.resize(rows, columns)
-        audit("console-attach", "reattached" if reattached else "opened", peer.uid)
+                                    "reattached": False, "persistent": False})
+        audit("console-attach", "opened", peer.uid)
         while True:
             readable, _, _ = select.select((connection,), (), (), 0.1)
             if connection in readable:
@@ -227,6 +222,7 @@ def bridge_root_console(connection: socket.socket, peer: HostServicesPeer,
                     break
     finally:
         session.release(peer.uid)
+        session.terminate()
 
 
 def handle(connection: socket.socket) -> None:
@@ -236,18 +232,24 @@ def handle(connection: socket.socket) -> None:
     request = parse_message(receive(connection)); operation = request.get("operation"); payload = request.get("payload")
     if type(operation) is not str or type(payload) is not dict:
         raise ValueError("Host-console request differs")
-    quickshell_ancestor(pid)
     if operation == "console.open":
         rows, columns = payload.get("rows"), payload.get("columns")
         if type(rows) is not int or type(columns) is not int \
                 or not 10 <= rows <= 500 or not 20 <= columns <= 1000:
             raise ValueError("Host-console terminal dimensions differ")
+        consume_ticket(payload.get("ticket"), peer)
         bridge_root_console(connection, peer, rows, columns)
+        return
+    if operation == "console.ticket":
+        if payload:
+            raise ValueError("Host-console ticket payload differs")
+        result = {"ticket": issue_ticket(peer), "expires_in": TICKET_TTL_SECONDS}
+        response(connection, True, result)
         return
     if operation == "capabilities.get":
         result = {"root_console": True, "authorization": "official-hub-button",
-                  "terminal_size_forwarding": True, "persistent_pty": True,
-                  "reattach_on_open": True}
+                  "terminal_size_forwarding": True, "persistent_pty": False,
+                  "one_time_ticket": True}
     else:
         raise ValueError("unsupported Host-console operation")
     response(connection, True, result)
@@ -273,7 +275,7 @@ def worker(connection: socket.socket) -> None:
                 response(connection, False, error=str(error)[:300])
             except OSError:
                 pass
-            audit("request", "rejected")
+            audit("request", f"rejected:{type(error).__name__}:{str(error)[:120]}")
 
 
 def serve() -> None:

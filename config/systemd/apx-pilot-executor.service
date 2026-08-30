@@ -1,0 +1,14 @@
+[Unit]
+Description=APX physical pilot typed executor
+After=local-fs.target systemd-machined.service
+RequiresMountsFor=/var/lib/apx
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-lab-executor.py
+Restart=on-failure
+RestartSec=1s
+NoNewPrivileges=no
+
+[Install]
+WantedBy=multi-user.target

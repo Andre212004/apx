@@ -77,7 +77,7 @@ class HubViewTests(unittest.TestCase):
         self.assertTrue(action(card, "archive").enabled)
         self.assertTrue(action(card, "destroy").enabled)
         self.assertEqual(action(card, "destroy").approval_class, "strong-confirmation")
-        self.assertIn("preservar as cópias", action(card, "destroy").explanation)
+        self.assertIn("não fica uma cópia recuperável", action(card, "destroy").explanation)
         for item in card.actions:
             self.assertFalse(hasattr(item, "command"))
             self.assertFalse(hasattr(item, "path"))

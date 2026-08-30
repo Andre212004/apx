@@ -1,0 +1,1 @@
+{"directory":"Ubuntu","disk":"Ubuntu.raw","disk_gib":160,"installer":"Ubuntu.iso","kind":"ubuntu","label":"Ubuntu","legacy_disk":"Ubuntu.qcow2","native_capable":false,"network":"virtio-net-pci","rtc":"utc","schema":2,"secure_boot":true,"tools_drive":false,"tpm":false}

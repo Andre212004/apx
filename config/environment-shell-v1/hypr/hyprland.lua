@@ -28,7 +28,7 @@ hl.monitor({
 ---------------------
 
 -- Set programs that you use
-local terminal    = "/usr/bin/alacritty"
+local terminal    = "/usr/bin/kitty --directory /home/apx"
 local fileManager = "/usr/bin/thunar"
 local menu        = "/usr/bin/rofi -show drun"
 
@@ -226,7 +226,9 @@ hl.config({
         sensitivity = 0, -- -1.0 - 1.0, 0 means no modification.
 
         touchpad = {
-            natural_scroll = false,
+            -- Content follows the fingers: dragging two fingers upward moves
+            -- down through the page, matching the owner's requested direction.
+            natural_scroll = true,
         },
     },
 })
@@ -262,7 +264,9 @@ hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("quickshell -c apx ipc call host togg
 hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("quickshell -c apx ipc call host toggleModel"))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("quickshell -c apx ipc call host toggleBattery"))
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("/usr/bin/brave"))
-hl.bind(mainMod .. " + H", hl.dsp.exec_cmd(terminal))
+-- SUPER+Q is local. SUPER+H asks the capability-aware shell to open its
+-- terminal action; only the official Hub maps that action to the Host broker.
+hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("quickshell -c apx ipc call host openTerminal"))
 -- Executor- and IPC-independent escape: Hyprland handles this dispatcher
 -- internally even if its runtime sockets or the APX shell are unavailable.
 hl.bind(mainMod .. " + M", hl.dsp.exit())
@@ -304,13 +308,31 @@ hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("quickshell -c apx ipc call host
 hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("quickshell -c apx ipc call host microphoneMute"), { locked = true })
 -- Lenovo brightness keys are handled by the exact ITE evdev bridge owned by
 -- Quickshell because this Hyprland build does not deliver their bindings.
-hl.bind("Print", hl.dsp.exec_cmd("/usr/bin/grim"), { locked = true })
+local laptopAction = "/home/apx/.local/bin/apx-laptop-action-v1"
+-- Print Screen is read from the exact AT keyboard by the Lenovo bridge. This
+-- avoids the raw-key delivery gap observed on this Hyprland build.
+hl.bind("XF86Display", hl.dsp.exec_cmd(laptopAction .. " display-cycle"), { locked = true })
+hl.bind("XF86Launch1", hl.dsp.exec_cmd(laptopAction .. " apps"), { locked = true })
+hl.bind("XF86TaskPane", hl.dsp.exec_cmd(laptopAction .. " overview"), { locked = true })
+hl.bind("XF86Calculator", hl.dsp.exec_cmd(laptopAction .. " calculator"), { locked = true })
+
+-- The Legion firmware can expose F9--F12 as F13--F16 instead of XF86 names.
+hl.bind("F13", hl.dsp.exec_cmd(laptopAction .. " apps"), { locked = true })
+hl.bind("F15", hl.dsp.exec_cmd(laptopAction .. " overview"), { locked = true })
+hl.bind("F16", hl.dsp.exec_cmd(laptopAction .. " calculator"), { locked = true })
 
 local touchpadEnabled = true
-hl.bind("XF86TouchpadToggle", function()
+local function toggleTouchpad()
     touchpadEnabled = not touchpadEnabled
     hl.device({ name = "elan06fa:00-04f3:31dd-touchpad", enabled = touchpadEnabled })
-end, { locked = true })
+    if touchpadEnabled then
+        hl.exec_cmd("quickshell -c apx ipc call host hotkeyTouchpadOn")
+    else
+        hl.exec_cmd("quickshell -c apx ipc call host hotkeyTouchpadOff")
+    end
+end
+hl.bind("XF86TouchpadToggle", toggleTouchpad, { locked = true })
+hl.bind("F14", toggleTouchpad, { locked = true })
 
 -- Requires playerctl
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })

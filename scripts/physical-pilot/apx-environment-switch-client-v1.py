@@ -38,9 +38,11 @@ def connect() -> socket.socket:
 
 def exchange(operation: str, target: str | None = None, generation: str | None = None,
              description: str | None = None, preset: str | None = None,
-             modules: list[str] | None = None):
+             modules: list[str] | None = None, system_kind: str | None = None,
+             size_gib: int | None = None, display_name: str | None = None):
     with connect() as connection:
-        connection.sendall(request_bytes(operation, target, generation, description, preset, modules))
+        connection.sendall(request_bytes(operation, target, generation, description, preset,
+                                         modules, system_kind, size_gib, display_name))
         data = bytearray()
         while b"\n" not in data and len(data) <= MAX_MESSAGE_BYTES:
             chunk = connection.recv(4096)
@@ -67,32 +69,51 @@ def hub_menu() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("catalog", "create", "destroy", "hub-menu", "identity", "management-status",
-                                         "open", "return", "status", "waybar-identity"))
+    parser.add_argument("mode", choices=("catalog", "create", "destroy", "edit", "hub-menu", "identity", "management-status",
+                                         "native-discard", "native-open", "native-retry", "open", "return", "status", "storage", "waybar-identity"))
     parser.add_argument("--target")
     parser.add_argument("--generation")
     parser.add_argument("--description")
+    parser.add_argument("--display-name")
     parser.add_argument("--preset", choices=("basic", "intermediate", "complete"))
     parser.add_argument("--modules")
+    parser.add_argument("--system", choices=("arch", "windows-native"))
+    parser.add_argument("--size-gib", type=int, choices=(80, 120, 160))
     arguments = parser.parse_args(); mode = arguments.mode
     if mode == "hub-menu":
         return hub_menu()
     operation = {"catalog": "catalog.get", "create": "environment.create",
                  "destroy": "environment.destroy", "identity": "identity.get",
+                 "edit": "environment.update-metadata",
                  "management-status": "management.status", "open": "switch.to-workload",
+                 "native-discard": "native.discard", "native-open": "native.boot",
+                 "native-retry": "native.retry",
                  "return": "return.to-hub", "status": "status.get",
+                 "storage": "storage.get",
                  "waybar-identity": "identity.get"}[mode]
-    if mode in {"create", "open"} and arguments.target is None:
+    if mode in {"create", "edit", "native-open", "open"} and arguments.target is None:
         parser.error(mode + " requires --target")
     if mode == "destroy" and (arguments.target is None or arguments.generation is None):
         parser.error("destroy requires --target and --generation")
-    if mode != "create" and (arguments.description is not None or arguments.preset is not None or arguments.modules is not None):
+    if mode in {"native-discard", "native-retry"} \
+            and (arguments.target != "windows" or arguments.generation is None):
+        parser.error(mode + " requires --target windows and --generation")
+    if mode == "edit" and (arguments.generation is None or arguments.display_name is None
+                            or arguments.description is None):
+        parser.error("edit requires --target, --generation, --display-name and --description")
+    if mode not in {"create", "edit"} and arguments.description is not None:
+        parser.error("description is only valid when creating or editing an Environment")
+    if mode != "edit" and arguments.display_name is not None:
+        parser.error("display name is only valid when editing an Environment")
+    if mode != "create" and (arguments.preset is not None or arguments.modules is not None or arguments.system is not None or arguments.size_gib is not None):
         parser.error("creation options are only valid when creating an Environment")
-    if mode not in {"create", "destroy", "open"} and (arguments.target is not None or arguments.generation is not None):
+    if mode not in {"create", "destroy", "edit", "native-discard", "native-open", "native-retry", "open"} \
+            and (arguments.target is not None or arguments.generation is not None):
         parser.error(mode + " takes no target")
     modules = arguments.modules.split(",") if arguments.modules else None
     value = exchange(operation, arguments.target, arguments.generation, arguments.description,
-                     arguments.preset, modules)
+                     arguments.preset, modules, arguments.system, arguments.size_gib,
+                     arguments.display_name)
     if mode == "waybar-identity":
         label = value.get("display_name", value.get("name", "?"))
         role = str(value.get("role", "unknown"))

@@ -14,7 +14,8 @@ class HostServicesV3PhysicalTests(unittest.TestCase):
                          "SO_PEERCRED", "parse_request", "pty.openpty()", "~termios.ECHO",
                          '"events.subscribe"', '"network.connect"', '"network.connectivity-check"',
                          '"network.portal.open"', '"bluetooth.pair.begin"', '"bluetooth.pair.respond"',
-                         '"KeyboardDisplay"', "perform_connectivity_check", "MAX_CLIENTS"):
+                         '"radio.status"', 'RFKILL_ROOT = Path("/sys/class/rfkill")',
+                         '"airplane_mode"', '"KeyboardDisplay"', "perform_connectivity_check", "MAX_CLIENTS"):
             self.assertIn(required, source)
         self.assertIn("if not stat.S_ISSOCK(metadata.st_mode)", source)
         self.assertNotIn("metadata.st_uid != 0", source)
@@ -27,6 +28,7 @@ class HostServicesV3PhysicalTests(unittest.TestCase):
         self.assertIn('SOCKET = "/run/apx/host-services-v3.sock"', source)
         self.assertIn('"--credential-stdin"', source)
         self.assertIn('"bluetooth-pair-respond"', source)
+        self.assertIn('"radio-status"', source)
         self.assertIn('"--accept"', source)
         self.assertIn("sys.stdin.readline()", source)
         self.assertNotIn('add_argument("--password"', source)

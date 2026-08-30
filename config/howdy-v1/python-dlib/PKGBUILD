@@ -1,0 +1,33 @@
+pkgname=python-dlib
+pkgver=20.0.1
+pkgrel=2.1
+pkgdesc="Dlib Python bindings for APX face authentication (CPU-only)"
+arch=('x86_64')
+url='http://www.dlib.net/'
+license=('BSL-1.0')
+depends=('python' 'cblas' 'lapack' 'libx11' 'libgif.so' 'libjpeg.so'
+         'libjxl.so' 'libjxl_threads.so' 'libpng16.so' 'libwebp.so')
+makedepends=('boost' 'cmake' 'python-setuptools' 'sqlite')
+options=('!debug' '!lto')
+source=("https://github.com/davisking/dlib/archive/refs/tags/v${pkgver}.tar.gz")
+sha256sums=('dab5b4ec4b68bd7dc128a1fb7900723f89d2da107e44cd5def7d38fc57252a9d')
+
+prepare() {
+  cd "dlib-${pkgver}"
+  local target='tools/python/CMakeLists.txt'
+  [[ $(grep -Fxc 'pybind11_add_module(_dlib_pybind11 ${python_srcs})' "$target") == 1 ]]
+  sed -i 's/pybind11_add_module(_dlib_pybind11 ${python_srcs})/pybind11_add_module(_dlib_pybind11 MODULE NO_EXTRAS ${python_srcs})/' "$target"
+  [[ $(grep -Fxc 'pybind11_add_module(_dlib_pybind11 MODULE NO_EXTRAS ${python_srcs})' "$target") == 1 ]]
+  sed -i '/pybind11_add_module(_dlib_pybind11 MODULE NO_EXTRAS ${python_srcs})/i set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")' "$target"
+  [[ $(grep -Fxc 'set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")' "$target") == 1 ]]
+}
+
+build() {
+  cd "dlib-${pkgver}"
+  DLIB_USE_CUDA=OFF python setup.py build
+}
+
+package() {
+  cd "dlib-${pkgver}"
+  python setup.py install --skip-build --prefix=/usr --root="$pkgdir" --optimize=1
+}

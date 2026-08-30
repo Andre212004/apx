@@ -213,9 +213,9 @@ credentials, assistant access, and device policy do not transfer implicitly.
 ## Destroy
 
 Destroy starts only from verified `inactive` under separate approval. Its plan
-enumerates registration, definition, root, home, runtime residue, affected
-references, and measured data-loss scope. Snapshots and archives have
-independent retention and are not deleted implicitly.
+enumerates registration, definition, root, home, runtime residue and affected
+references. Deletion is always complete: snapshots, archives, APX-owned named
+backups, capabilities and stored plans are included rather than retained.
 
 Immediately before deletion, generation, storage identities, lineage, qgroups,
 mounts, processes, runtime state, and registration digests are revalidated.
@@ -223,9 +223,8 @@ Any disagreement stops rather than widening deletion by path or owner.
 Deletion is leaf-first and registration-last. Final verification proves target
 absence and continued identity of protected neighbors.
 
-The user selects either `environment-only`, preserving every enumerated
-snapshot and archive, or `complete-purge`, including those copies after strong
-confirmation. Logical path disappearance moves the Environment to visible
+The single `complete-purge` path requires strong confirmation. There is no
+preserve-copies variant. Logical path disappearance moves the Environment to visible
 `cleaning`; only complete resource, runtime, qgroup, account, registration, and
 physical-cleanup evidence moves it to absent and permits identity reuse. The
 detailed contract is `cleanup-completion-v1.md`.
@@ -287,3 +286,24 @@ Before this proposal becomes confirmed architecture:
 
 These gates do not authorize host mutation; every experiment remains separately
 planned and approved.
+
+## Visible metadata editing in the physical pilot — 2026-08-25
+
+The current physical pilot permits the authoritative Hub to change only an
+Environment's visible `display_name` and `description`. This is not an identity
+rename: the logical name, generation, role, release, backend, partition and
+storage identities remain unchanged.
+
+The request is bound to the selected logical name and current generation. The
+Host accepts it only from the active official Hub QuickShell, while no other
+Environment operation is running, and only when an ordinary Environment is
+stopped or native Windows is ready. Titles are 1–64 characters and descriptions
+0–120 characters; leading/trailing whitespace and control characters are
+rejected.
+
+A fixed root-owned runner reopens and validates the protected registration,
+changes exactly the two presentation fields and replaces the file atomically in
+its original directory and mode. It runs in a transient service with no
+capabilities and write access limited to the two Environment metadata parents.
+Native-Windows boot validation admits bounded user-selected presentation text
+but continues to enforce every physical, firmware and system identity.

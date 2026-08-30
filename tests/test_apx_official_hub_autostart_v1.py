@@ -108,6 +108,13 @@ class OfficialHubAutostartV1Tests(unittest.TestCase):
         self.assertLess(source.index("clear_recovery_console()\n    wait_for_host_services()"),
                         source.index('run((HUB, "--interactive")'))
 
+    def test_authenticated_handoff_suppresses_competing_restart(self) -> None:
+        source = SCRIPT.read_text()
+        self.assertIn('HANDOFF_LOCK = Path("/run/apx/environment-handoff-v1.lock")', source)
+        self.assertIn("def handoff_active() -> bool:", source)
+        self.assertIn("if handoff_active():\n        return 0", source)
+        self.assertIn("if result.returncode and handoff_active():", source)
+
 
 if __name__ == "__main__":
     unittest.main()

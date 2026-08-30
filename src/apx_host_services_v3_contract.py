@@ -17,7 +17,7 @@ OPERATIONS = (
     "bluetooth.power", "bluetooth.scan", "bluetooth.status",
     "capabilities.get", "events.subscribe", "network.connect",
     "network.connectivity-check", "network.disconnect", "network.forget",
-    "network.portal.open", "network.scan", "network.status",
+    "network.portal.open", "network.scan", "network.status", "radio.status",
     "snapshot.get",
 )
 SECRET_FIELDS = frozenset({"credential", "passphrase", "password", "pin", "secret"})
@@ -60,7 +60,7 @@ def validate_payload(operation: str, payload: object) -> dict[str, object]:
         raise HostServicesV3ContractError("operation or payload is unsupported")
     if operation in {"bluetooth.scan", "bluetooth.status", "capabilities.get",
                      "network.connectivity-check", "network.disconnect",
-                     "network.portal.open", "network.scan", "network.status", "snapshot.get"}:
+                     "network.portal.open", "network.scan", "network.status", "radio.status", "snapshot.get"}:
         if payload:
             raise HostServicesV3ContractError("operation takes no payload")
         return {}

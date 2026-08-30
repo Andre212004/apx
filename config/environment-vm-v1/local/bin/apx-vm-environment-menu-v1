@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+"""Minimal APX-styled return surface for a system Environment."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+import subprocess
+import time
+
+CLIENT = "/run/apx/environment-switch-client-v1.py"
+LOG = Path.home() / ".local/state/apx-system-vm/menu.log"
+
+
+def run_client(*arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run((CLIENT, *arguments), text=True, capture_output=True, check=False)
+
+
+def return_to_hub() -> int:
+    result = None
+    for _ in range(3):
+        result = run_client("return")
+        if result.returncode == 0:
+            return 0
+        time.sleep(0.15)
+    LOG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with LOG.open("a", encoding="utf-8") as stream:
+        stream.write(f"broker-return-failed: {result.stderr.strip()}\n")
+    # A clean compositor exit is the local fail-safe. The foreground Host
+    # runner observes that owner exit and restores the Hub through the same
+    # supervised lifecycle, even if the socket request itself was unavailable.
+    fallback = subprocess.run(("/usr/bin/hyprctl", "dispatch", "exit"),
+                              text=True, capture_output=True, check=False)
+    return fallback.returncode
+
+
+def menu() -> int:
+    identity = run_client("identity")
+    display_name = "ENVIRONMENT"
+    if identity.returncode == 0:
+        try:
+            value = json.loads(identity.stdout)
+            candidate = value.get("display_name") or value.get("name")
+            if type(candidate) is str and candidate.strip():
+                display_name = candidate.strip().upper()
+        except json.JSONDecodeError:
+            pass
+    label = "←   REGRESSAR AO HUB"
+    # This is deliberately an opaque top sheet, matching the APX bar palette
+    # and placement.  The system Environment has no second shell: the
+    # one-row surface is only the supervised escape back to the HUB.
+    theme = """
+* { font: "Adwaita Mono 12"; text-color: #e8f7fa; background-color: transparent; }
+window { location: north; anchor: north; y-offset: 14px; width: 560px;
+         border: 2px; border-color: #55e6ff; border-radius: 16px;
+         background-color: #102832f2; padding: 20px; }
+mainbox { spacing: 12px; }
+inputbar { padding: 2px 4px 10px 4px; children: [prompt]; }
+prompt { text-color: #55e6ff; font: "Adwaita Mono Bold 15"; }
+message { padding: 12px 14px; border-radius: 10px; background-color: #173944ee;
+          border: 1px; border-color: #4a7180; }
+textbox { text-color: #d7f6fb; font: "Adwaita Mono Bold 11"; }
+listview { lines: 1; fixed-height: true; spacing: 0; }
+element { padding: 16px; border-radius: 10px; background-color: #132c36f5;
+          border: 1px; border-color: #3a606d; }
+element selected { background-color: #1d5360fa; border-color: #a6f3ff; }
+element-text { text-color: #f1fcff; font: "Adwaita Mono Bold 12"; }
+"""
+    selected = subprocess.run((
+        "/usr/bin/rofi", "-dmenu", "-no-custom", "-p", "APX · ENVIRONMENTS",
+        "-mesg", f"ENVIRONMENT ATUAL  ·  {display_name}     SUPER+E · REGRESSO IMEDIATO",
+        "-me-accept-entry", "MousePrimary",
+        "-kb-accept-entry", "Return,KP_Enter,space",
+        "-format", "i", "-theme-str", theme,
+    ), input=label + "\n", text=True, capture_output=True, check=False)
+    if selected.returncode:
+        LOG.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with LOG.open("a", encoding="utf-8") as stream:
+            stream.write(f"menu-cancelled: status={selected.returncode}\n")
+        return 0
+    # With a single fixed action, any accepted selection means return. Avoid
+    # coupling the safety action to Rofi's exact output/Unicode normalisation.
+    return return_to_hub()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--return", dest="return_only", action="store_true")
+    arguments = parser.parse_args()
+    return return_to_hub() if arguments.return_only else menu()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,5 +1,585 @@
 # APX Current Handoff
 
+System VM v2 physical reset — 2026-08-24: the owner rejected the
+accumulated VM opening path and requested a simple, near-native rebuild. The
+from-first-principles v2 runtime, profiles, provisioning path, minimal
+compositor surface and identity-bound adapter are now installed on the exact
+disposable physical pilot. No VM was started.
+
+v2 removes QMP/readiness/presentation markers, Host-side process rediscovery,
+automatic source switching and nested timers. One runtime owns QEMU, swtpm and
+optional Looking Glass under the existing session cgroup. Direct QEMU VGA is
+the deterministic default. After Windows guest acceleration setup,
+`SUPER+SHIFT+N` selects next-entry RTX/KVMFR native mode; `SUPER+SHIFT+R`
+selects direct recovery even from a black surface. The target plan uses 5C/10T
+and 19 GiB dynamically, reserving 1C/2T and roughly 7–8 GiB for the live Host.
+New guests use sparse raw/NOCOW/native-AIO storage. The owner explicitly
+requested removal rather than migration of the existing VM guests: old
+`faculdade` generation `ba865d3f-e592-4281-8e76-6bba8402ff2a` and `trabalho`
+generation `bd9caf9d-aa17-411e-a0e3-4c9ca21cbe2e` were completely destroyed by
+APX, including home/root, snapshots, archives, APX-managed backups, metadata
+and plans.
+
+Fresh stopped Windows 11 v2 generations are `faculdade`
+`3a2de127-176a-457a-97b4-a3010a4ca4d2` and `trabalho`
+`c03e65b5-3310-4ff2-8a37-165769da1205`. Both have the verified Portuguese ISO,
+source-matched runtime/profile/Hyprland/VFIO files and NOCOW VM directories.
+Both have no raw/qcow2 disk, NVRAM or TPM; first entry therefore starts from
+empty state. Historical code/config backups contain no guest-shaped content.
+
+The first post-v16 create failed closed because the v2 template omitted its
+VFIO manifest; automatic rollback removed the unpublished root/home. v17 adds
+that exact manifest and supports an empty system-Environment catalog. Both
+final creates then succeeded. Backups are
+`/var/lib/apx/backups/20260824-system-vm-v2-v16/` and
+`/var/lib/apx/backups/20260824-system-vm-v2-v17/`. The complete suite passes
+1064 tests with 11 expected skips; source/Host/Environment hashes and ISO
+digests match, Hub is sole, switch/Host services are active, VFIO is clear and
+there is no failed unit.
+
+The next boundary is owner-driven: enter `faculdade`, use the visible direct
+QEMU surface to create the new raw disk/NVRAM/TPM and install Windows from the
+verified ISO. Native mode remains disabled until Windows NVIDIA/IDD/Looking
+Glass setup succeeds; physical direct/native/recovery performance acceptance
+then follows `docs/system-vm-v2-architecture-2026-08-24.md`.
+
+First-entry profile-access correction — 2026-08-24: the owner opened
+Faculdade and saw a black background with an APX information/error surface.
+QEMU never started. The runtime wrote exact error state saying its v2 config
+was unavailable; no raw/qcow2 disk, NVRAM or TPM was created. The profile was
+byte-correct and owned by uid 1000, but its new intermediate `.config/apx`
+directory was `root:root 0700`, so the Environment user could not traverse it.
+The session correctly returned to the Hub and restored the RTX.
+
+v18 introduces an explicit `user_directory` provisioner primitive, repairs
+`.config`, `.config/apx`, `.config/hypr`, `.local` and `.local/bin` to exact
+`1000:1000` ownership in both stopped system Environments, and retains the old
+metadata for rollback at
+`/var/lib/apx/backups/20260824-system-vm-v2-v18/`. The complete 1064-test suite
+passes with 11 expected skips. A uid-1000 probe rooted at the exact future
+`/home` bind now reads/parses both profiles, source/Host provisioner hashes
+match, both guests remain empty/stopped, Hub is sole, VFIO is clear and no unit
+is failed. Next action is an owner retry of Faculdade; Windows/QEMU behavior is
+still physically unobserved.
+
+QEMU pre-firmware correction — 2026-08-24: the owner retry reached QEMU, which
+then exited with status 1 and logged `mlockall: Operation not permitted` and
+`locking memory failed`. This was not a Windows crash: OVMF never ran and the
+new raw disk had only one 4-KiB block allocated. v19 removes the unnecessary
+whole-process `-overcommit mem-lock=on` request while retaining the systemd
+24-GiB VFIO memlock allowance. It also surfaces the last QEMU log diagnostic
+instead of only the exit code and aligns the topology test with the measured
+Ryzen sibling pairs: guest CPUs `0-9`, Host reserve `10-11`.
+
+The v19 deployment passed 1065 tests with 11 expected skips and is backed up
+at `/var/lib/apx/backups/20260824-system-vm-v2-v19/`. Source, template,
+Faculdade and Trabalho runtimes match SHA-256
+`b63e7b8a8c1dcba9179cd0f81300eaded82f107006c2f41522cfef0ef50b64e7`.
+After proving QEMU/Looking Glass/swtpm/VFIO were inactive and both exact
+generations stopped, APX removed only the blank-attempt raw file, pristine
+NVRAM copy, empty TPM directory and empty lock. The admitted ISO remains at
+SHA-256 `c74c96aa06e2548f14c76b5fd6600514c0d4f6eb05a731e4272ab005e8f48ce3`;
+logs remain for diagnosis. Next action is an owner-started direct Faculdade
+entry; APX intentionally did not start it during deployment.
+
+Windows ISO keyboard-capture correction — 2026-08-24: the v19 retry reached
+OVMF and the verified Windows ISO's `Press any key to boot from CD or DVD`
+prompt, but direct GTK did not deliver the owner's key before the prompt
+expired. QEMU logged no failure and the raw disk still had only one 4-KiB
+block allocated. v20 changes the direct display from
+`grab-on-hover=off` to `grab-on-hover=on`; with the cursor over the full-screen
+VM, keyboard input is captured immediately. It adds no QMP, key injector or
+timer. Deployment passed 1065 tests with 11 expected skips; rollback is
+`/var/lib/apx/backups/20260824-system-vm-v2-v20/` and the installed runtime
+hash is `aadebf461455a6e9f00f301c614b90ca297825a29d18eee0c7f1f107550824b1`.
+The blank second-attempt disk/NVRAM/TPM/lock/socket were reset after proving
+the Environment stopped and VFIO was clear. ISO and logs are preserved.
+
+Faculdade Windows complete reset — 2026-08-24: after continued visible
+instability, the owner explicitly requested total deletion and a clean start.
+The exact complete-destroy plan for generation
+`98edbee0-a816-4637-9473-9e824c8a6974` was approved and applied. It removed
+the Environment home/root subvolumes and purged its disk, NVRAM, TPM,
+snapshots, archives, metadata and stored plans. Post-destroy audit found no
+recoverable qcow2/NVRAM/TPM/snapshot/archive data. Small historical deployment
+directories bearing the Faculdade label contain only launcher/config rollback
+files, some shared with `trabalho`, and no guest content.
+
+A new minimal `graphical-base`/`system` Faculdade was created as generation
+`ba865d3f-e592-4281-8e76-6bba8402ff2a` and provisioned atomically as
+`windows11`. It is stopped and contains the verified Portuguese installer ISO
+with SHA-256 `c74c96aa06e2548f14c76b5fd6600514c0d4f6eb05a731e4272ab005e8f48ce3`.
+No qcow2, NVRAM or TPM state exists yet: the launcher creates all three fresh
+on the first owner-started entry. The new instance carries the stable-display
+marker, so installation begins through direct full-screen QEMU GTK/VGA with
+no Looking Glass and no Host timer. Hub is sole/healthy and VFIO is clear.
+Next action is the owner's interactive clean Windows installation; APX does
+not accept licence terms or choose personal setup answers automatically.
+
+Faculdade stable-display fallback — 2026-08-24: after v14, the owner reported
+that Windows began and then appeared to crash. Host evidence contains no QEMU
+error, VFIO failure, OOM, guest-container termination or supervised QEMU kill;
+the launch started at 12:39 and the physical Host was abruptly rebooted about
+six minutes later. Together with prior LGMP `primaryLost`/source-restart
+evidence, this classifies the visible failure as the Looking Glass transition
+between SPICE recovery and IDD/LGMP, not a proven Windows/QEMU crash.
+
+To restore a usable baseline, only `faculdade` now carries the explicit
+mode-0444 `looking-glass-disabled-v1` marker. Its launcher uses the direct
+full-screen QEMU GTK/VGA recovery display and never starts Looking Glass, so no
+SPICE-to-LGMP source switch occurs. The no-Host-timer v14 behavior remains.
+The shared launcher/template and existing system VM launchers understand the
+marker, but `trabalho` and future templates are not marked disabled. All 1065
+tests pass with 11 skips; hashes/marker ownership match, Hub is healthy/sole,
+and QEMU/Looking Glass/VFIO residue is absent. Rollback is
+`/var/lib/apx/backups/20260824-faculdade-stable-display-v15/`. Do not run the
+guest acceleration installer until this stable direct-display baseline is
+physically accepted.
+
+VM Host timer fully removed and black-wait made visible — 2026-08-24: the
+owner explicitly requested removal of the timer after the v13 trial presented
+a black surface. The prior-boot journal proves v13 did not trigger the former
+deadline: Faculdade started at 12:24:18 and remained running until the machine
+was abruptly rebooted roughly 27 seconds after the request. The latest launcher
+log contains a new start and no supervisor QEMU termination. The black interval
+was therefore guest/video-source startup with Looking Glass's waiting message
+deliberately disabled, not another 60-second recovery.
+
+VM readiness now has no Host deadline at all. The Host waits for QEMU/QMP and
+the exact presentation marker for as long as the already-proven Hyprland owner
+session exists; native desktops retain their ten-second bound. Looking Glass
+waiting status is visible again (`win:disableWaitingMessage=no`) so a cold
+Windows boot is not represented as a silent black screen. The launcher still
+owns real client/QEMU liveness and `SUPER+E` remains the explicit owner exit.
+Host, template, `faculdade` and `trabalho` are synchronized. All 1065 tests pass
+with 11 skips; hashes match, Hub is sole/healthy and VFIO is clear. Rollback:
+`/var/lib/apx/backups/20260824-vm-no-host-timer-v14/`.
+
+Final false 60-second recovery removal — 2026-08-24: the latest physical trial
+again proved QEMU running, both exact markers valid, presentation required and
+no forbidden processes, while the extra Host `/proc` Looking Glass discovery
+alone remained zero. Windows was visible, stable and usable until that outer
+deadline. The process rediscovery was redundant: the Windows launcher itself
+owns the actual Looking Glass PID, publishes presentation readiness only after
+QMP `query-spice` reports a connected channel, then waits for that PID and
+kills QEMU if the client exits.
+
+The outer Host now requires the live exact QEMU executable plus the QMP and
+presentation markers, and no longer attempts a second namespace-sensitive
+Looking Glass identity proof. Actual client death still ends the launcher and
+the supervised session. A regression test asserts this ownership chain. The
+v13 correction is installed; source/Host hashes match, only Hub is active,
+services are healthy, and no VM/VFIO/failed-unit residue remains. All 1065
+tests pass with 11 skips. Exact rollback is
+`/var/lib/apx/backups/20260824-vm-launcher-owned-liveness-v13/`. Next action is
+one owner-initiated Faculdade acceptance entry.
+
+Urgent Faculdade immediate-return correction — 2026-08-24: the owner reported
+that the next entry appeared to return before Windows opened. The current and
+previous handoff journals explain the visible immediacy: a failed handoff owns
+the restored blocking Hub command and only publishes its error when that Hub
+is stopped for the next request. The newly requested VM still ran for the
+bounded 60 seconds behind that transition and was then rejected. Its exact
+diagnostic remained `qemu=1`, both markers valid, presentation required,
+forbidden list empty, trusted live client file valid, but `looking_glass=0`.
+
+The v11 device/inode proof was invalid across the nspawn idmapped home mount;
+that identity is mount-namespace-relative. The Host now compares the immutable
+live `/proc/<pid>/exe` content of same-sized processes inside the exact outer
+cgroup against the SHA-256 of the root-owned B7-799 artefact. It is independent
+of truncated names and namespace-relative inode numbers without accepting a
+marker alone. The correction is physically installed; hashes match, only Hub
+is active, Host services are healthy, and no QEMU/Looking Glass/VFIO/failed
+unit residue remains. Rollback is
+`/var/lib/apx/backups/20260824-vm-looking-glass-content-v12/`; all 1064 tests
+pass with 11 skips. Next action is one owner-initiated Faculdade entry.
+
+Looking Glass live-identity correction — 2026-08-24: the owner's next two
+Faculdade trials both provided usable Windows input but were recovered after
+the same bounded interval. The new timeout evidence is exact:
+`qemu=1`, both readiness markers valid, presentation required, no forbidden
+process, but `looking_glass=0`. Thus neither Space nor ordinary input caused
+the exit; the Host rejected its own remaining Looking Glass process proof.
+
+The live client is installed as `looking-glass-client`, exposes the truncated
+Linux `comm` value `looking-glass-c`, and is byte-identical to the root-owned
+B7-799 artefact. The Host now first validates that installed file against the
+root artefact and then admits the running process by its exact device/inode
+identity inside the existing exact outer cgroup. This handles the kernel name
+representation without accepting a marker alone or an arbitrary same-named
+binary. The correction is installed; source/Host hashes and live/artifact
+bytes match, only Hub is running, services are active, and QEMU/Looking Glass/
+VFIO/failed-unit residue is absent. Rollback is
+`/var/lib/apx/backups/20260824-vm-looking-glass-identity-v11/`; all 1064 tests
+pass with 11 skips. Next is one owner-started >75-second Faculdade trial. Only
+after stability is proven should the Windows NVIDIA driver and acceleration
+tool be assessed separately.
+
+Faculdade 60-second return correction — 2026-08-24: the owner's first trial
+after the VM performance deployment reached a stable visible Windows desktop,
+but returned to the Hub immediately when Space was pressed. Host evidence
+places the supervisor rejection at the exact 60-second outer-readiness bound;
+both exact readiness markers still existed and QMP/SPICE presentation had
+succeeded. Space is not an admitted APX or standard Looking Glass exit
+binding, so the timing does not establish an input shortcut failure.
+
+The remaining Host proof used Linux `comm`, which is truncated to 15 bytes and
+may be renamed by an application. VM acceptance now identifies the exact
+`/proc/<pid>/exe` basename for QEMU and Looking Glass while retaining the exact
+Host-owned systemd cgroup boundary. A failed 60-second proof now reports JSON
+with both process counts, both marker states, certification state and any
+forbidden processes. The correction is installed without restarting the Hub;
+source and installed hashes match, the Hub is the sole machine, switch/Host
+services are active, and no QEMU, Looking Glass, VFIO state or failed unit
+remains. Rollback is
+`/var/lib/apx/backups/20260824-vm-executable-readiness-v10/`. All 1064 tests
+pass with 11 expected skips. The next action is one owner-initiated Faculdade
+retest, including ordinary keyboard input after the desktop appears.
+
+Repository VM boot/readiness/performance candidate — 2026-08-24: the owner
+chose to retain KVM/VFIO/Looking Glass and requested closure of the boot,
+unexpected-return and non-native-feel findings. The candidate is now installed
+but not yet physically accepted. Windows QMP readiness uses the
+documented buffered 30-second deadline rather than the remaining 12-second
+implementation, and the regression test counts the exact deadlines so the
+unrelated installer timer cannot satisfy it. A fresh Windows disk sends three
+bounded DVD-prompt keys across a narrow 5.5--9.5-second window rather than one
+fragile key at 7.2 seconds.
+
+The launcher publishes separate QMP-running and presentation-ready proofs. For
+Looking Glass, presentation additionally requires an actual connected SPICE
+channel; a live client process without a video/input transport no longer
+disarms Host recovery. The Host's VM-only outer window is 60 seconds. A failed
+QMP or presentation stage stops the guest and shows a bounded APX Rofi error
+with the diagnostic log path before returning, instead of disappearing
+without an explanation. Ubuntu publishes the same two-marker contract for its
+GTK recovery surface.
+
+The target Legion's Windows and Ubuntu guests now use four physical cores/
+eight SMT threads pinned to logical CPUs `0-3,6-9`, reserving physical pairs
+`4/10` and `5/11` for AMD display, Looking Glass and APX supervision. Guest RAM
+is 12 GiB; the VM Environment is bounded at 14 GiB high/16 GiB maximum with a
+14 GiB VFIO memlock ceiling. Looking Glass explicitly enables KVMFR DMA and
+one-millisecond frame/cursor polling; relative USB mouse input replaces the
+absolute tablet. The Windows acceleration tool schedules a first-login
+PowerShell verifier that selects IDD 1920x1080/120 Hz only when that exact mode
+is advertised, selects the High Performance power scheme and records display,
+GPU and service evidence at
+`C:\ProgramData\APX\looking-glass-display.txt`.
+
+The target-bound deployment synchronized both Host graphical-engine copies,
+the generic launcher, system template/provisioner and the existing stopped
+`faculdade` and `trabalho` Windows Environments. The running Hub was not
+restarted and no VM was launched. Source/installed hashes and ownership match;
+Hub/switch services remain active, the Hub is the sole machine, no QEMU,
+Looking Glass or VFIO residue exists and the Host has no failed unit. Exact
+rollback is `/var/lib/apx/backups/20260824-vm-readiness-performance-v9/`.
+
+Emulated E1000E networking and the NVMe/qcow2-on-Btrfs disk remain deliberately
+unchanged: replacing either requires verified guest VirtIO drivers and a
+before/after physical storage benchmark, and must not trade a bootable Windows
+guest for an unmeasured optimization. The complete repository suite passes
+1064 tests with 11 expected skips. Next acceptance is owner-initiated: five
+cold Faculdade boots, one new-Windows installer boot, confirmation of the
+Windows 120 Hz report, Looking Glass DMA/
+frame evidence, input observation and `SUPER+E` return. No automatic graphical
+transition is permitted during deployment.
+
+Latest VM/QMP, Windows creation and terminal repair — 2026-08-24: the failed
+Faculdade entry was a bounded-readiness race, not a guest disk failure. QEMU
+opened QMP during a cold start, but the launcher used one fragile two-second
+`readline()` and the Host recovery deadline was only ten seconds. Windows and
+Ubuntu launchers now parse buffered QMP messages, ignore asynchronous events,
+retry reads for a bounded 30 seconds, and the Host grants VM sessions a bounded
+35-second readiness window while native desktops remain at ten seconds.
+
+Windows creation had three independent physical faults: two installed shell
+seed assets were older than their digest-pinned sources; every graphical
+snapshot redundantly reinstalled the release's NVIDIA/lib32 graphics stack;
+and the private-root QEMU transaction omitted pacman's required
+`--disable-sandbox`. The seed is synchronized, graphical-base packages are no
+longer duplicated, and the system provisioner performs one consistent private
+`-Syu` transaction. The previously failed residue was removed only through
+`recovery-clean-unpublished`; a complete Windows 11 creation then succeeded as
+`trabalho` and remains stopped.
+
+`SUPER+Q` silently called absent Alacritty. The shared shell now launches the
+installed Kitty in `/home/apx`; source, physical seed, Hub and existing normal
+Environments are synchronized, and the live Hub compositor accepted the reload
+and reports the SUPER/Q binding. Faculdade remains owner-started only. Hub is
+running, Host/services are healthy, no failed unit exists, and all 1063 tests
+pass with 11 expected skips. Backup:
+`/var/lib/apx/backups/20260823-vm-qmp-seed-v8/`.
+
+Latest black-screen/return/Windows-creation repair — 2026-08-23: the owner's
+18:49 trial proved the VM itself reached QMP, SPICE 1920x1080 and then a B7 IDD
+BGRA 1920x1080 DMA frame after 23 seconds, with no QEMU or Looking Glass crash.
+The visible failure came from stale deployment boundaries: Faculdade's generic
+launcher lacked the warning-suppression options, and Looking Glass used an app
+id not covered by the compositor's no-shortcut-inhibition rule. The Hub's
+persistent bridge client also lacked `--system`, exactly reproducing the
+reported Windows 11 creation error before any Host request was sent.
+
+Faculdade now uses the current launcher for both entry points, with the fixed
+`apx-system-vm` app id, full-screen/no-inhibition matching and hidden B7 waiting
+messages. `SUPER+E` and `SUPER+M` are native compositor exits observed by the
+Host supervisor; they have no script, menu, socket or guest dependency.
+`SUPER+SHIFT+E` remains the blue menu. The Hub now uses the current `/run`
+client and sends a minimal payload for Windows/Ubuntu creation. QuickShell
+hot-reloaded without an error; source/template/live hashes match; all 1062
+tests pass with 11 expected skips. Hub is running, Faculdade is stopped, and
+the rollback is `/var/lib/apx/backups/20260823-vm-black-return-create-v7/`.
+
+Latest accelerated guest/reboot acceptance — 2026-08-23: the owner completed
+`ATIVAR-ACELERACAO.cmd` and reported visibly improved response. The persistent
+client log proves the matching Windows B7 Host and IDD became active after
+4m35s, exported BGRA 1920x1080 frames through KVMFR DMA, and moved input from
+SPICE to LGMP. The installer-triggered Windows reboot dropped the source at
+5m16s; SPICE recovery reconnected immediately and accelerated frames returned
+23 seconds later. The physical Host was powered off at that same boundary, so
+there is no VM/client crash behind the reported black interval.
+
+The B7 waiting/capture overlays are now suppressed with
+`win:disableWaitingMessage=yes`; SPICE clipboard is explicitly off. Future
+acceleration runs no longer reboot automatically: the Windows script explains
+the possible 90-second black interval and requires an explicit Restart/Later
+choice. `SUPER+E` and the redundant `SUPER+M` now request an immediate return
+from the Host-owned compositor, independent of Windows, Looking Glass, SPICE,
+or guest video; the blue menu moved to `SUPER+SHIFT+E`. The correction is
+installed in source, template and the existing Faculdade, with its prior state
+at `/var/lib/apx/backups/20260823-faculdade-super-e-direct-v6/`. Source,
+template and live hashes match; the full suite passes 1061 tests with 11
+expected skips. Hub remains running, Faculdade remains stopped, and the Host
+has no failed unit.
+
+Latest Faculdade launch diagnosis — 2026-08-23: the owner requested an
+offline diagnosis while remaining on the Host tty1. The 18:23 physical log
+proves the rebuilt no-FUSE Looking Glass client started correctly with
+Wayland/EGL on AMD, KVMFR/LGMP, UNIX-SPICE input/video, JIT rendering and a
+1920x1080 surface. There was no FUSE crash. The generic readiness loop killed
+it after ten seconds solely because it searched for 16-byte
+`looking-glass-cl`; Linux `TASK_COMM_LEN` publishes the 15-byte
+`looking-glass-c`. That exact identity is now deployed.
+
+The same attempt exposed a separate Hub race: boot autostart restarted after
+the supervisor deliberately stopped Hub, competing with authenticated Hub
+restoration and producing `graphical session result is malformed`. Autostart
+now recognizes the trusted root-owned handoff lock before launch and after an
+interrupted result, exits successfully, and cannot race the supervisor. Source
+and installed hashes match. The full suite passes 1061 tests with 11 expected
+skips. The owner remains intentionally on tty1; Hub and Faculdade are stopped,
+there is no machine/VFIO residue, and no failed unit remains. Backup:
+`/var/lib/apx/backups/20260823-faculdade-open-recovery-v4/`.
+
+Latest near-native presentation and menu repair — 2026-08-23: the owner
+confirmed Windows became visible but input-to-display response remained slow.
+The Host was almost idle with ~25 GiB available RAM; the actual path was the
+software VGA/GTK recovery surface because guest Looking Glass was not yet
+active. Faculdade now always uses its verified B7-799 Looking Glass client as
+the sole Host window. Its built-in UNIX-SPICE recovery keeps Windows visible
+before guest setup, then changes automatically to KVMFR/RTX frames after the
+Windows Host/IDD starts. JIT rendering, raw mouse, auto-capture and resolution
+sync are enabled; no GTK window remains behind it, and readiness requires both
+QEMU/QMP and the Looking Glass client.
+
+`APXTools/ATIVAR-ACELERACAO.cmd` is now present in Windows media. One owner UAC
+confirmation installs the matching IDD and Host silently and schedules the one
+required guest reboot. The menu colour bug was reversed alpha/RGB ordering;
+the deployed theme now uses Rofi's `#RRGGBBAA`, is anchored at the top and
+accepts one normal click (`MousePrimary`) rather than the default double-click,
+plus Enter/Space. Source/template/live hashes match and 1058 tests pass with 11
+expected skips. Backup:
+`/var/lib/apx/backups/20260823-faculdade-native-input-menu-v3/`. Hub is running,
+Faculdade stopped, Host healthy and the RTX is restored. The next trial and
+guest-local UAC confirmation remain owner actions.
+
+Latest physical Faculdade black-screen/menu repair — 2026-08-23: the launcher
+log proved QEMU failed at VFIO guest-memory mapping because its transient unit
+had only an 8 MiB memlock limit (`vfio_container_dma_map ... Cannot allocate
+memory`). VFIO sessions now receive a bounded 10 GiB limit at both outer and
+inner units; an independent physical transient-unit proof returned 10,485,760
+KiB. This is a ceiling, not reserved memory. Windows and Ubuntu launchers now
+require QMP `running` before publishing an exact readiness marker, so a dying
+QEMU PID cannot disarm Hub recovery and leave an accepted black screen.
+
+The VM return overlay now treats any accepted selection as the sole
+`REGRESSAR AO HUB` action, retries the authenticated broker three times and
+uses clean compositor exit as a supervised fallback. It remains Rofi-only but
+now has the centred translucent blue/cyan APX card styling requested by the
+owner. Source, template and live Faculdade hashes match; 1057 tests pass with
+11 expected skips. Backup:
+`/var/lib/apx/backups/20260823-faculdade-black-screen-v2/`. The Hub is running,
+Faculdade is stopped, Host state is healthy and both RTX functions are back on
+their Host drivers. A new visual trial remains owner-initiated.
+
+Latest VM-wide runtime repair — 2026-08-23: every exact
+`virtual-machine-v1` Environment now runs through generic `apx-system-vm` with
+only D-Bus, native PipeWire/WirePlumber, Hyprland, QEMU/Looking Glass and the
+on-demand APX return menu. QuickShell, Waybar, locks/idling, portals,
+pipewire-pulse, shared audio-state, model control and Host desktop services are
+absent and forbidden by the readiness proof. Looking Glass uses `-display none`
+instead of keeping a hidden GTK/VGA display. New Windows/Ubuntu Environments
+are forced to the minimal `basic`/`system` plan and receive no desktop
+autostart entry. Hyprland remains deliberately present as the lightweight
+owner of `SUPER+E`, `SUPER+M`, input, display and supervised return.
+
+The two launch failures are corrected at their actual boundaries: the session
+admits `vfio-guest` only for VM mode and no longer kills a healthy Hub after a
+redundant IPC fallback; the Host supervisor also reads the retained inner-unit
+exit result and rejects non-zero session exits instead of mislabelling them as
+an intentional return. Source and live hashes match across both engine copies,
+the generic launcher, session, provisioning/management runners, template and
+Faculdade. The full suite passes 1056 tests with 11 expected skips. The old
+Faculdade autostart entry was moved to the recoverable backup at
+`/var/lib/apx/backups/20260823-generic-minimal-vm-v1/`. No automatic visual
+transition is permitted while this maintenance/Codex session is active; the
+remaining acceptance is one manual Faculty launch followed by `SUPER+E`
+return to Hub.
+
+Latest `SUPER+H` and Faculdade control repair — 2026-08-23: the Host console
+now opens a fresh root PTY from a uid-bound, single-use ticket issued only to a
+provable official-Hub QuickShell child. It no longer reattaches or competes for
+a persistent PTY; an existing visible Kitty window is focused and closing it
+terminates its shell. Error presentation auto-closes instead of requiring
+Enter/ESC. Source, Hub seed and live Hub copies are deployed and the broker was
+restarted; the next physical `SUPER+H` press is the remaining acceptance test.
+
+Subsequent physical acceptance confirmed the console window works but exposed
+that `SUPER+H` itself still used the shared profile's ordinary terminal target.
+The binding is now deployed through QuickShell IPC `openTerminal`, which maps
+to the ticketed Host console only in the official Hub. A fresh Hub session is
+required for this Lua change; physical shortcut confirmation remains.
+
+The VM-only profile still starts no QuickShell. It now reserves `SUPER+E` for a
+minimal Rofi Environment chooser and `SUPER+M` for the Host-supervised return
+to Hub; the full-screen guest cannot inhibit those bindings. The switch broker
+and runner support direct workload-to-workload handoff and restore Hub on a
+stale/invalid request. Source and live `faculdade` copies are deployed; the
+physical menu/return trial remains pending.
+
+The owner confirmed `SUPER+E` functions in `faculdade` but requested the APX
+visual language and no sibling switching. The deployed overlay is now
+dark/cyan/monospace, identifies `FACULDADE` as the current Environment and has
+only `REGRESSAR AO HUB`. It no longer requests the catalog or opens targets.
+
+The panel's live kernel state proves 1920x1080 at 120 Hz. Faculdade now selects
+the highest-refresh physical mode at scale 1, advertises exact 1920x1080/120 Hz
+guest video with a 64 MiB framebuffer, fixes AMD topology with `topoext`, and
+uses threaded writeback qcow2 AIO after native-AIO/Btrfs errors in the VM log.
+These changes are deployed. They improve sharpness and reliability but do not
+claim accelerated Windows 3D; that remains the owner-gated VFIO phase.
+
+The architectural recommendation is an APX-supervised KVM guest with the RTX
+3060 passed through by VFIO and Looking Glass presented through the AMD iGPU.
+It should feel native while preserving isolation, complete deletion and instant
+APX controls. A true hidden dual boot cannot retain those guarantees. IOMMU is
+disabled in the current boot and no IOMMU groups are exposed, so no boot entry
+or device binding has been changed. Enabling IOMMU, rebooting and auditing the
+live groups require explicit owner approval. See
+`docs/faculdade-native-feel-vfio-v1-2026-08-23.md`.
+
+Latest dedicated Faculdade/Host-console repair — 2026-08-22: `faculdade` now
+has the strict root-owned `virtual-machine-v1` marker and starts QEMU directly
+through the supervised graphical session. It runs zero QuickShell/hyprlock
+processes, presents Windows full-screen, and reserves only `SUPER+M` for return.
+KVM, Secure-Boot-capable OVMF, TPM 2.0, NVMe, NAT, audio and QMP are active.
+The official Portuguese installer passed Windows 11 Pro requirements and is
+left visibly at Microsoft's licence terms so the owner can accept them
+personally. The launcher now reliably answers the ISO prompt on a fresh disk;
+after Windows writes more than 512 MiB, later launches prefer the NVMe disk.
+The Host-console description in this older checkpoint is superseded by the
+2026-08-23 fresh-PTY ticket design above. Temporary framebuffer/firmware
+diagnostic artifacts were deleted.
+
+Latest complete-removal policy — 2026-08-22: the owner requires deletion of an
+Environment to be an unconditional complete purge. The installed Host executor
+now removes all generations of matching snapshots and archives, explicitly
+named legacy maintenance backups, `home`, `root`, capability/top-level metadata
+including `kvm-v1`, registration and stored plans for that exact logical name.
+The effect list is generation-bound and old destroy plans are rejected. Exact
+UUID/name matching preserves neighboring Environments. The global append-only
+audit journal retains only the deletion fact, never recoverable Environment
+content. No `environment-only` or preserve-copies option remains. `faculdade`
+has not been deleted; this change was tested with disposable filesystem trees.
+
+Latest Faculdade VM and input recovery — 2026-08-22: `faculdade` now contains
+QEMU/KVM, OVMF and swtpm plus a persistent Windows 11 VM definition (12 vCPU,
+8 GiB RAM, sparse 120 GiB qcow2, UEFI, TPM 2.0, NAT and virtual graphics). A
+strict root-owned `kvm-v1` marker leases only `/dev/kvm`; no Host shares, GPU
+passthrough or inbound network are enabled. The launcher starts full-screen on
+entry. The official Portuguese (Portugal) x64 ISO is bootable and matched
+Microsoft's published SHA-256 exactly. A disposable KVM/UEFI/TPM/NVMe/NAT
+smoke boot passed. Windows setup and activation remain interactive owner work.
+Details are in
+`docs/faculdade-windows11-kvm-v1-2026-08-22.md`.
+
+The current keyboard repair deliberately supersedes the exclusive ITE grab
+below. That grab caused ordinary typing to become non-responsive on the physical
+laptop, so it was removed. FnLock is off; plain F1--F12 must remain application
+keys and multimedia actions must occur only with Fn+F1--F12. The exact-device
+observer maps ITE Fn-row events while leaving the ordinary AT keyboard
+untouched. Physical confirmation of both paths remains pending.
+
+Latest Fn exclusivity repair — 2026-08-21: the next owner trial proved
+brightness routing but showed each ITE raw code also reaching applications
+(for example Fn+F5 both lowered brightness and reloaded the browser), while
+volume stopped responding. The exact bridge now takes `EVIOCGRAB` exclusively
+on the dedicated internal ITE Fn interface and handles raw F1--F3 as volume
+mute/down/up. The separate AT keyboard is not grabbed, so ordinary F1--F12 and
+all typing remain normal. This relies on the live-captured target separation
+between ITE Fn codes and AT ordinary function keys.
+
+Latest physical Fn routing repair — 2026-08-21: the owner confirmed the OSD
+design and volume path, but reported no response/feedback for brightness,
+microphone, F7/F8/F11/F12/Print and no feedback for the working F10 hardware
+toggle. A live evdev capture proved that this Legion mirrors Fn+F4--F12 on the
+exact internal ITE keyboard as raw codes `62--68,87,88`, rather than the
+configured XF86/F13--F16 symbols. The identity-checked bridge now routes those
+ITE-only codes directly to the existing QuickShell/helper actions, while plain
+F4--F12 remain on the separate AT keyboard and continue reaching applications.
+AT `KEY_SYSRQ/99` is routed to the screenshot action. Direct post-install proof
+passed microphone mute/restore, brightness `65535 → 62258 → 65535`, F7/F8/F10/
+F11/F12 OSD endpoints, and a real screenshot at
+`Screenshot_2026-08-21_23-12-03.png`. The full suite passes 1046 tests with 11
+expected skips. Final owner observation of the physical row remains.
+
+Latest hotkey feedback repair — 2026-08-21: the owner confirmed volume/mute and
+Fn+F8, but F5/F6 had no effect and none of the actions had visible feedback.
+The brightness backend physically passed a controlled raw
+`65535 → 62258 → 65535` proof, isolating the issue to keyboard routing. The
+exact bridge now accepts F5/F6 and codes 224/225 from either of the two already
+identity-checked internal Lenovo keyboard interfaces. The common QuickShell has
+a translucent bottom-centred OSD for audio, microphone, brightness, airplane
+mode, monitors, launcher, windows, touchpad, calculator and screenshots. A
+read-only Host `radio.status` operation is available, while the active OSD reads
+the same kernel rfkill soft-block state directly from read-only sysfs so it
+survives service-socket replacement. The source, seed, five existing
+Environments and active Hub are installed. QuickShell loaded successfully, the
+OSD was captured visibly, Hyprland reports `natural_scroll = true`, and a live
+brightness proof passed `65535 → 62258 → 65535`. The full suite passes 1046
+tests with 11 expected skips. Only owner observation of the physical keys
+remains.
+The owner additionally requested natural touchpad scrolling, where dragging
+two fingers upward moves down through the page; the common profile now enables
+that direction.
+
+Latest keyboard behavior — 2026-08-21: the shared Lenovo Legion Environment
+profile covers Fn+F1--F12 with the documented display switch, radio, Lenovo
+panel, touchpad, task overview and calculator meanings mapped to APX/Hyprland.
+Print Screen now saves a real timestamped PNG; Insert, Delete, Home, End, Page
+Up and Page Down remain normal application keys. F8 stays on the Host kernel's
+rfkill handler, while all other new actions are Environment-local or reuse
+existing audio/brightness mediation. The earlier complete suite passed 1044 tests with
+11 expected skips. The source, Host seed/runtime, Hub, faculdade, hytale,
+Steam and minecraft copies match; the active Hub reloaded without config
+errors and published every expected bind. A real full-screen capture succeeded
+at `~/Pictures/Screenshots/Screenshot_2026-08-21_22-02-43.png`. Only eDP-1 is
+currently connected and the Hub currently has no supported calculator, so F7
+is presently a safe no-op and F12 will work after a calculator is installed.
+Rollback copies are under
+`/var/lib/apx/backups/20260821-laptop-hotkeys-v1/`; see
+`docs/legion-keyboard-hotkeys-v1-2026-08-21.md`.
+
 Final AC-powered performance closure — 2026-08-21: Host power reports
 `ADP0=1`. Three alternating 256 MiB direct-I/O passes measured ~638 MB/s Host
 versus ~655 MB/s Hub writes and ~3.07 versus ~2.97 GB/s reads, so the earlier
@@ -1751,6 +2331,44 @@ and add direct runtime-contract tests.
 Detailed incident:
 `docs/environment-handoff-runtime-readiness-fix-2026-08-18.md`.
 
+## System Environments and Faculdade VFIO — 2026-08-23
+
+The Hub creator now offers Arch native, Windows 11 system, and Ubuntu system
+choices. The authenticated wire contract, management runner and atomic
+provisioner carry the selected system kind; catalogue rows show small Windows
+or Ubuntu tags. System disks, firmware, media, configuration and trusted
+markers live under the Environment lifecycle, and failed provisioning invokes
+the normal full destroy plan.
+
+The Host boot has IOMMU enabled and the RTX 3060 graphics/audio pair is alone
+in group 11. A signed KVMFR module, B7-799 client and matching Windows Host/IDD
+installers are staged. VFIO bind and restore pass. At compositor level,
+`SUPER+E` and `SUPER+M` return directly to Hub even during guest reboot or a
+black frame; `SUPER+SHIFT+E` opens the APX-styled blue menu.
+
+Do not trigger Environment transitions automatically while a Codex session is
+active. Two failed-closed attempts repeatedly interrupted the owner. The final
+diagnosis was a stale `/usr/lib/apx/apx-official-hub-graphical-v1.py` shadowing
+the canonical engine after VFIO bind. The generic launcher now selects the
+canonical `/var/lib` engine explicitly and the duplicate installed copy is
+synchronised. The owner should perform the next visual launch manually.
+
+That manual visual launch reproduced a two-stage failure. The `faculdade`
+session exited immediately because the shared session script still accepted
+only `amd|hybrid|nvidia` even though the Host launcher had correctly selected
+the new `vfio-guest` policy. The recovery Hub then ran normally with Hyprland
+and QuickShell, but was terminated about 25 seconds later by the new IPC
+fallback loop: it made the whole session depend on a redundant dispatch return
+even when the Lua callback had already started the owner shell.
+
+The repository session contract now admits `vfio-guest` only together with
+`virtual-machine`, observes an already-running owner workload before issuing
+the duplicate-safe IPC fallback, and leaves final workload readiness to the
+existing Host-side authoritative proof. Do not attempt another visual launch
+until the live `/var/lib` session copy is updated; this turn did not explicitly
+invoke the temporary root-Host development guide. After installation, the
+owner should again initiate the launch manually.
+
 
 Latest physical audio repair — 2026-08-18: shared internal analog playback was
 traced through Environment-local PipeWire to the leased ALC287 PCM. The failure
@@ -1789,3 +2407,448 @@ QuickShell popup opening animations are owner-approved. The control-centre
 output-volume slider now previews its percentage immediately and applies
 coalesced real PipeWire volume changes continuously while being dragged, with
 the exact release position guaranteed as the final write.
+
+## Active handoff — native Windows reservation, 2026-08-25
+
+Normal Environment creation is physically repaired and proven. The special
+catalogue entry `Windows` / `NATIVO` is installed and currently returns
+`state=preparing`, `display_name=Windows`; it cannot be opened or deleted yet.
+The physical reservation is complete and finalized. The signed offline UKI
+recorded `success:128849354240`; GPT p2 is 746457088 sectors, dm-crypt is
+746424320 sectors, Btrfs is 382169251840 bytes with zero slack, and the exact
+120 GiB tail is unallocated. Current Btrfs write/read/flush/generation counters
+are zero. `/var/lib/apx/native-environments/windows-storage-v1.json` is
+root-owned mode 0400, and the catalogue description now confirms the reserved
+storage.
+
+The owner has no USB drive. An internal installer is therefore complete: p3 is
+a 9-GiB FAT32 ESP named `APX_WINSETUP`, with verified Microsoft-signed Windows
+Setup files and three split SWM parts; the exact preceding 111 GiB is still
+unallocated for Windows. `Boot0003 APX Windows Setup` targets p3, is not in the
+unchanged permanent BootOrder `2001,0005,0000,2002,2003`, and no BootNext is
+armed. Secure Boot remains enabled with both original APX trust and the needed
+Microsoft authorities. Direct verification of all APX EFI loaders succeeds.
+The complete repository suite passes 1076 tests with 11 expected skips.
+
+The partition-selection tutorial and post-install return procedure are in
+`docs/native-windows-physical-120gib-v1-2026-08-25.md`. The corrected next
+action is recorded below after the completed WinPE diagnosis.
+
+Owner-driven boots reached the current Windows Setup UI, but Setup then showed
+`Install driver to show hardware`. Every attempt returned to APX without a GPT
+or filesystem change; the exact 111-GiB hole and APX partitions remain intact.
+Firmware-created fallback duplicates for p3 were identity-checked and deleted,
+and the exact APX BootOrder was restored.
+
+The target storage is a directly attached Samsung PM981/SM981-class NVMe
+controller `144d:a808`, class `010802`, with AMD SATA in AHCI mode and no RAID
+or VMD layer. Lenovo's 82JU Windows 11 catalogue has no RAID/RST storage driver.
+The exact Setup boot WIM contains Microsoft's signed `stornvme.sys` and an INF
+matching `PCI\CC_010802`. The diagnostic boot returned `0x80070103` when
+reloading that INF, while DiskPart successfully showed Disk 0 at 476 GB with
+111 GB free. Storage discovery is therefore working. All three SWM parts and
+all 11 images also passed complete cross-part verification.
+
+The actual failure was source-media discovery: WinPE booted from the internal
+ESP but assigned no drive letter to it, after which Setup emitted the generic
+multimedia/DVD/USB/disk-controller prompt. The first custom WinPE attempt used
+DiskPart `assign`, but physical boot entered its recovery console because that
+command cannot assign a letter to a GPT partition other than a basic-data
+partition. The owner closed the console and WinPE returned safely to APX.
+
+The deployed v2 Setup-index WinPE runs `wpeinit`, scans existing letters and,
+if needed, invokes the ESP-specific `mountvol W: /S`. It checks `setup.exe` and
+all three SWMs before launching Setup and uses no DiskPart. There is no
+partition create/delete/clean/type-change/format instruction. The installed
+WIM and embedded files passed full verification; SHA-256 is
+`b4041a17b34aca0db72e32eb1bcd7d675354f600d4b79efb2ab4a8af8dcb5df2`.
+The fixed boot validator has been updated and passes `--validate-only` without
+arming a boot. No BootNext exists and permanent BootOrder remains
+`2001,0005,0000,2002,2003`.
+
+That installer action is complete and is superseded by the OOBE handoff below.
+
+## Active handoff — Windows OOBE Wi-Fi and Linux-first boot
+
+The v2 media path worked and Windows Setup applied the image using only the
+reserved tail. Current physical layout is APX p1/p2 unchanged, Windows MSR p3
+16 MiB, Windows NTFS p4 110.2 GiB, Windows Recovery p5 790 MiB and the former
+internal setup ESP as p6 9 GiB. Windows Boot Manager entry 0006 targets p6.
+
+OOBE stopped only at network discovery. Physical Wi-Fi is Realtek RTL8852AE
+`10ec:8852`, Lenovo subsystem `17aa:4852`. Official Lenovo Windows 11 package
+DS551503 was downloaded and matched its published SHA-256
+`1defff5645c18427c5f1af5af07a0ebae1dde25c70c3624869d485cef06f0c04`.
+The extracted Realtek 6001.0.10.340 INF contains exact ID
+`PCI\VEN_10EC&DEV_8852&SUBSYS_485217AA`; its catalogue identifies Microsoft
+Windows Hardware Compatibility Publisher. Only its INF, CAT, SYS and data file
+were staged at `C:\APX\Drivers\Realtek8852AE`, then verified after a read-only
+remount. No existing Windows file was replaced.
+
+Permanent UEFI BootOrder is `0005,0006,0000,2001,2002,2003`, Linux first and
+Windows second. There is no BootNext. The one-shot OOBE executor
+`scripts/physical-pilot/boot-native-windows-oobe-v1.sh` passes validation of
+hardware, GPT, p4/p6 identities, Secure Boot, Windows Boot Manager/BCD and all
+staged driver hashes. Complete suite: 1078 tests, 11 expected skips.
+
+Next exact action: after a new owner readiness confirmation, run the OOBE
+executor with `--reboot`. On the OOBE network page select `Instalar
+controlador`, browse to `C:\APX\Drivers\Realtek8852AE`, confirm the folder,
+connect to Wi-Fi and finish OOBE. If a Windows restart returns to APX before
+the desktop, use a new exact one-shot Windows handoff. After desktop proof,
+publish `Windows · NATIVO` as ready and change the installed native runner from
+the obsolete same-ESP `bootctl auto-windows` design to validated firmware
+BootNext entry 0006. `SUPER+E` cannot cross operating systems; returning from
+Windows is a normal restart to the Linux-first firmware default.
+
+The owner selected that folder, connected to Wi-Fi and saw Windows continue
+installing before its restart returned to APX. Offline verification confirms
+`netrtwlane6.inf` is now installed in the Windows DriverStore with the exact
+Lenovo RTL8852AE ID. There is no new OOBE/setup error at that timestamp. The
+Windows Boot Manager executable is unchanged and signed; BCD changed normally
+during the continuation. The OOBE executor is now safely repeatable: each
+attempt records the current bounded BCD digest and firmware state in a new
+non-overwriting slot, while permanent BootOrder stays Linux-first. It passes
+`--validate-only`; no BootNext is armed. Next action is one more owner-approved
+`--reboot` to Windows entry 0006 so OOBE resumes where it stopped.
+
+## Current handoff — native Windows and APX face authentication ready
+
+The preceding OOBE instruction is superseded: Windows 11 is fully installed and
+functional. `Windows · NATIVO` is ready in the HUB. The installed runner uses
+firmware BootNext 0006 only after validating the exact physical storage and the
+signed Windows manager; permanent firmware order remains Linux 0005 first and
+no BootNext is armed. The Windows return helper is staged invisibly in Common
+Startup without a Public Desktop icon: `SUPER+E` restarts to the Linux-first HUB, with
+`SUPER+SHIFT+E` as the initial Explorer-policy fallback.
+
+Repeatable native Windows create/delete is installed. The HUB accepts one
+instance at 80/120/160 GiB and uses a signed offline lifecycle UKI. Delete is
+strictly bound to the expected p3-p6 identities/layout and returns space through
+the boot-time finalizer. Source and installed shell hashes match, the current
+native validator passes, and all 1087 tests pass with 11 expected skips. Do not
+claim the destructive real-NVMe lifecycle has been accepted: it has only been
+rehearsed with disposable GPT storage because exercising it now would erase the
+working Windows installation.
+
+The owner changed the Hub password locally. Four stopped graphical
+Environments and Host `root` were synchronized from that protected hash with
+atomic replacement and mode-0600 backups; no secret or hash was printed. The
+Host console and Hub now use the same password.
+
+The Lenovo camera is admitted to the Hub by its full immutable udev identity;
+only `/dev/video0` capture is leased. Howdy native PAM and CPU-only dlib are
+installed from pinned repository PKGBUILDs, the local `APX-owner` model is
+mode 0600, snapshots and SSH face auth are disabled, and the normal password
+stack remains the fallback. A raw recognition test, a real owner `sudo`, and a
+real `hyprlock` cycle all succeeded physically. Rollback is
+`/var/lib/apx/backups/20260825T171900Z-face-auth-pam-v1`; the earlier camera
+launcher backup is `/var/lib/apx/backups/20260825T175200Z-face-auth-v1`.
+
+The native Windows row is openable again. Its first post-install menu attempt
+never reached `native.boot`: the capability-empty switch service called the
+full validator from its catalogue path, and the validator's read-only mounts
+were correctly denied inside that sandbox. The catalogue now trusts the exact
+root-owned mode-0400 `ready` marker only for presentation; the privileged
+one-shot boot runner still revalidates all physical storage, UEFI and signed
+Windows content before arming BootNext. The active catalogue returns `ready`,
+the full validator passes, BootNext is absent, and the switch service has no
+added capability. Close and reopen the Environments panel before the next
+owner click so QuickShell reloads the corrected catalogue. Rollback:
+`/var/lib/apx/backups/20260825T173000Z-native-windows-menu-ready-v1`.
+
+The owner physically accepted Hub → native Windows and the explicit Windows →
+Hub return. Return v2 is now installed offline in the current Windows: there is
+no APX icon on the Public Desktop, while a hidden supervised Common Startup
+helper owns `SUPER+E` (`SUPER+SHIFT+E` remains the first-login fallback) and
+retries registration if Explorer is not ready. Future create media includes
+the same assets and runs the official Lenovo RTL8852AE driver through
+`SetupComplete.cmd`/`pnputil` automatically. A generation cannot become
+`ready`, and cannot later open, unless its exact background helper exists, the
+old icon is absent, and DriverStore contains an INF matching the Lenovo
+`PCI\VEN_10EC&DEV_8852&SUBSYS_485217AA` identity. Windows Update remains
+responsible for current AMD/NVIDIA and other optional vendor revisions once
+network is available; programs and owner data are never cloned. Current
+validation and all 1087 tests pass; BootNext is absent and no unit is failed.
+
+## Current handoff — editable Environment presentation
+
+The live Hub menu now exposes `EDITAR` after selecting any stopped Environment
+or ready native Windows entry; `F2` opens the same form. It changes only the
+visible title and optional legend. The internal name, generation, system type,
+partitions and data do not move or change.
+
+The request is generation-bound and admitted only from the active official Hub
+QuickShell. The separate root-owned writer validates the exact protected record
+and atomically changes only `display_name` and `description` under a transient
+no-capability sandbox. This applies to ordinary Environments and Windows; the
+native boot validator continues to enforce every disk/UEFI/driver/return-helper
+identity independently of the chosen display text.
+
+QuickShell loaded the live source cleanly at 19:50:54, the future seed and
+installed runtime are source-exact, and a same-value `faculdade` write passed
+the real protected runner. All 1088 tests pass with 11 skips, all relevant
+services are active, Windows validation passes, no BootNext is armed and no unit
+is failed. The remaining manual acceptance is one owner-selected edit in the
+menu. Latest rollback:
+`/var/lib/apx/backups/20260825T185053Z-environment-metadata-edit-v1`.
+
+## Current handoff — first physical delete attempt safely refused
+
+The owner's first `Windows · NATIVO` delete request on the real NVMe did not
+reach maintenance and did not change storage. The signed-UKI builder correctly
+refused because its repository working-directory invariant was not supplied by
+the transient lifecycle runner. There was no reboot, BootNext, pending marker,
+maintenance UKI or GPT change; the existing Windows remains `ready` and its
+four physical partitions remain intact.
+
+The lifecycle runner now executes every fixed command with the validated
+repository as its explicit working directory. A regression assertion and an
+installed-runner mock exercise cover that boundary. The live delete preflight
+passes against the exact 120-GiB generation, Linux remains BootCurrent/default
+and first in BootOrder, no operation is pending, and the full suite passes 1089
+tests with 11 expected skips. The owner may retry the same delete from the Hub;
+do not trigger it automatically. Rollback:
+`/var/lib/apx/backups/20260825T222335Z-native-windows-lifecycle-cwd-fix-v1`.
+
+## Current handoff — physical delete reached initrd and safely refused
+
+The next owner retry successfully built and booted the signed maintenance UKI,
+but the offline executor refused at `msr-type` before its first `blkdiscard`.
+On util-linux 2.42.2, cached `blkid -s PART_ENTRY_TYPE` returns no value for a
+partition device; direct low-level probing requires `blkid -p`. The real GPT
+types, starts, sizes, filesystems and identities all remain exactly correct.
+Windows p3-p6 and the shrunken APX p2 were unchanged, so the Windows row still
+correctly remains present.
+
+All four partition-type gates now use direct probing. The exact failed pending,
+status, UKI and entry artifacts were backed up and removed only after validating
+that no disk change occurred. A freshly built signed UKI was then extracted and
+its embedded executor was proven to contain all four corrected probes; the test
+UKI/entry were removed without arming BootNext. AC is online, battery is 49%,
+Linux remains first/default, no unit is failed, and all 1089 tests pass with 11
+expected skips. The owner must explicitly retry delete in the Hub. Recovery
+backup: `/var/lib/apx/backups/20260826T143302Z-native-windows-msr-probe-refusal-v1`.
+
+## Current handoff — physical native Windows deletion accepted
+
+The owner retry completed the destructive offline stage successfully: p3-p6
+were discarded and removed, p2 returned to 511035383296 bytes, dm-crypt reopened
+at 511018606080 bytes, and the success marker was exact. The boot-time finalizer
+initially stopped because `cryptsetup resize` was redundant after systemd had
+already reopened the enlarged mapping and attempted to read authentication from
+the noninteractive service. Btrfs was grown explicitly to its aligned maximum
+of 511018602496 bytes (3584 bytes of unavoidable 4-KiB alignment slack).
+
+The finalizer now requires the already-full dm-crypt size instead of invoking
+interactive resize, then performs idempotent `btrfs filesystem resize 1:max`.
+Its successful rerun removed pending/native metadata, storage marker, lifecycle
+status, maintenance UKI/entry, Windows Boot Manager and APX Setup firmware
+entries. BootOrder is Linux-first without BootNext, no unit is failed, the APX
+storage summary contains no Windows and reports 450096533504 bytes available.
+The Hub completion state is `Windows apagado; todo o espaço regressou ao APX.`
+All 1089 tests pass with 11 expected skips. Physical delete is now accepted;
+physical recreate/install remains the next owner test. Finalization backup:
+`/var/lib/apx/backups/20260826T144156Z-native-windows-delete-finalize-v1`.
+
+## Current handoff — lifecycle is now self-contained and resumable
+
+The owner rejected a workflow that depended on Codex manually completing the
+last steps. The installed native-Windows lifecycle no longer reads executable
+assets from the development repository. Its root-owned immutable build hook,
+mkinitcpio configuration, boot entry, offline executor/unit and Windows return
+assets now live under `/usr/share/apx/native-windows-lifecycle-v1`; fixed
+executors remain under `/usr/lib/apx`.
+
+Delete persists a `finalizing` stage before post-boot cleanup, so reruns are
+idempotent and pending is removed last. Create persists `preparing-installer`
+and `installing`, records an exact prepared-installer marker, makes installer
+preparation repeatable, and automatically resumes an exact APX Setup or Windows
+Boot Manager entry for at most eight Windows restarts. The finalizer retries a
+transient failure up to three times at boot; the Hub treats a live Windows phase
+as busy. Completion still requires the driver, background return helper and
+absence of the obsolete Desktop icon before publishing `ready`.
+
+The deployed builder was executed from `/`, built and signed an exact create
+UKI using only installed assets, and the UKI was extracted byte-for-byte against
+the installed executor/unit. No BootNext, pending operation, maintenance image
+or disk change remains. All 1089 tests pass with 11 expected skips. Rollback:
+`/var/lib/apx/backups/20260826T145246Z-self-contained-native-windows-lifecycle-v1`.
+
+## Current handoff — orphan removed and visible maintenance menu eliminated
+
+The incomplete Windows/OOBE generation that occupied the reserved tail without
+a Hub record has been removed through an exact signed offline cleanup. Current
+NVMe state is only p1 `APX_EFI` (1 GiB) and full-size p2 `APX_CRYPT`; Btrfs is
+511018602496 bytes with about 449429082112 bytes estimated free. There is no p3
+or p4, Windows/native/pending marker, `BootNext`, Microsoft EFI tree, Windows
+Boot Manager entry, APX Setup entry or lifecycle image. Linux entry 0005 is
+current and first in permanent `BootOrder`.
+
+The newly installed WinPE v2 contract creates exactly p3 `APXWINTARGET` and p4
+`APXWINSETUP`, preserves shared p1 `APX_EFI`, identifies every object by fixed
+disk/GPT/partition identities rather than drive letters, applies Windows 11 Pro
+index 6 from the split SWMs, writes BCDBoot to the true ESP and refuses reboot
+until both EFI and BCD/loader validation pass. Setup media is not reclaimed
+until first Windows login and required APX-return/Wi-Fi assets are confirmed.
+
+The strange systemd-boot selection screen seen during the cleanup was a
+technical maintenance entry being selected through the normal APX boot menu.
+The deployed runner now bypasses that menu: it uses a direct temporary UEFI
+entry created with `--create-only`, verifies permanent `BootOrder` is exactly
+unchanged, removes the systemd-boot entry before reboot, and arms only
+`BootNext`. The post-boot finalizer removes that temporary firmware entry and
+UKI. No new create or reboot has been armed; the owner must explicitly start
+the next Windows creation from the Hub.
+
+Installed/source comparisons pass, the environment switch service is active,
+no systemd unit is failed, and all 1089 tests pass with 11 expected skips.
+Rollback: `/var/lib/apx/backups/20260826T161719Z-native-windows-explicit-winpe-v2`.
+
+## Current handoff — 160-GiB WinPE stopped before format; repair staged
+
+The owner created native Windows generation
+`890c5a4c-3b84-41ea-af57-2fb0043243b5` at 160 GiB. Offline storage creation
+and installer preparation succeeded. The physical disk now has unchanged p1
+`APX_EFI`, 315.94-GiB p2 APX Linux, 151-GiB p3 NTFS `APXWINTARGET` and 9-GiB
+p4 FAT32 `APXWINSETUP`. WinPE displayed `findstr is not recognized` and
+returned to Linux before its first format.
+
+Read-only mounts proved p3 contains only `APX/install-contract-v2.ini`; p4
+still has the exact three SWMs and the same contract as p3 and p1. There is no
+`EFI/Microsoft`, `bootmgfw.efi`, BCD, Windows Boot Manager firmware entry or
+`BootNext`. Linux is current and first in permanent `BootOrder`. No WinPE/DISM
+process remains. The Host has about 23 GiB RAM available; the active menu
+service uses about 12.5 MiB and QuickShell about 192 MiB RSS.
+
+The finalizer is failed at its three-attempt start limit because its completion
+probe tried to iterate a missing `Users` directory. The visible management
+state records this failure and the trusted lifecycle remains pending at
+`installing`, attempt zero. The repository correction treats missing `Users`
+as incomplete, keeps the menu busy while any native pending marker exists,
+eliminates all WinPE `findstr` calls, dynamically chooses free drive letters,
+checks DiskPart size/type/label plus the replicated exact contract, revalidates
+the target before formatting and retains full DISM/BCDBoot/BCD/firmware gates.
+
+Two exact adapters are ready but have not been executed:
+`repair-current-native-windows-winpe-findstr-v3.sh --prepare` performs a
+non-rebooting atomic p4 WIM/runtime repair with rollback, and
+`resume-current-native-windows-install-v3.sh --reboot` revalidates everything
+before allowing the finalizer to arm APX Setup once. Do not delete, recreate or
+format p3/p4, do not remove the pending/installer markers, and do not manually
+start the failed finalizer before the prepare adapter has completed.
+
+The corrected sources pass the complete 1090-test repository suite with 11
+expected skips. They deliberately differ from the still-installed Host assets;
+no deployment, `BootNext` or reboot was performed in this session.
+The corrected command was also rebuilt into a temporary copy of the current
+`boot.wim`; complete WIM verification and byte comparisons passed. That copy
+was removed and p3/p4 are unmounted and unchanged.
+
+## Current handoff — recovery moved into Environments menu
+
+The owner explicitly requires every normal Windows lifecycle action to be
+performed from the Hub Environments menu. The repository now closes the failed
+creation gap: trusted failed `installing` state exposes `RETOMAR WINDOWS` and a
+two-click `APAGAR INCOMPLETO`, both bound to the root-owned pending generation.
+The ordinary `APAGAR` path remains the final acceptance action after Windows
+has reached `ready`.
+
+Retry validates the exact p1-p4 layout, contracts, prepared marker, setup UEFI
+path and split SWMs before atomically rebuilding only p4 `boot.wim` from the
+installed fixed WinPE source. It neither partitions nor formats from Linux and
+does not arm boot itself. The authenticated finalizer is started only after the
+refresh passes and then selects APX Setup once. Discard uses the signed offline
+delete path; it restores the original pending marker and removes temporary UEFI
+artifacts if the reboot cannot be committed.
+
+`deploy-native-windows-menu-recovery-v1.sh` is the staged non-rebooting rollout
+for the current Host. It installs code/UI only, stops the exhausted finalizer
+and deliberately cannot mount/write the Windows volumes, arm BootNext, start
+the finalizer or reboot. It has not been executed. Consequently the live menu,
+runtime and p4 still remain as reported in the preceding handoff; no physical
+state changed while implementing this menu-owned flow. Syntax, whitespace,
+focused recovery tests and the complete 1095-test suite pass, with 11 expected
+skips.
+
+## Current handoff — menu recovery controls activated
+
+The owner authorized the code/UI-only rollout. It first refused cleanly with
+AC offline and changed nothing. After AC became online (battery 76%), it
+installed exact source copies of the QuickShell menu, wire contract, client,
+switch service, corrected finalizer, WinPE source, retry executor and discard
+executor. The focused 42-test preflight passed and QuickShell recorded
+`Configuration Loaded`. Backup:
+`/var/lib/apx/backups/20260826T182015Z-native-windows-menu-recovery-v1`.
+
+Postflight proves the switch service active, exact installed recovery/refresh
+sources, pending generation `890c5a4c-3b84-41ea-af57-2fb0043243b5` still at
+`create/installing` for 160 GiB, no BootNext and no p3/p4 mounts. The finalizer
+is deliberately still failed/stopped. No disk, installer-media, filesystem or
+firmware write was performed by deployment. The menu now exposes
+`RETOMAR WINDOWS` and the two-click `APAGAR INCOMPLETO`; neither action has
+been selected. Since the owner intends a fresh create, the immediate physical
+action is owner confirmation of `APAGAR INCOMPLETO` in Environments, followed
+by the signed offline reboot/delete/finalization sequence.
+
+The owner's first two-click attempt displayed an error, but the destructive
+request never crossed the client boundary. There is no recovery unit or
+accepted `native.discard` journal event; pending remains `create/installing`,
+the prior successful-create status is unchanged, p3/p4 remain intact, and
+BootNext/maintenance artifacts are absent. Exact digest/inode comparison found
+that the already-running Hub container retains the old environment-switch
+client through its read-only bind mount, while the Host path and QML are the
+new source-exact versions. Hot-reloading QML cannot replace a bind-mounted
+inode. The next bounded action is an owner-approved controlled Hub relaunch so
+the container receives the new client; do not retry discard before that.
+
+The owner then approved the controlled Hub relaunch. The official authenticated
+handoff closed the old session and opened a replacement at 19:25 WEST without
+rebooting the computer. Repository, installed Host and live-container client
+digests now all equal
+`bc2cf6f2099f1326d862bd3dd6bdfbf953a1740d95f3afa513dea50333bba482`,
+and the live client exposes both `native-discard` and `native-retry`; the wire
+contract is likewise source-exact in all three locations. The switch service
+and replacement Hub are active, locks are absent, pending is still the same
+160-GiB `create/installing` generation, BootNext is absent, p3/p4 are unmounted
+and disk geometry is unchanged. It is now safe for the owner to retry the
+two-click `APAGAR INCOMPLETO` action from Environments. No recovery action has
+yet been started by this relaunch.
+
+The owner subsequently retried and confirmed `APAGAR INCOMPLETO` in the menu.
+The exact-generation `native.discard` request was accepted and the offline
+delete/finalization completed. Current authenticated menu state is
+`native-delete/complete`, `busy: false`; the catalogue has no Windows entry,
+the pending/native Windows markers are absent, p3/p4 are removed and p2 has
+expanded back to 475.9 GiB. There is no BootNext, active recovery unit,
+management/recovery lock or Windows/APX Setup/maintenance loader entry. The
+remaining `windows-storage-*.status` files are inert records dated 2026-08-25,
+not active lifecycle artifacts. The supported next step is now a fresh native
+Windows creation initiated by the owner solely from Environments.
+
+## Current handoff — 2026-08-30 boot-loop recovery
+
+This section supersedes the earlier handoffs. A later create/160 generation
+`18fe09c4-ed14-40a3-96d2-544d3ba3e628` failed in WinPE with
+`APX-FORMAT-04 / formatted-target-label`, then the old finalizer automatically
+rearmed Setup from `stage=installing` until `resume_attempts=11`. The owner
+recovered Linux from live media by reversibly renaming the pending file.
+
+The fail-closed finalizer, recovery executor, switch integration, preparation
+scripts, WinPE source and systemd unit are now installed source-exact. The
+recovered pending was copied back only after protection was active and was
+consumed once into `recovery-required`. The original
+`windows-pending.json.recovery-20260830` remains unchanged. Linux is current
+and first in BootOrder, BootNext is absent, and the finalizer is inactive with
+`Result=success`, status 0 and no restart policy.
+
+p3 has valid NTFS metadata but contains only the APX contract; DISM never
+applied Windows. p4 is a valid setup volume whose BCD boots `sources/boot.wim`.
+There is no Windows tree, winload, EFI Microsoft tree or Windows firmware
+entry. Therefore the only recovery is an explicit re-application after the
+boot.wim is rebuilt with the corrected CRLF/find.exe batch. It must not be
+started while AC is offline, and no automatic process may arm it.
+
+The complete suite passes 1102 tests with 11 expected skips. See
+`docs/native-windows-fail-closed-v2-2026-08-30.md` and
+`docs/apx-system-state-audit-2026-08-30.md`.

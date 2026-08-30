@@ -1,0 +1,16 @@
+[Unit]
+Description=APX native Windows maintenance pre-unlock probe
+DefaultDependencies=no
+ConditionKernelCommandLine=apx.native_windows_reserve=1
+Requires=dev-nvme0n1p1.device
+After=dev-nvme0n1p1.device
+Before=systemd-cryptsetup@cryptroot.service cryptsetup.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/apx-native-windows-probe-initrd-v1
+StandardInput=null
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=30s
+RemainAfterExit=yes

@@ -22,6 +22,12 @@ def load_launcher():
 
 
 class OfficialHubGraphicalTests(unittest.TestCase):
+    def test_recovery_runs_workload_hook_before_publishing_stopped(self) -> None:
+        source = LAUNCHER.read_text()
+        self.assertIn("def before_publish_stopped()", source)
+        self.assertLess(source.index("before_publish_stopped()\n    if REGISTRATION.is_file()"),
+                        source.index('write_registration_state("stopped")'))
+
     def test_launcher_binds_current_hub_identity_and_recovers(self) -> None:
         source = LAUNCHER.read_text()
         compile(source, str(LAUNCHER), "exec")
@@ -91,6 +97,15 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             '"--bind-ro=/sys/module/nvidia:/sys/module/nvidia"',
             'HOST_SERVICES_UI_V3 = Path("/usr/lib/apx/apx-host-services-ui-v3.py")',
             'BRIGHTNESS_KEYS = Path("/usr/lib/apx/apx-legion-brightness-keys-v1.py")',
+            'EXTRA_DEVICE_NODES: tuple[str, ...] = ()',
+            'valid_kvm = node == "/dev/kvm"',
+            'valid_vfio_control = node == "/dev/vfio/vfio"',
+            'valid_vfio_group = re.fullmatch',
+            'valid_kvmfr = node == "/dev/kvmfr0"',
+            'kvmfr[0-9]+',
+            '*EXTRA_DEVICE_NODES',
+            'VFIO_MEMLOCK_LIMIT = "14G"',
+            '--property=LimitMEMLOCK={VFIO_MEMLOCK_LIMIT}',
         ):
             self.assertIn(required, source)
         for fixed_event in ("/dev/input/event3", "/dev/input/event5", "/dev/input/event9"):
@@ -165,9 +180,22 @@ class OfficialHubGraphicalTests(unittest.TestCase):
         for forbidden in ('"--bind=/dev/snd"', '"--property=DeviceAllow=/dev/snd rw"'):
             self.assertNotIn(forbidden, source)
 
+    def test_launcher_leases_only_the_exact_internal_camera_capture_node(self) -> None:
+        source = LAUNCHER.read_text()
+        for required in (
+            '"ID_PATH": "pci-0000:05:00.3-usb-0:3:1.0"',
+            '"ID_VENDOR_ID": "5986"', '"ID_MODEL_ID": "212b"',
+            '"ID_USB_DRIVER": "uvcvideo"', '"ID_V4L_CAPABILITIES": ":capture:"',
+            "resolve_camera_device", 'Path("/dev").glob("video*")',
+            'r"/dev/video[0-9]+"', "os.major(camera_metadata.st_rdev) != 81",
+            "validate_devices(inputs, audio, graphics, camera)",
+            "camera,\n        *EXTRA_DEVICE_NODES",
+        ):
+            self.assertIn(required, source)
+
     def test_audio_master_is_initialized_before_device_lease(self) -> None:
         source = LAUNCHER.read_text()
-        validation = source.index("validate_devices(inputs, audio, graphics)")
+        validation = source.index("validate_devices(inputs, audio, graphics, camera)")
         master = source.index("ensure_audio_master_playback(audio)")
         lease = source.index("prepare_device_leases(device_nodes)")
         outer = source.index("start_outer(inputs, audio, graphics, bindings, authenticated_handoff)")
@@ -189,8 +217,18 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             'drm_devices="$DISPLAY_CARD:$NVIDIA_CARD"',
             "APX_KEYBOARD_I8042_DEVICE", "APX_KEYBOARD_ITE_DEVICE",
             "cd -- /home/apx", "--groups=5,983,987,992,995,998",
+            '/usr/bin/hyprctl dispatch exec "$workload_command"',
+            '^(amd|hybrid|nvidia|vfio-guest)$',
+            '[[ $SESSION_MODE == virtual-machine ]]',
+            'if /usr/bin/pgrep -u 1000 -f "$workload_process"',
         ):
             self.assertIn(required, source)
+        self.assertNotIn('[[ $workload_dispatched == true ]]', source)
+        self.assertLess(
+            source.index('if /usr/bin/pgrep -u 1000 -f "$workload_process"'),
+            source.index('/usr/bin/hyprctl dispatch exec "$workload_command"'),
+        )
+        self.assertNotIn('hl.dsp.exec_cmd(\\"$workload_command\\")', source)
         self.assertNotIn("sudo", source)
         self.assertNotIn("/usr/bin/seatd", source)
         self.assertNotIn("--bounding-set=-all", source)
@@ -233,6 +271,24 @@ class OfficialHubGraphicalTests(unittest.TestCase):
             self.assertEqual(subject.health_watchdog(), {
                 "classification": "healthy", "recovered": False,
             })
+
+    def test_inner_session_outcome_rejects_crash_and_accepts_owner_exit(self) -> None:
+        subject = load_launcher()
+        success = SimpleNamespace(
+            returncode=0,
+            stdout="LoadState=loaded\nActiveState=inactive\nResult=success\n"
+                   "ExecMainCode=1\nExecMainStatus=0\n",
+        )
+        with mock.patch.object(subject, "run", return_value=success):
+            self.assertEqual(subject.inner_session_outcome()["Result"], "success")
+        failure = SimpleNamespace(
+            returncode=0,
+            stdout="LoadState=loaded\nActiveState=failed\nResult=exit-code\n"
+                   "ExecMainCode=1\nExecMainStatus=1\n",
+        )
+        with mock.patch.object(subject, "run", return_value=failure), \
+                self.assertRaises(subject.OfficialHubGraphicalError):
+            subject.inner_session_outcome()
 
     def test_process_discovery_is_scoped_to_the_official_hub_unit(self) -> None:
         subject = load_launcher()

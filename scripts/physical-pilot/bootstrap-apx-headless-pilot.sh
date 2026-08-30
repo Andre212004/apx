@@ -154,22 +154,8 @@ EOF
   btrfs property set -ts "$STATE/releases/hub-headless-v3/root" ro true
 fi
 
-cat > /etc/systemd/system/apx-pilot-executor.service <<'EOF'
-[Unit]
-Description=APX physical pilot typed executor
-After=local-fs.target systemd-machined.service
-RequiresMountsFor=/var/lib/apx
-
-[Service]
-Type=simple
-ExecStart=/usr/lib/apx/apx-lab-executor.py
-Restart=on-failure
-RestartSec=1s
-NoNewPrivileges=no
-
-[Install]
-WantedBy=multi-user.target
-EOF
+install -Dm0644 "$REPOSITORY/config/systemd/apx-pilot-executor.service" \
+  /etc/systemd/system/apx-pilot-executor.service
 systemctl daemon-reload
 systemctl enable --now apx-pilot-executor.service
 

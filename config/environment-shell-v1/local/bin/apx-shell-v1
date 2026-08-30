@@ -8,6 +8,15 @@ state_dir=/home/apx/.local/state/apx-shell-v1
 log=$state_dir/quickshell.log
 login_marker=${XDG_RUNTIME_DIR:-/run/user/1000}/apx-initial-login-v1
 handoff_proof=/run/apx/authenticated-handoff-v1
+launcher_lock=${XDG_RUNTIME_DIR:-/run/user/1000}/apx-shell-launcher-v1.lock
+
+# The Lua autostart and the supervised IPC fallback may race on a physical
+# launch. Only one owner shell may run the login flow and the QuickShell retry
+# loop; a losing launcher exits successfully without touching the compositor.
+exec 9>"$launcher_lock"
+if ! /usr/bin/flock -n 9; then
+    exit 0
+fi
 
 install -d -m 0700 "$state_dir"
 if [[ -f $log ]] && (( $(stat -c %s "$log") > 1048576 )); then

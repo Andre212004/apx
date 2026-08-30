@@ -2,6 +2,7 @@ import importlib.util
 import hashlib
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -181,6 +182,93 @@ class RuntimeDestroyGenerationTests(unittest.TestCase):
                 runtime.destroy("0" * 64, "DESTROY codex-test-one")
         append_event.assert_not_called()
         stop.assert_not_called()
+
+    def test_destroy_is_complete_purge_and_preserves_only_other_environments(self) -> None:
+        generation = "98edbee0-a816-4637-9473-9e824c8a6974"
+        older_generation = "11111111-2222-3333-4444-555555555555"
+        archive_nonce = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            environments = state / "environments"
+            snapshots = state / "snapshots"
+            archives = state / "archives"
+            plans = state / "plans"
+            backups = state / "backups"
+            for directory in (environments, snapshots, archives, plans, backups):
+                directory.mkdir()
+
+            target = environments / "faculdade"
+            target.mkdir(mode=0o700)
+            (target / "registration.json").write_text("{}")
+            (target / "kvm-v1").write_text("apx-kvm-v1\n")
+            for label in ("home", "root"):
+                (target / label).mkdir()
+                (target / label / "owned-data").write_text(label)
+
+            owned_snapshot = snapshots / f"faculdade-{older_generation}-20260822T180000Z"
+            owned_snapshot.mkdir()
+            for label in ("home", "root"):
+                (owned_snapshot / label).mkdir()
+            owned_archive = archives / f"archive-faculdade-{older_generation}-{archive_nonce}"
+            owned_archive.mkdir()
+            (owned_archive / "home.btrfs.zst").write_text("vm copy")
+
+            neighbor_snapshot = snapshots / f"faculdade-extra-{older_generation}-20260822T180000Z"
+            neighbor_snapshot.mkdir()
+            neighbor_archive = archives / f"archive-faculdade-extra-{older_generation}-{archive_nonce}"
+            neighbor_archive.mkdir()
+
+            owned_plan = plans / ("a" * 64 + ".json")
+            owned_plan.write_text('{"name":"faculdade"}')
+            neighbor_plan = plans / ("b" * 64 + ".json")
+            neighbor_plan.write_text('{"name":"faculdade-extra"}')
+            backup_set = backups / "maintenance"
+            backup_set.mkdir()
+            owned_backup = backup_set / "faculdade"
+            owned_backup.mkdir()
+            (owned_backup / "shell.qml").write_text("owned")
+            owned_shell_backup = backup_set / "faculdade-shell.qml"
+            owned_shell_backup.write_text("owned")
+            neighbor_backup = backup_set / "faculdade-extra"
+            neighbor_backup.mkdir()
+
+            plan = {
+                "schema": 1,
+                "action": "destroy",
+                "name": "faculdade",
+                "generation": generation,
+                "effects": list(runtime.EFFECTS["destroy"]),
+            }
+
+            def remove_tree(path: Path) -> None:
+                if path.exists():
+                    shutil.rmtree(path)
+
+            with patch.object(runtime, "ENVIRONMENTS", environments), \
+                 patch.object(runtime, "SNAPSHOTS", snapshots), \
+                 patch.object(runtime, "ARCHIVES", archives), \
+                 patch.object(runtime, "BACKUPS", backups), \
+                 patch.object(runtime, "PLANS", plans), \
+                 patch.object(runtime, "require_root"), \
+                 patch.object(runtime, "load_plan", return_value=plan), \
+                 patch.object(runtime, "registration", return_value={
+                     "name": "faculdade", "generation": generation,
+                 }), \
+                 patch.object(runtime, "stop"), \
+                 patch.object(runtime, "append_event"), \
+                 patch.object(runtime, "delete_subvolume_tree", side_effect=remove_tree):
+                runtime.destroy("0" * 64, "DESTROY faculdade")
+
+            self.assertFalse(target.exists())
+            self.assertFalse(owned_snapshot.exists())
+            self.assertFalse(owned_archive.exists())
+            self.assertFalse(owned_plan.exists())
+            self.assertFalse(owned_backup.exists())
+            self.assertFalse(owned_shell_backup.exists())
+            self.assertTrue(neighbor_snapshot.exists())
+            self.assertTrue(neighbor_archive.exists())
+            self.assertTrue(neighbor_plan.exists())
+            self.assertTrue(neighbor_backup.exists())
 
 
 class RuntimeHubRoleBoundaryTests(unittest.TestCase):

@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Small Environment-local actions for the Lenovo laptop keys."""
+
+from __future__ import annotations
+
+import datetime
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+
+
+HYPRCTL = "/usr/bin/hyprctl"
+QUICKSHELL = "/usr/bin/quickshell"
+
+
+def feedback(method: str) -> None:
+    subprocess.run(
+        (QUICKSHELL, "-c", "apx", "ipc", "call", "host", method), check=False,
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL, timeout=3,
+    )
+
+
+def detached(command: list[str]) -> int:
+    subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return 0
+
+
+def screenshot() -> int:
+    grim = shutil.which("grim")
+    if grim is None:
+        feedback("hotkeyScreenshotUnavailable")
+        return 0
+    destination = Path.home() / "Pictures" / "Screenshots"
+    destination.mkdir(mode=0o700, parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    result = subprocess.run(
+        (grim, str(destination / f"Screenshot_{stamp}.png")), check=False
+    )
+    feedback("hotkeyScreenshot" if result.returncode == 0 else "hotkeyFailed")
+    return result.returncode
+
+
+def calculator() -> int:
+    candidates = (
+        "gnome-calculator", "qalculate-gtk", "kcalc", "galculator", "mate-calc",
+    )
+    for candidate in candidates:
+        executable = shutil.which(candidate)
+        if executable is not None:
+            feedback("hotkeyCalculator")
+            return detached([executable])
+    feedback("hotkeyCalculatorMissing")
+    return 0
+
+
+def airplane_status() -> int:
+    # The Host kernel owns the actual Lenovo rfkill toggle. Wait briefly for
+    # that handler, then report the resulting read-only sysfs state.
+    time.sleep(0.35)
+    blocked: list[bool] = []
+    kinds: set[str] = set()
+    for directory in sorted(Path("/sys/class/rfkill").glob("rfkill*")):
+        try:
+            kind = (directory / "type").read_text(encoding="ascii").strip()
+            soft = (directory / "soft").read_text(encoding="ascii").strip()
+        except OSError:
+            continue
+        if kind in {"wlan", "bluetooth"}:
+            kinds.add(kind)
+            blocked.append(soft == "1")
+    if not {"wlan", "bluetooth"}.issubset(kinds):
+        feedback("hotkeyAirplaneUnavailable")
+    elif blocked and all(blocked):
+        feedback("hotkeyAirplaneOn")
+    else:
+        feedback("hotkeyAirplaneOff")
+    return 0
+
+
+def display_cycle() -> int:
+    try:
+        result = subprocess.run(
+            (HYPRCTL, "-j", "monitors", "all"), check=True, capture_output=True,
+            text=True, timeout=3,
+        )
+        monitors = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        feedback("hotkeyFailed")
+        return 0
+
+    internal = next(
+        (item for item in monitors if str(item.get("name", "")).startswith(("eDP-", "LVDS-"))),
+        None,
+    )
+    external = next(
+        (item for item in monitors if item is not internal and item.get("name")), None
+    )
+    if internal is None or external is None:
+        feedback("hotkeyDisplayInternalOnly")
+        return 0
+
+    internal_name = str(internal["name"])
+    external_name = str(external["name"])
+    internal_enabled = not bool(internal.get("disabled", False))
+    external_enabled = not bool(external.get("disabled", False))
+    mirror_source = external.get("mirrorOf")
+    mirrored = mirror_source not in (None, "", "none")
+
+    commands: list[str]
+    if internal_enabled and not external_enabled:
+        # Extend the desktop to the external screen.
+        commands = [f"{external_name},preferred,auto,auto"]
+        feedback_method = "hotkeyDisplayExtended"
+    elif internal_enabled and external_enabled and not mirrored:
+        # Duplicate the internal screen.
+        commands = [f"{external_name},preferred,auto,auto,mirror,{internal_name}"]
+        feedback_method = "hotkeyDisplayMirrored"
+    elif internal_enabled and external_enabled:
+        # External screen only; remove mirroring before disabling its source.
+        commands = [f"{external_name},preferred,auto,auto", f"{internal_name},disable"]
+        feedback_method = "hotkeyDisplayExternal"
+    else:
+        # Laptop screen only.
+        commands = [f"{internal_name},preferred,auto,auto", f"{external_name},disable"]
+        feedback_method = "hotkeyDisplayInternal"
+
+    for monitor_rule in commands:
+        subprocess.run(
+            (HYPRCTL, "keyword", "monitor", monitor_rule), check=False,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, timeout=3,
+        )
+    feedback(feedback_method)
+    return 0
+
+
+def main() -> int:
+    actions = {
+        "airplane-status": airplane_status,
+        "apps": lambda: (feedback("hotkeyApps"), detached(["/usr/bin/rofi", "-show", "drun"]))[1],
+        "calculator": calculator,
+        "display-cycle": display_cycle,
+        "overview": lambda: (feedback("hotkeyOverview"), detached(["/usr/bin/rofi", "-show", "window"]))[1],
+        "screenshot": screenshot,
+    }
+    if len(sys.argv) != 2 or sys.argv[1] not in actions:
+        return 2
+    return actions[sys.argv[1]]()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

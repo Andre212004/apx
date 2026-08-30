@@ -34,6 +34,7 @@ PLANS = STATE / "plans"
 JOURNAL = STATE / "journal" / "operations.jsonl"
 SNAPSHOTS = STATE / "snapshots"
 ARCHIVES = STATE / "archives"
+BACKUPS = STATE / "backups"
 NAME_RE = re.compile(r"[a-z][a-z0-9-]{0,31}")
 ROLES = {"hub", "development", "minimal", "graphical-h0", "graphical-base", "hub-graphical"}
 HEADLESS_START_ROLES = {"hub", "development", "minimal"}
@@ -63,14 +64,16 @@ LOCAL_PACKAGE_MANIFESTS = {
 ENVIRONMENT_SHELL_ASSETS = {
     "hypr/hypridle.conf": "dc34b120018d969d9b873265179ac8013e175252fdb87d0e2fe3846795d2a0e9",
     "hypr/hyprlock.conf": "a3486791844e0e298a1a1a617dc8006ebb288a93f25c0619e57e2c2f72f53c99",
-    "hypr/hyprland.lua": "1b28abea5fdbe75bbc1a36fb778e9c47ce6eb7b16ec1190e6eb16fb9e8d0a24f",
-    "hyprland/hyprland.conf": "4a53246fddda7fa7b12ddf16d0ecaa51e1c25bdb67562f5e6fc12afc51acc351",
+    "hypr/hyprland.lua": "ec60c435f182dfef77a9beaa90359e3a65802f6779867d9a4c955f2381d55cd3",
+    "hyprland/hyprland.conf": "43e023a29d459692c7ff1b6b8178cf483d2c37db5b7f20ae9f3406a4771c55c8",
     "local/bin/apx-detached-launch": "40970a9ed235a6799913211dc135c66222ee55e15d5d38e5cfe5d2feafd785ef",
-    "local/bin/apx-host-console-open": "25ad55f70cf212defb86b2d4869378c49a39e8fb0be7588a47403547560846a2",
+    "local/bin/apx-host-console-open": "ed33a55eb6ac1eb1682989efd41ad26c2b12549f0dcfd056252a4f239d94b229",
+    "local/bin/apx-host-console-terminal": "187025f24fda099acc85a7b82b0e0cacfd979f86feca77219911e661e7ec963e",
+    "local/bin/apx-laptop-action-v1": "0edd10c264318719007c59831c097ec9c8e3fa8b3068fb7494f06523e617c7f7",
     "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
-    "local/bin/apx-shell-v1": "fb11d72639b6784bfeb6eb4e0004c20ecf7d88b1e22ef0655092a69bdbc25710",
+    "local/bin/apx-shell-v1": "f5f8e6aeb729ea92c1561c6fe90c00e4692d17272e469f06ed7f7fbbccf5aca4",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "3b2b56ac7d4ba400b8f76be67dc4b6bc136b0d9fb8e370a34ff5f9d113390637",
+    "quickshell/apx/shell.qml": "cca01ed15e4c01da158f1a703ffc9d92f2bd64331baf11fce74ceb6cd734a56e",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 RELEASE_IDS = {
@@ -100,7 +103,10 @@ LOCAL_ADMIN_MARKER = "/etc/apx/local-admin-v1"
 NETWORK_ADAPTER = "/usr/lib/apx/apx-environment-network-v1.py"
 EFFECTS = {
     "create": ("root", "home", "configure", "publish"),
-    "destroy": ("stop", "unpublish", "remove-home", "remove-root"),
+    "destroy": (
+        "stop", "purge-snapshots", "purge-archives", "purge-backups", "remove-home",
+        "remove-root", "purge-metadata", "unpublish", "purge-plans",
+    ),
 }
 
 
@@ -638,7 +644,7 @@ def configure_environment_features(root: Path, plan: dict[str, object]) -> None:
                     os.close(descriptor)
         run(["pacman", "--root", str(root), "--dbpath", str(root / "var/lib/pacman"),
              "--cachedir", "/var/cache/pacman/pkg", "--config", str(root / "etc/pacman.conf"),
-             "--disable-sandbox", "-Sy", "--needed", "--noconfirm", *packages])
+             "--disable-sandbox", "-Syu", "--needed", "--noconfirm", *packages])
     for package in local_packages_for(modules):
         artifact = validated_local_package_artifact(package)
         run(["pacman", "--root", str(root), "--dbpath", str(root / "var/lib/pacman"),
@@ -1007,20 +1013,41 @@ def destroy(plan_identity: str, approval: str) -> None:
     record = registration(name)
     if plan.get("generation") != record.get("generation"):
         raise Refusal("destruction plan generation is stale")
+    if plan.get("effects") != list(EFFECTS["destroy"]):
+        raise Refusal("destruction plan effects differ from complete purge policy")
+    target = environment_dir(name)
+    metadata = target.lstat()
+    if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode) \
+            or metadata.st_uid != 0 or metadata.st_gid != 0 \
+            or stat.S_IMODE(metadata.st_mode) != 0o700:
+        raise Refusal("Environment container is not a trusted root-owned directory")
     operation = str(uuid.uuid4())
     append_event(operation, "destroy", "operation", "started", name=name, plan=plan_identity)
     stop(name)
-    record_path = registration_path(name)
-    append_event(operation, "destroy", "unpublish", "started", name=name)
-    record_path.unlink()
-    append_event(operation, "destroy", "unpublish", "complete", name=name)
-    target = environment_dir(name)
+    for effect, count in purge_environment_copies(name):
+        append_event(operation, "destroy", effect, "complete", name=name, removed=count)
+    removed_backups = purge_environment_backups(name)
+    append_event(
+        operation, "destroy", "purge-backups", "complete", name=name,
+        removed=removed_backups,
+    )
     for label in ("home", "root"):
         path = target / label
         append_event(operation, "destroy", f"remove-{label}", "started", name=name)
         delete_subvolume_tree(path)
         append_event(operation, "destroy", f"remove-{label}", "complete", name=name)
-    target.rmdir()
+    record_path = registration_path(name)
+    append_event(operation, "destroy", "unpublish", "started", name=name)
+    record_path.unlink()
+    append_event(operation, "destroy", "unpublish", "complete", name=name)
+    append_event(operation, "destroy", "purge-metadata", "started", name=name)
+    shutil.rmtree(target)
+    append_event(operation, "destroy", "purge-metadata", "complete", name=name)
+    removed_plans = purge_environment_plans(name)
+    append_event(
+        operation, "destroy", "purge-plans", "complete", name=name,
+        removed=removed_plans,
+    )
     append_event(operation, "destroy", "operation", "complete", name=name)
 
 
@@ -1028,6 +1055,87 @@ def delete_subvolume_tree(path: Path) -> None:
     if not path.exists():
         return
     run(["btrfs", "subvolume", "delete", "-R", str(path)])
+
+
+UUID_COMPONENT = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+
+
+def _remove_exact_copy(path: Path, *, snapshot: bool) -> None:
+    metadata = path.lstat()
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        path.unlink()
+        return
+    if snapshot:
+        for label in ("home", "root"):
+            delete_subvolume_tree(path / label)
+    shutil.rmtree(path)
+
+
+def purge_environment_copies(name: str) -> tuple[tuple[str, int], ...]:
+    """Delete every APX snapshot/archive generation for one logical name."""
+    validate_name(name)
+    snapshot_name = re.compile(
+        rf"{re.escape(name)}-{UUID_COMPONENT}-[0-9]{{8}}T[0-9]{{6}}Z"
+    )
+    archive_name = re.compile(
+        rf"archive-{re.escape(name)}-{UUID_COMPONENT}-{UUID_COMPONENT}"
+    )
+    counts: list[tuple[str, int]] = []
+    for parent, pattern, effect, is_snapshot in (
+        (SNAPSHOTS, snapshot_name, "purge-snapshots", True),
+        (ARCHIVES, archive_name, "purge-archives", False),
+    ):
+        removed = 0
+        if parent.exists():
+            for path in sorted(parent.iterdir()):
+                if pattern.fullmatch(path.name):
+                    _remove_exact_copy(path, snapshot=is_snapshot)
+                    removed += 1
+        counts.append((effect, removed))
+    return tuple(counts)
+
+
+def purge_environment_plans(name: str) -> int:
+    """Remove stored operation plans that identify the deleted Environment."""
+    validate_name(name)
+    removed = 0
+    if not PLANS.exists():
+        return removed
+    for path in sorted(PLANS.glob("*.json")):
+        if re.fullmatch(r"[0-9a-f]{64}\.json", path.name) is None:
+            continue
+        try:
+            value = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(value, dict) and value.get("name") == name:
+            path.unlink()
+            removed += 1
+    return removed
+
+
+def purge_environment_backups(name: str) -> int:
+    """Remove legacy Host maintenance copies explicitly named for the target."""
+    validate_name(name)
+    if not BACKUPS.exists():
+        return 0
+    exact_names = {name, f"{name}-shell.qml"}
+    candidates = sorted(
+        (path for path in BACKUPS.rglob("*") if path.name in exact_names),
+        key=lambda path: len(path.parts), reverse=True,
+    )
+    removed = 0
+    for path in candidates:
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+        removed += 1
+    return removed
 
 
 def snapshot(name: str) -> str:

@@ -10,10 +10,10 @@ from typing import Sequence
 
 
 CLEANUP_POLICY = "complete-cleanup-v1"
-SCOPES = ("environment-only", "complete-purge")
+SCOPES = ("complete-purge",)
 RESOURCE_KINDS = (
     "root", "home", "runtime", "account", "registration", "qgroup",
-    "snapshot", "archive", "network",
+    "snapshot", "archive", "backup", "capability", "plan", "metadata", "network",
 )
 DISPOSITIONS = ("delete", "preserve")
 OBSERVED_STATES = (
@@ -148,10 +148,6 @@ def validate_cleanup_plan(plan: CleanupPlan) -> None:
         ids.append(resource.resource_id)
         if plan.scope == "complete-purge" and resource.disposition != "delete":
             raise CleanupError("complete purge cannot preserve listed Environment resources")
-        if plan.scope == "environment-only":
-            expected = "preserve" if resource.kind in {"snapshot", "archive"} else "delete"
-            if resource.disposition != expected:
-                raise CleanupError("environment-only disposition conflicts with policy")
     if ids != sorted(ids) or len(ids) != len(set(ids)):
         raise CleanupError("cleanup resources are duplicate or non-canonical")
     required = {"root", "home", "account", "registration", "qgroup"}

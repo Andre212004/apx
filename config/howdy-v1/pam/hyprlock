@@ -1,0 +1,5 @@
+# PAM configuration file for hyprlock
+# Face recognition is sufficient; the normal login stack remains the fallback.
+
+auth            sufficient      pam_howdy.so
+auth            include         login

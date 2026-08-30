@@ -42,12 +42,38 @@ class LegionHardwareProfileSourceTests(unittest.TestCase):
         source = (ROOT / "scripts/physical-pilot/apx-legion-brightness-keys-v1.py").read_text()
         for required in (
             "ITE Tech. Inc. ITE Device(8910) Keyboard",
-            "AT Raw Set 2 keyboard", "KEY_F5 = 63", "KEY_F6 = 64",
+            "AT Raw Set 2 keyboard", "KEY_F1 = 59", "KEY_F2 = 60", "KEY_F3 = 61",
+            "KEY_F4 = 62", "KEY_F5 = 63", "KEY_F6 = 64",
+            "KEY_F7 = 65", "KEY_F8 = 66", "KEY_F9 = 67", "KEY_F10 = 68",
+            "KEY_F11 = 87", "KEY_F12 = 88", "KEY_PRINT = 99",
+            "KEY_MUTE = 113", "KEY_VOLUMEDOWN = 114", "KEY_VOLUMEUP = 115",
+            "KEY_MICMUTE = 248",
             "KEY_BRIGHTNESSDOWN = 224", "KEY_BRIGHTNESSUP = 225",
             'call_shell("brightnessDown")', 'call_shell("brightnessUp")',
+            'name == ITE_NAME and code in (KEY_F4, KEY_MICMUTE)', 'launch_action("display-cycle")',
+            'call_shell("volumeMute")',
+            'call_shell("volumeDown")', 'call_shell("volumeUp")',
+            'launch_action("airplane-status")', 'launch_action("overview")',
+            'launch_action("calculator")', 'name == AT_NAME and code == KEY_PRINT',
         ):
             self.assertIn(required, source)
         self.assertNotIn("/dev/uinput", source)
+        self.assertNotIn("EVIOCGRAB", source)
+
+    def test_hotkey_osd_covers_brightness_audio_radio_and_laptop_actions(self):
+        source = (ROOT / "config/environment-shell-v1/quickshell/apx/shell.qml").read_text()
+        for required in (
+            "id: hotkeyOsdWindow", "property real hotkeyOsdOpacity", "showHotkeyOsd(",
+            '"Brilho do ecrã"', '"Modo de avião"', '"Volume"', '"Microfone"',
+            "hotkeyTouchpadOn", "hotkeyDisplayExtended", "hotkeyCalculatorMissing",
+            "hotkeyScreenshot", "hotkeyScreenshotUnavailable", "hotkeyOverview",
+            "hotkeyAirplaneOn", "hotkeyAirplaneOff", "hotkeyTouchpadToggled",
+            "id: radioStatusProcess",
+            'for directory in /sys/class/rfkill/rfkill*',
+            'printf \'{\\"airplane_mode\\":%s}\\\\n\'',
+        ):
+            self.assertIn(required, source)
+        self.assertIn('color: "#dc10181e"', source)
 
     def test_module_rebuild_and_recovery_are_documented(self):
         hook = (ROOT / "config/pacman-hooks/95-apx-legion-gpu-profile-v1.hook").read_text()

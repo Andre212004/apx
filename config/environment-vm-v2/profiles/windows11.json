@@ -1,0 +1,1 @@
+{"directory":"Windows11","disk":"Windows11.raw","disk_gib":160,"installer":"Windows11.iso","kind":"windows11","label":"Windows 11","legacy_disk":"Windows11.qcow2","native_capable":true,"network":"e1000e","rtc":"localtime","schema":2,"secure_boot":true,"tools_drive":true,"tpm":true}

@@ -1,0 +1,41 @@
+#!/usr/bin/bash
+
+build() {
+    add_module vfat
+    map add_binary \
+        /usr/bin/blockdev \
+        /usr/bin/btrfs \
+        /usr/bin/cat \
+        /usr/bin/cryptsetup \
+        /usr/bin/mkdir \
+        /usr/bin/mountpoint \
+        /usr/bin/sfdisk \
+        /usr/bin/sleep \
+        /usr/bin/sync \
+        /usr/bin/systemctl \
+        /usr/bin/umount
+    add_file \
+        /root/apx-host-development-mode-v1/apx/scripts/physical-pilot/apx-native-windows-probe-initrd-v1.sh \
+        /usr/bin/apx-native-windows-probe-initrd-v1 0755
+    add_file \
+        /root/apx-host-development-mode-v1/apx/scripts/physical-pilot/apx-native-windows-maintenance-initrd-v1.sh \
+        /usr/bin/apx-native-windows-maintenance-initrd-v1 0755
+    add_file \
+        /root/apx-host-development-mode-v1/apx/config/systemd/initrd/apx-native-windows-probe-v1.service \
+        /usr/lib/systemd/system/apx-native-windows-probe-v1.service 0644
+    add_file \
+        /root/apx-host-development-mode-v1/apx/config/systemd/initrd/apx-native-windows-reserve-v1.service \
+        /usr/lib/systemd/system/apx-native-windows-reserve-v1.service 0644
+    add_symlink \
+        /usr/lib/systemd/system/initrd-root-fs.target.wants/apx-native-windows-probe-v1.service \
+        ../apx-native-windows-probe-v1.service
+    add_symlink \
+        /usr/lib/systemd/system/initrd-root-fs.target.wants/apx-native-windows-reserve-v1.service \
+        ../apx-native-windows-reserve-v1.service
+}
+
+help() {
+    cat <<'EOF'
+Adds the exact APX native-Windows one-shot maintenance executor.
+EOF
+}

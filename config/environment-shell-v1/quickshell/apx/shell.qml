@@ -21,13 +21,20 @@ ShellRoot {
     property bool environmentSwitchPending: false
     property int environmentSwitchProgress: 0
     property var environmentCatalog: []
+    property var environmentStorageState: ({ available_bytes: 0, total_bytes: 0, sizes: ({}) })
     property string selectedEnvironmentName: ""
     property string selectedEnvironmentGeneration: ""
     property bool environmentCreateOpen: false
+    property bool environmentEditOpen: false
     property bool environmentDeleteConfirm: false
+    property bool nativeRecoveryDiscardConfirm: false
     property int environmentDeleteFocusIndex: 0
     property string environmentDraftName: ""
     property string environmentDraftDescription: ""
+    property string environmentEditTitle: ""
+    property string environmentEditDescription: ""
+    property string environmentSystemKind: "arch"
+    property int environmentNativeWindowsSizeGib: 120
     property string environmentDesktopPreset: "intermediate"
     property string environmentFeatureDrawer: ""
     property string environmentFeatureInfo: ""
@@ -63,7 +70,9 @@ ShellRoot {
     property bool environmentKeyboardFocus: false
     property int environmentFocusIndex: -1
     property int environmentCreateFocusIndex: -1
+    property int environmentEditFocusIndex: -1
     property bool environmentManagementBusy: false
+    property bool environmentMetadataBusy: false
     property var environmentManagementState: ({ phase: "idle", progress: 0, message: "" })
     property int environmentProgressReadFailures: 0
     property bool identityReady: false
@@ -76,14 +85,17 @@ ShellRoot {
     readonly property bool isHub: identityReady
                                   ? environmentIdentity.role === "hub"
                                   : sessionHubProof
-    readonly property string environmentClient: isHub
-        ? "/home/.apx-host-bridge/environment-switch-client-v1.py"
-        : "/run/apx/environment-switch-client-v1.py"
+    // Every graphical Environment receives the current Host-installed client
+    // as a read-only /run bind. Using one path avoids a stale persistent Hub
+    // bridge rejecting newly added creation fields such as --system.
+    readonly property string environmentClient: "/run/apx/environment-switch-client-v1.py"
     readonly property string environmentLabel: isHub ? "HUB" : String(environmentIdentity.display_name || environmentIdentity.name || "ENVIRONMENT").toUpperCase()
     readonly property int environmentPopupHeight: !isHub ? 214
         : (environmentCreateOpen ? 540 + (environmentManagementBusy ? 42 : 0)
+           : (environmentEditOpen ? 276
            : 216 + Math.max(1, Math.min(5, environmentCatalog.length)) * 66
-             + (environmentDeleteConfirm ? 64 : 0) + (environmentManagementBusy ? 42 : 0))
+             + (environmentDeleteConfirm ? 64 : 0) + (environmentManagementBusy ? 42 : 0)
+             + (nativeWindowsRecoveryAvailable() ? 100 : 0)))
     property string popupKind: ""
     property Item popupTarget: null
     property real popupReveal: 1
@@ -125,6 +137,14 @@ ShellRoot {
     property int keyboardBrightness: 0
     property int keyboardBrightnessMax: 2
     property string hardwareControlError: ""
+    property bool hotkeyOsdVisible: false
+    property real hotkeyOsdOpacity: 0
+    property string hotkeyOsdIcon: ""
+    property string hotkeyOsdTitle: ""
+    property string hotkeyOsdDetail: ""
+    property int hotkeyOsdProgress: -1
+    property bool airplaneModeKnown: false
+    property bool airplaneMode: false
     property bool powerConfirmOpen: false
     property bool powerBusy: false
     property string powerAction: ""
@@ -188,7 +208,7 @@ ShellRoot {
     property int menuBodySize: 10
     property int menuSmallSize: 9
     property int menuMetaSize: 8
-    readonly property int environmentCreateModuleFocusBase: 6 + environmentModuleGroups.length
+    readonly property int environmentCreateModuleFocusBase: 9 + environmentModuleGroups.length
     readonly property int environmentCreateSubmitFocusIndex: environmentCreateModuleFocusBase + environmentModuleCatalog.length
     // Hyprland renders the display at 150%. Present the control centre at a
     // 125% physical compromise: readable on the internal panel while keeping
@@ -820,6 +840,7 @@ ShellRoot {
         controlsMicrophoneOpen = false
         cancelWifiPassword()
         environmentCreateOpen = false
+        environmentEditOpen = false
         environmentDeleteConfirm = false
         environmentKeyboardFocus = false
         calendarFocusAction = ({ kind: "", key: "" })
@@ -857,11 +878,13 @@ ShellRoot {
             modelStoreStatusProcess.running = true
         if (kind === "environments" && root.isHub) {
             root.environmentCreateOpen = false
+            root.environmentEditOpen = false
             root.environmentDeleteConfirm = false
             root.selectedEnvironmentName = ""
             root.selectedEnvironmentGeneration = ""
             root.environmentFocusIndex = -1
             if (!environmentCatalogProcess.running) environmentCatalogProcess.running = true
+            if (!environmentStorageProcess.running) environmentStorageProcess.running = true
             if (!environmentManagementStatusProcess.running) environmentManagementStatusProcess.running = true
             focusEnvironmentMenuAfterOpen()
         }
@@ -902,8 +925,59 @@ ShellRoot {
         return String(item.description || "Sem descrição")
     }
 
+    function environmentStorageLabel(bytes, decimals) {
+        var value = Number(bytes || 0) / 1073741824
+        if (!(value > 0)) return ""
+        var rounded = decimals ? Math.round(value * 10) / 10 : Math.round(value)
+        return String(rounded).replace(".", ",") + " GiB"
+    }
+
+    function environmentSizeSuffix(item) {
+        if (!item || !environmentStorageState.sizes) return ""
+        var bytes = Number(environmentStorageState.sizes[item.name] || 0)
+        return bytes > 0 ? "  ·  " + environmentStorageLabel(bytes, bytes < 10 * 1073741824) : ""
+    }
+
+    function environmentStorageSummary() {
+        var available = Number(environmentStorageState.available_bytes || 0)
+        var total = Number(environmentStorageState.total_bytes || 0)
+        return total > 0 ? "LIVRE " + environmentStorageLabel(available, false)
+                         + " / " + environmentStorageLabel(total, false) : "A MEDIR…"
+    }
+
+    function nativeWindowsExists() {
+        for (var index = 0; index < environmentCatalog.length; ++index)
+            if (environmentIsNative(environmentCatalog[index])) return true
+        return false
+    }
+
+    function nativeWindowsRecoveryAvailable() {
+        return environmentManagementState.native_recovery === true
+            && String(environmentManagementState.pending_generation || "").length === 36
+    }
+
+    function recoverNativeWindows(action) {
+        if (!nativeWindowsRecoveryAvailable() || environmentActionProcess.running) return
+        var mode = action === "discard" ? "native-discard" : "native-retry"
+        environmentSwitchError = ""
+        nativeRecoveryDiscardConfirm = false
+        environmentManagementBusy = true
+        environmentActionProcess.command = [root.environmentClient, mode,
+                                            "--target", "windows",
+                                            "--generation", String(environmentManagementState.pending_generation)]
+        environmentActionProcess.running = true
+    }
+
+    function environmentIsOpenable(item) {
+        return !!item && (item.state === "stopped" || item.state === "ready")
+    }
+
+    function environmentIsNative(item) {
+        return !!item && item.environment_kind === "native-boot"
+    }
+
     function selectEnvironment(item) {
-        if (!item || item.state !== "stopped" || environmentManagementBusy) return
+        if (!environmentIsOpenable(item) || environmentManagementBusy || environmentMetadataBusy) return
         selectedEnvironmentName = item.name
         selectedEnvironmentGeneration = item.generation
         environmentDeleteConfirm = false
@@ -914,58 +988,68 @@ ShellRoot {
         for (var i = 0; i < environmentCatalog.length; ++i)
             if (environmentCatalog[i].name === selectedEnvironmentName) selectedIndex = i
         if (selectedIndex >= 0) environmentFocusIndex = selectedIndex
-        else if (environmentFocusIndex > environmentCatalog.length + 1) environmentFocusIndex = -1
+        else if (environmentFocusIndex > environmentCatalog.length + 2) environmentFocusIndex = -1
     }
 
     function moveEnvironmentFocus(direction) {
-        if (environmentManagementBusy) return
+        if (environmentManagementBusy || environmentMetadataBusy) return
         var rows = environmentCatalog.length
         var indices = []
         for (var index = 0; index < rows; ++index)
-            if (environmentCatalog[index].state === "stopped") indices.push(index)
+            if (environmentIsOpenable(environmentCatalog[index])) indices.push(index)
         indices.push(rows)
-        if (selectedEnvironmentName.length) indices.push(rows + 1)
+        if (selectedEnvironmentName.length) {
+            indices.push(rows + 1)
+            indices.push(rows + 2)
+        }
         var position = indices.indexOf(environmentFocusIndex)
         if (position < 0) environmentFocusIndex = direction > 0 ? indices[0] : indices[indices.length - 1]
         else environmentFocusIndex = indices[(position + direction + indices.length) % indices.length]
         environmentDeleteConfirm = false
+        environmentEditOpen = false
     }
 
     function moveEnvironmentActionFocus(direction) {
         var rows = environmentCatalog.length
         if (environmentFocusIndex === rows && direction > 0) environmentFocusIndex = rows + 1
-        else if (environmentFocusIndex === rows + 1 && direction < 0) environmentFocusIndex = rows
+        else if (environmentFocusIndex === rows + 1)
+            environmentFocusIndex = direction > 0 ? rows + 2 : rows
+        else if (environmentFocusIndex === rows + 2 && direction < 0) environmentFocusIndex = rows + 1
         environmentDeleteConfirm = false
     }
 
     function activateEnvironmentFocus() {
-        if (environmentManagementBusy) return
+        if (environmentManagementBusy || environmentMetadataBusy) return
         if (environmentFocusIndex < environmentCatalog.length) {
             var item = environmentCatalog[environmentFocusIndex]
-            if (!item || item.state !== "stopped") return
+            if (!environmentIsOpenable(item)) return
             if (selectedEnvironmentName === item.name) openSelectedEnvironment()
             else selectEnvironment(item)
             return
         }
         if (environmentFocusIndex === environmentCatalog.length) beginEnvironmentCreate()
+        else if (environmentFocusIndex === environmentCatalog.length + 1) beginEnvironmentEdit()
         else requestEnvironmentDelete()
     }
 
     function deleteFocusedEnvironment() {
         if (environmentFocusIndex < environmentCatalog.length) {
             var item = environmentCatalog[environmentFocusIndex]
-            if (!item || item.state !== "stopped") return
+            if (!environmentIsOpenable(item)) return
             if (selectedEnvironmentName !== item.name) selectEnvironment(item)
         }
         requestEnvironmentDelete()
     }
 
     function beginEnvironmentCreate() {
+        if (environmentManagementBusy || environmentMetadataBusy) return
         environmentCreateOpen = true
+        environmentEditOpen = false
         environmentDeleteConfirm = false
         environmentSwitchError = ""
         environmentDraftName = ""
         environmentDraftDescription = ""
+        environmentSystemKind = "arch"
         applyEnvironmentPreset("intermediate")
         environmentFeatureDrawer = ""
         environmentFeatureInfo = ""
@@ -975,7 +1059,7 @@ ShellRoot {
     }
 
     function requestEnvironmentDelete() {
-        if (!selectedEnvironmentName.length || environmentManagementBusy) return
+        if (!selectedEnvironmentName.length || environmentManagementBusy || environmentMetadataBusy) return
         if (environmentDeleteConfirm) destroySelectedEnvironment()
         else {
             environmentDeleteFocusIndex = 0
@@ -1001,6 +1085,69 @@ ShellRoot {
         Qt.callLater(function() { environmentMenu.forceActiveFocus() })
     }
 
+    function beginEnvironmentEdit() {
+        var selected = environmentSelection()
+        if (!selected || environmentManagementBusy || environmentMetadataBusy) return
+        environmentCreateOpen = false
+        environmentDeleteConfirm = false
+        environmentEditOpen = true
+        environmentEditTitle = String(selected.display_name || selected.name)
+        environmentEditDescription = String(selected.description || "")
+        environmentEditFocusIndex = 1
+        environmentSwitchError = ""
+        Qt.callLater(function() { environmentEditTitleInput.forceActiveFocus() })
+    }
+
+    function cancelEnvironmentEdit() {
+        if (environmentMetadataBusy) return
+        environmentEditOpen = false
+        environmentEditTitle = ""
+        environmentEditDescription = ""
+        environmentEditFocusIndex = -1
+        environmentSwitchError = ""
+        environmentKeyboardFocus = true
+        resetEnvironmentFocus()
+        Qt.callLater(function() { environmentMenu.forceActiveFocus() })
+    }
+
+    function saveEnvironmentMetadata() {
+        var title = environmentEditTitle.trim()
+        var description = environmentEditDescription.trim()
+        if (!selectedEnvironmentName.length || !selectedEnvironmentGeneration.length
+                || environmentMetadataBusy || environmentManagementBusy) return
+        if (!title.length) {
+            environmentSwitchError = "O título não pode ficar vazio."
+            environmentEditFocusIndex = 1
+            environmentEditTitleInput.forceActiveFocus()
+            return
+        }
+        environmentSwitchError = ""
+        environmentMetadataBusy = true
+        environmentMetadataProcess.command = [root.environmentClient, "edit",
+                                              "--target", selectedEnvironmentName,
+                                              "--generation", selectedEnvironmentGeneration,
+                                              "--display-name", title,
+                                              "--description", description]
+        environmentMetadataProcess.running = true
+    }
+
+    function handleEnvironmentEditKey(event) {
+        if (event.key === Qt.Key_Escape) cancelEnvironmentEdit()
+        else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab)
+            environmentEditFocusIndex = (environmentEditFocusIndex + 3) % 4
+        else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab)
+            environmentEditFocusIndex = (environmentEditFocusIndex + 1) % 4
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (environmentEditFocusIndex === 0) cancelEnvironmentEdit()
+            else if (environmentEditFocusIndex === 1) environmentEditTitleInput.forceActiveFocus()
+            else if (environmentEditFocusIndex === 2) environmentEditDescriptionInput.forceActiveFocus()
+            else saveEnvironmentMetadata()
+        } else return
+        if (environmentEditFocusIndex === 0 || environmentEditFocusIndex === 3)
+            environmentMenu.forceActiveFocus()
+        event.accepted = true
+    }
+
     function environmentModuleIndex(key) {
         for (var index = 0; index < environmentModuleCatalog.length; ++index)
             if (environmentModuleCatalog[index].key === key) return index
@@ -1008,9 +1155,15 @@ ShellRoot {
     }
 
     function environmentCreateVisibleFocusIndices() {
-        var indices = [0, 1, 2, 3, 4, 5]
+        var indices = [0, 1, 2, 3, 4]
+        if (environmentSystemKind !== "arch") {
+            indices.push(6, 7, 8)
+            indices.push(environmentCreateSubmitFocusIndex)
+            return indices
+        }
+        indices.push(6, 7, 8)
         environmentModuleGroups.forEach(function(group, groupIndex) {
-            indices.push(6 + groupIndex)
+            indices.push(9 + groupIndex)
             if (environmentFeatureDrawer === group.key) group.modules.forEach(function(key) {
                 var moduleIndex = environmentModuleIndex(key)
                 if (moduleIndex >= 0) indices.push(environmentCreateModuleFocusBase + moduleIndex)
@@ -1031,9 +1184,11 @@ ShellRoot {
     function moveEnvironmentCreateHorizontal(direction) {
         var focusIndex = environmentCreateFocusIndex
         if (focusIndex < 0) {
-            environmentCreateFocusIndex = direction > 0 ? 3 : 5
-        } else if (focusIndex >= 3 && focusIndex <= 5) {
-            environmentCreateFocusIndex = 3 + ((focusIndex - 3 + direction + 3) % 3)
+            environmentCreateFocusIndex = direction > 0 ? 3 : 4
+        } else if (focusIndex >= 3 && focusIndex <= 4) {
+            environmentCreateFocusIndex = 3 + ((focusIndex - 3 + direction + 2) % 2)
+        } else if (focusIndex >= 6 && focusIndex <= 8) {
+            environmentCreateFocusIndex = 6 + ((focusIndex - 6 + direction + 3) % 3)
         } else if (focusIndex >= environmentCreateModuleFocusBase && focusIndex < environmentCreateSubmitFocusIndex) {
             var moduleIndex = focusIndex - environmentCreateModuleFocusBase
             for (var groupIndex = 0; groupIndex < environmentModuleGroups.length; ++groupIndex) {
@@ -1056,10 +1211,12 @@ ShellRoot {
         if (focusIndex === 0) environmentCreateFocusIndex = direction > 0 ? 1 : environmentCreateSubmitFocusIndex
         else if (focusIndex === 1) environmentCreateFocusIndex = direction > 0 ? 2 : 0
         else if (focusIndex === 2) environmentCreateFocusIndex = direction > 0 ? 4 : 1
-        else if (focusIndex >= 3 && focusIndex <= 5)
-            environmentCreateFocusIndex = direction > 0 ? 6 : 2
-        else if (focusIndex >= 6 && focusIndex <= 9) {
-            var groupIndex = focusIndex - 6
+        else if (focusIndex >= 3 && focusIndex <= 4)
+            environmentCreateFocusIndex = direction > 0 ? 7 : 2
+        else if (focusIndex >= 6 && focusIndex <= 8)
+            environmentCreateFocusIndex = direction > 0 ? (environmentSystemKind === "arch" ? 9 : environmentCreateSubmitFocusIndex) : 4
+        else if (focusIndex >= 9 && focusIndex <= 13) {
+            var groupIndex = focusIndex - 9
             var group = environmentModuleGroups[groupIndex]
             if (direction > 0 && environmentFeatureDrawer === group.key && group.modules.length)
                 environmentCreateFocusIndex = environmentCreateModuleFocusBase + environmentModuleIndex(group.modules[0])
@@ -1074,11 +1231,11 @@ ShellRoot {
                 var verticalNeighbour = position + direction * 2
                 if (verticalNeighbour >= 0 && verticalNeighbour < groupModules.length)
                     environmentCreateFocusIndex = environmentCreateModuleFocusBase + environmentModuleIndex(groupModules[verticalNeighbour])
-                else if (direction < 0) environmentCreateFocusIndex = 6 + index
-                else environmentCreateFocusIndex = index < environmentModuleGroups.length - 1 ? 7 + index : environmentCreateSubmitFocusIndex
+                else if (direction < 0) environmentCreateFocusIndex = 9 + index
+                else environmentCreateFocusIndex = index < environmentModuleGroups.length - 1 ? 10 + index : environmentCreateSubmitFocusIndex
                 break
             }
-        } else if (focusIndex === environmentCreateSubmitFocusIndex) environmentCreateFocusIndex = direction > 0 ? 0 : environmentModuleGroups.length + 5
+        } else if (focusIndex === environmentCreateSubmitFocusIndex) environmentCreateFocusIndex = direction > 0 ? 0 : (environmentSystemKind === "arch" ? environmentModuleGroups.length + 8 : 7)
         environmentMenu.forceActiveFocus()
     }
 
@@ -1088,12 +1245,23 @@ ShellRoot {
         if (focusIndex === 0) { cancelEnvironmentCreate(); return }
         if (focusIndex === 1) { environmentNameInput.forceActiveFocus(); return }
         if (focusIndex === 2) { environmentDescriptionInput.forceActiveFocus(); return }
-        if (focusIndex >= 3 && focusIndex <= 5) {
-            applyEnvironmentPreset(["basic", "intermediate", "complete"][focusIndex - 3])
+        if (focusIndex >= 3 && focusIndex <= 4) {
+            if (focusIndex === 4 && nativeWindowsExists()) {
+                environmentSwitchError = "Já existe um Windows nativo. A versão atual admite uma instalação física."
+                return
+            }
+            environmentSystemKind = ["arch", "windows-native"][focusIndex - 3]
+            if (environmentSystemKind === "windows-native") environmentDraftName = "windows"
+            environmentFeatureDrawer = ""
             return
         }
-        if (focusIndex >= 6 && focusIndex <= 9) {
-            var group = environmentModuleGroups[focusIndex - 6]
+        if (focusIndex >= 6 && focusIndex <= 8) {
+            if (environmentSystemKind === "arch") applyEnvironmentPreset(["basic", "intermediate", "complete"][focusIndex - 6])
+            else environmentNativeWindowsSizeGib = [80, 120, 160][focusIndex - 6]
+            return
+        }
+        if (focusIndex >= 9 && focusIndex <= 13) {
+            var group = environmentModuleGroups[focusIndex - 9]
             environmentFeatureDrawer = environmentFeatureDrawer === group.key ? "" : group.key
             environmentFeatureInfo = ""
             return
@@ -1181,11 +1349,16 @@ ShellRoot {
     }
 
     function openSelectedEnvironment() {
-        if (!selectedEnvironmentName.length || environmentSwitchPending || environmentManagementBusy) return
+        if (!selectedEnvironmentName.length || environmentSwitchPending || environmentManagementBusy
+                || environmentMetadataBusy) return
+        var selected = environmentSelection()
+        if (!environmentIsOpenable(selected)) return
         environmentSwitchError = ""
         environmentSwitchProgress = 8
         environmentSwitchPending = true
-        environmentSwitchProcess.command = [root.environmentClient, "open", "--target", selectedEnvironmentName]
+        environmentSwitchProcess.command = [root.environmentClient,
+                                            environmentIsNative(selected) ? "native-open" : "open",
+                                            "--target", selectedEnvironmentName]
         environmentSwitchProcess.running = true
     }
 
@@ -1207,7 +1380,11 @@ ShellRoot {
         var visibleName = rawName === undefined ? environmentDraftName : String(rawName)
         var visibleDescription = rawDescription === undefined
             ? environmentDraftDescription : String(rawDescription)
-        var name = visibleName.trim().toLowerCase()
+        var name = environmentSystemKind === "windows-native" ? "windows" : visibleName.trim().toLowerCase()
+        if (environmentSystemKind === "windows-native" && nativeWindowsExists()) {
+            environmentSwitchError = "Já existe um Windows nativo. A versão atual admite uma instalação física."
+            return
+        }
         try { name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") }
         catch (error) {}
         name = name.replace(/[^a-z0-9]+/g, "-")
@@ -1229,15 +1406,26 @@ ShellRoot {
         environmentFeatureDrawer = ""
         environmentFeatureInfo = ""
         environmentCreateFocusIndex = -1
+        var requestedPreset = environmentSystemKind === "arch"
+            ? (environmentDesktopPreset === "custom" ? "intermediate" : environmentDesktopPreset)
+            : "basic"
+        var requestedModules = environmentSystemKind === "arch"
+            ? selectedEnvironmentModuleKeys()
+            : ["system"]
         environmentActionProcess.command = [root.environmentClient, "create", "--target", name,
                                             "--description", visibleDescription.trim(),
-                                            "--preset", environmentDesktopPreset === "custom" ? "intermediate" : environmentDesktopPreset,
-                                            "--modules", selectedEnvironmentModuleKeys().join(",")]
+                                            "--preset", requestedPreset,
+                                            "--modules", requestedModules.join(","),
+                                            "--system", environmentSystemKind]
+        if (environmentSystemKind === "windows-native")
+            environmentActionProcess.command.push("--size-gib", String(environmentNativeWindowsSizeGib))
         environmentActionProcess.running = true
     }
 
     function destroySelectedEnvironment() {
-        if (!selectedEnvironmentName.length || !selectedEnvironmentGeneration.length || environmentManagementBusy) return
+        if (!selectedEnvironmentName.length || !selectedEnvironmentGeneration.length || environmentManagementBusy
+                || environmentMetadataBusy
+                ) return
         environmentSwitchError = ""
         environmentManagementBusy = true
         environmentActionProcess.command = [root.environmentClient, "destroy",
@@ -1280,8 +1468,38 @@ ShellRoot {
         }
     }
 
+    function showHotkeyOsd(icon, title, detail, progress) {
+        hotkeyOsdIcon = icon
+        hotkeyOsdTitle = title
+        hotkeyOsdDetail = detail
+        hotkeyOsdProgress = progress === undefined ? -1 : progress
+        hotkeyOsdVisible = true
+        hotkeyOsdOpacity = 1
+        hotkeyOsdHideTimer.restart()
+    }
+
+    function applyRadioState(state) {
+        if (state.airplane_mode === undefined) return
+        var next = state.airplane_mode === true
+        if (airplaneModeKnown && airplaneMode !== next) {
+            showHotkeyOsd(
+                next
+                    ? "file:///usr/share/icons/Adwaita/symbolic/status/airplane-mode-symbolic.svg"
+                    : "file:///usr/share/icons/Adwaita/symbolic/status/airplane-mode-disabled-symbolic.svg",
+                "Modo de avião", next ? "Ativado" : "Desativado", -1)
+        }
+        airplaneMode = next
+        airplaneModeKnown = true
+    }
+
     function previewVolume(value) {
         volumeValue = Math.max(0, Math.min(100, Math.round(value)))
+
+        showHotkeyOsd(
+            volumeMuted
+                ? "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-muted-symbolic.svg"
+                : "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-high-symbolic.svg",
+            volumeMuted ? "Som silenciado" : "Volume", volumeValue + "%", volumeValue)
 
         if (!volumeMuted)
             volumeText = volumeValue + "%"
@@ -1335,6 +1553,11 @@ ShellRoot {
         microphoneVolume = nextVolume
         if (!microphoneMuted)
             microphoneText = nextVolume + "%"
+        showHotkeyOsd(
+            microphoneMuted
+                ? "file:///usr/share/icons/Adwaita/symbolic/status/microphone-sensitivity-muted-symbolic.svg"
+                : "file:///usr/share/icons/Adwaita/symbolic/devices/audio-input-microphone-symbolic.svg",
+            "Microfone", microphoneMuted ? "Silenciado" : nextVolume + "%", nextVolume)
         localAction(["/usr/bin/wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SOURCE@", nextVolume + "%"])
     }
 
@@ -1342,6 +1565,12 @@ ShellRoot {
         if (localActionProcess.running) return
         volumeMuted = !volumeMuted
         volumeText = volumeMuted ? "MUTE" : volumeValue + "%"
+        showHotkeyOsd(
+            volumeMuted
+                ? "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-muted-symbolic.svg"
+                : "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-high-symbolic.svg",
+            "Som", volumeMuted ? "Silenciado" : "Ativado · " + volumeValue + "%",
+            volumeMuted ? 0 : volumeValue)
         localAction(["/usr/bin/wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
     }
 
@@ -1349,6 +1578,12 @@ ShellRoot {
         if (localActionProcess.running) return
         microphoneMuted = !microphoneMuted
         microphoneText = microphoneMuted ? "MUTE" : microphoneVolume + "%"
+        showHotkeyOsd(
+            microphoneMuted
+                ? "file:///usr/share/icons/Adwaita/symbolic/status/microphone-sensitivity-muted-symbolic.svg"
+                : "file:///usr/share/icons/Adwaita/symbolic/devices/audio-input-microphone-symbolic.svg",
+            "Microfone", microphoneMuted ? "Silenciado" : "Ativado · " + microphoneVolume + "%",
+            microphoneMuted ? 0 : microphoneVolume)
         localAction(["/usr/bin/wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
     }
 
@@ -1364,6 +1599,9 @@ ShellRoot {
 
     function previewDisplayBrightness(value) {
         displayBrightness = Math.max(5, Math.min(100, Math.round(value)))
+        showHotkeyOsd(
+            "file:///usr/share/icons/Adwaita/symbolic/status/display-brightness-symbolic.svg",
+            "Brilho do ecrã", displayBrightness + "%", displayBrightness)
         displayBrightnessPending = displayBrightness
         if (!displayBrightnessProcess.running && !displayBrightnessDebounce.running)
             displayBrightnessDebounce.start()
@@ -1546,6 +1784,28 @@ ShellRoot {
                     }
                 }
                 catch (error) { root.hostState = ({ network_name: "host?", bluetooth_powered: false }) }
+            }
+        }
+    }
+
+    Process {
+        id: radioStatusProcess
+        // rfkill state is kernel-owned and read-only here. Reading sysfs directly
+        // also keeps the OSD alive if the host-service socket is replaced while
+        // an environment is already running.
+        command: ["/usr/bin/bash", "--noprofile", "--norc", "-c",
+            "blocked=1; wlan=0; bluetooth=0; "
+            + "for directory in /sys/class/rfkill/rfkill*; do "
+            + "[ -d \"$directory\" ] || continue; kind=$(<\"$directory/type\"); "
+            + "case \"$kind\" in wlan) wlan=1;; bluetooth) bluetooth=1;; *) continue;; esac; "
+            + "[ \"$(<\"$directory/soft\")\" = 1 ] || blocked=0; done; "
+            + "[ $wlan = 1 ] && [ $bluetooth = 1 ] || exit 1; "
+            + "if [ $blocked = 1 ]; then value=true; else value=false; fi; "
+            + "printf '{\"airplane_mode\":%s}\\n' \"$value\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.applyRadioState(JSON.parse(text)) }
+                catch (error) {}
             }
         }
     }
@@ -1862,7 +2122,11 @@ ShellRoot {
                 }
             }
         }
-        onExited: {
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                root.showHotkeyOsd(
+                    "file:///usr/share/icons/Adwaita/symbolic/status/display-brightness-symbolic.svg",
+                    "Brilho do ecrã", "Não foi possível alterar", -1)
             root.displayBrightnessInFlight = -1
             if (root.displayBrightnessPending >= 5)
                 displayBrightnessDebounce.restart()
@@ -1889,6 +2153,8 @@ ShellRoot {
     Process {
         id: legionBrightnessKeysProcess
         command: ["/usr/lib/apx/apx-legion-brightness-keys-v1.py"]
+        // This observer is single-instanced with QuickShell and does not grab
+        // either keyboard exclusively.
         running: true
     }
 
@@ -1969,6 +2235,21 @@ ShellRoot {
         stderr: StdioCollector { onStreamFinished: if (text.trim().length) root.environmentSwitchError = text.trim() }
     }
     Process {
+        id: environmentStorageProcess
+        command: [root.environmentClient, "storage"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var storage = JSON.parse(text)
+                    if (Number(storage.total_bytes || 0) > 0 && Number(storage.available_bytes || 0) >= 0)
+                        root.environmentStorageState = storage
+                } catch (error) {
+                    root.environmentStorageState = ({ available_bytes: 0, total_bytes: 0, sizes: ({}) })
+                }
+            }
+        }
+    }
+    Process {
         id: environmentManagementStatusProcess
         command: [root.environmentClient, "management-status"]
         stdout: StdioCollector {
@@ -1978,6 +2259,7 @@ ShellRoot {
                     root.environmentManagementState = state
                     root.environmentProgressReadFailures = 0
                     root.environmentManagementBusy = state.busy === true
+                    if (state.native_recovery !== true) root.nativeRecoveryDiscardConfirm = false
                     if (state.phase === "complete") {
                         root.environmentSwitchError = ""
                         if (state.action === "destroy" && root.selectedEnvironmentName === state.target) {
@@ -1989,6 +2271,7 @@ ShellRoot {
                         root.environmentDraftName = ""
                         root.environmentDraftDescription = ""
                         if (!environmentCatalogProcess.running) environmentCatalogProcess.running = true
+                        if (!environmentStorageProcess.running) environmentStorageProcess.running = true
                     } else if (state.phase === "failed") {
                         root.environmentSwitchError = state.message || "A operação falhou."
                     }
@@ -2016,6 +2299,26 @@ ShellRoot {
         onExited: function(exitCode) {
             if (exitCode !== 0) root.environmentManagementBusy = false
             if (!environmentManagementStatusProcess.running) environmentManagementStatusProcess.running = true
+        }
+    }
+    Process {
+        id: environmentMetadataProcess
+        stderr: StdioCollector {
+            onStreamFinished: if (text.trim().length) root.environmentSwitchError = text.trim()
+        }
+        onExited: function(exitCode) {
+            root.environmentMetadataBusy = false
+            if (exitCode === 0) {
+                root.environmentEditOpen = false
+                root.environmentEditTitle = ""
+                root.environmentEditDescription = ""
+                root.environmentEditFocusIndex = -1
+                root.environmentSwitchError = ""
+                if (!environmentCatalogProcess.running) environmentCatalogProcess.running = true
+                Qt.callLater(function() { environmentMenu.forceActiveFocus() })
+            } else if (!root.environmentSwitchError.length) {
+                root.environmentSwitchError = "Não foi possível guardar o título e a legenda."
+            }
         }
     }
     Process { id: environmentFilesProcess; command: ["/usr/bin/thunar"] }
@@ -2151,6 +2454,24 @@ ShellRoot {
         function volumeDown(): void { root.stepVolume(-5) }
         function volumeMute(): void { root.toggleVolumeMute() }
         function microphoneMute(): void { root.toggleMicrophoneMute() }
+        function hotkeyApps(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/actions/view-grid-symbolic.svg", "Aplicações", "A abrir", -1) }
+        function hotkeyAirplaneOff(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/status/airplane-mode-disabled-symbolic.svg", "Modo de avião", "Desativado", -1) }
+        function hotkeyAirplaneOn(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/status/airplane-mode-symbolic.svg", "Modo de avião", "Ativado", -1) }
+        function hotkeyAirplaneUnavailable(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/status/dialog-warning-symbolic.svg", "Modo de avião", "Estado indisponível", -1) }
+        function hotkeyCalculator(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/accessories-calculator-symbolic.svg", "Calculadora", "A abrir", -1) }
+        function hotkeyCalculatorMissing(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/accessories-calculator-symbolic.svg", "Calculadora", "Não está instalada", -1) }
+        function hotkeyDisplayExtended(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/preferences-desktop-display-symbolic.svg", "Ecrãs", "Ambiente estendido", -1) }
+        function hotkeyDisplayExternal(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/preferences-desktop-display-symbolic.svg", "Ecrãs", "Apenas ecrã externo", -1) }
+        function hotkeyDisplayInternal(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/preferences-desktop-display-symbolic.svg", "Ecrãs", "Apenas ecrã do portátil", -1) }
+        function hotkeyDisplayInternalOnly(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/preferences-desktop-display-symbolic.svg", "Ecrãs", "Nenhum ecrã externo", -1) }
+        function hotkeyDisplayMirrored(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/legacy/preferences-desktop-display-symbolic.svg", "Ecrãs", "Imagem duplicada", -1) }
+        function hotkeyFailed(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/status/dialog-warning-symbolic.svg", "Atalho", "A ação falhou", -1) }
+        function hotkeyOverview(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/ui/focus-windows-symbolic.svg", "Janelas abertas", "A mostrar", -1) }
+        function hotkeyScreenshot(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/devices/camera-photo-symbolic.svg", "Captura de ecrã", "Guardada em Imagens", -1) }
+        function hotkeyScreenshotUnavailable(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/status/dialog-warning-symbolic.svg", "Captura de ecrã", "Ferramenta não instalada", -1) }
+        function hotkeyTouchpadOff(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/devices/input-touchpad-symbolic.svg", "Touchpad", "Desativado", -1) }
+        function hotkeyTouchpadOn(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/devices/input-touchpad-symbolic.svg", "Touchpad", "Ativado", -1) }
+        function hotkeyTouchpadToggled(): void { root.showHotkeyOsd("file:///usr/share/icons/Adwaita/symbolic/devices/input-touchpad-symbolic.svg", "Touchpad", "Estado alterado", -1) }
     }
     Process {
         id: audioStateProcess
@@ -2233,6 +2554,31 @@ ShellRoot {
         interval: 20
         repeat: false
         onTriggered: root.dispatchDisplayBrightness()
+    }
+
+    Timer {
+        id: hotkeyOsdHideTimer
+        interval: 1500
+        repeat: false
+        onTriggered: {
+            root.hotkeyOsdOpacity = 0
+            hotkeyOsdGoneTimer.restart()
+        }
+    }
+
+    Timer {
+        id: hotkeyOsdGoneTimer
+        interval: 180
+        repeat: false
+        onTriggered: root.hotkeyOsdVisible = false
+    }
+
+    Timer {
+        interval: 750
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!radioStatusProcess.running) radioStatusProcess.running = true
     }
 
     Timer {
@@ -2491,6 +2837,7 @@ ShellRoot {
         property bool selected: false
         property bool keyboardFocused: false
         signal activated()
+        opacity: enabled ? 1 : 0.42
         radius: 8
         color: keyboardFocused ? "#244b55" : (presetMouse.containsMouse ? "#203b46" : (selected ? "#1c3941" : "#101920"))
         border.width: selected || keyboardFocused ? 1 : 0
@@ -2501,7 +2848,7 @@ ShellRoot {
             Text { width: parent.width; text: presetCard.description; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
             Text { width: parent.width; text: presetCard.additions; color: presetCard.selected ? root.cyan : root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true; elide: Text.ElideRight }
         }
-        BounceMouseArea { id: presetMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: presetCard.activated() }
+        BounceMouseArea { id: presetMouse; anchors.fill: parent; enabled: presetCard.enabled; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: presetCard.activated() }
     }
 
     component FeatureCard: Rectangle {
@@ -2647,6 +2994,83 @@ ShellRoot {
                     alternateLabel: "[A]"
                     alternateActive: popup.visible && root.popupKind === "controls"
                     onActivated: root.togglePopup("controls", this)
+                }
+            }
+        }
+    }
+
+    PanelWindow {
+        id: hotkeyOsdWindow
+        visible: root.hotkeyOsdVisible
+        anchors { bottom: true }
+        margins { bottom: 72 }
+        implicitWidth: 286
+        implicitHeight: 132
+        exclusiveZone: 0
+        aboveWindows: true
+        focusable: false
+        color: "transparent"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        Rectangle {
+            anchors.fill: parent
+            opacity: root.hotkeyOsdOpacity
+            radius: 22
+            color: "#dc10181e"
+            border.width: 1
+            border.color: "#6b55e6ff"
+
+            Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+
+            ControlIcon {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 15
+                width: 38
+                height: 38
+                source: root.hotkeyOsdIcon
+                tint: root.cyan
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 57
+                text: root.hotkeyOsdTitle
+                color: root.textMain
+                font.family: "Adwaita Mono"
+                font.pixelSize: 14
+                font.bold: true
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 80
+                text: root.hotkeyOsdDetail
+                color: root.textDim
+                font.family: "Adwaita Mono"
+                font.pixelSize: 12
+            }
+
+            Rectangle {
+                visible: root.hotkeyOsdProgress >= 0
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 24
+                anchors.rightMargin: 24
+                anchors.bottomMargin: 14
+                height: 5
+                radius: 3
+                color: "#394b53"
+
+                Rectangle {
+                    width: parent.width * Math.max(0, Math.min(100, root.hotkeyOsdProgress)) / 100
+                    height: parent.height
+                    radius: 3
+                    color: root.cyan
+                    Behavior on width { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
                 }
             }
         }
@@ -3364,6 +3788,10 @@ ShellRoot {
                     visible: root.popupKind === "environments"
                     focus: visible
                     Keys.onPressed: function(event) {
+                        if (root.environmentEditOpen) {
+                            root.handleEnvironmentEditKey(event)
+                            return
+                        }
                         if (root.environmentCreateOpen) {
                             root.handleEnvironmentCreateKey(event)
                             return
@@ -3403,6 +3831,9 @@ ShellRoot {
                         } else if (event.key === Qt.Key_Delete) {
                             root.deleteFocusedEnvironment()
                             event.accepted = true
+                        } else if (event.key === Qt.Key_F2) {
+                            root.beginEnvironmentEdit()
+                            event.accepted = true
                         } else if (event.key === Qt.Key_Escape) {
                             root.closePopup()
                             event.accepted = true
@@ -3426,11 +3857,11 @@ ShellRoot {
 
                     Column {
                         width: parent.width; spacing: 7
-                        visible: root.isHub && !root.environmentCreateOpen
+                        visible: root.isHub && !root.environmentCreateOpen && !root.environmentEditOpen
                         Row {
                             width: parent.width; height: 24
-                            Text { width: parent.width * 0.72; anchors.verticalCenter: parent.verticalCenter; text: "Os teus Environments"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
-                            Text { width: parent.width * 0.28; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: root.environmentCatalog.length + (root.environmentCatalog.length === 1 ? " ENVIRONMENT" : " ENVIRONMENTS"); color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize }
+                            Text { width: parent.width * 0.42; anchors.verticalCenter: parent.verticalCenter; text: "Os teus Environments"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
+                            Text { width: parent.width * 0.58; anchors.verticalCenter: parent.verticalCenter; horizontalAlignment: Text.AlignRight; text: root.environmentStorageSummary(); color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideLeft }
                         }
                         Repeater {
                             model: root.environmentCatalog.length ? root.environmentCatalog : [{ name: "", display_name: "Ainda não tens Environments", state: "empty", generation: "", category: "general" }]
@@ -3439,20 +3870,29 @@ ShellRoot {
                                 required property int index
                                 width: parent ? parent.width : 400; height: 59; radius: 9
                                 property bool selected: modelData.name.length > 0 && root.selectedEnvironmentName === modelData.name
-                                property bool keyboardFocused: modelData.state === "stopped" && root.environmentKeyboardFocus && root.environmentFocusIndex === index
+                                property bool keyboardFocused: root.environmentIsOpenable(modelData) && root.environmentKeyboardFocus && root.environmentFocusIndex === index
                                 color: keyboardFocused ? "#1d4650" : (selected ? "#17363e" : (environmentChoiceMouse.containsMouse ? "#172a31" : "#111d23"))
                                 border.width: 1; border.color: keyboardFocused ? "#a6f3ff" : (selected ? root.cyan : "#263941")
-                                Rectangle { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: modelData.state === "stopped" ? (parent.selected ? root.cyan : "#5d7b82") : "#79505a" }
+                                Rectangle { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: root.environmentIsOpenable(modelData) ? (parent.selected ? root.cyan : "#5d7b82") : "#79505a" }
                                 Column {
                                     anchors.left: parent.left; anchors.leftMargin: 32; anchors.right: environmentRowStatus.left; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; spacing: 3
-                                    Text { width: parent.width; text: String(modelData.display_name || modelData.name); color: modelData.state === "empty" ? root.textDim : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true; elide: Text.ElideRight }
-                                    Text { width: parent.width; text: root.environmentMeta(modelData); color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideRight }
+                                    Text { width: parent.width; text: String(modelData.display_name || modelData.name) + root.environmentSizeSuffix(modelData); color: modelData.state === "empty" ? root.textDim : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true; elide: Text.ElideRight }
+                                    Row {
+                                        width: parent.width; height: 16; spacing: 6
+                                        Rectangle {
+                                            visible: !!modelData.system_kind && modelData.system_kind !== "arch"
+                                            width: visible ? systemTagText.implicitWidth + 10 : 0; height: 16; radius: 5
+                                            color: "#173b42"; border.width: 1; border.color: root.cyanDim
+                                            Text { id: systemTagText; anchors.centerIn: parent; text: String(modelData.system_label || "SISTEMA"); color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: 8; font.bold: true }
+                                        }
+                                        Text { width: parent.width - (modelData.system_kind && modelData.system_kind !== "arch" ? systemTagText.implicitWidth + 16 : 0); text: root.environmentMeta(modelData); color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideRight }
+                                    }
                                 }
-                                Text { id: environmentRowStatus; anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: modelData.state === "stopped" ? (parent.selected ? "SELECIONADO" : "PRONTO") : (modelData.state === "empty" ? "" : "INDISPONÍVEL"); color: parent.selected ? root.cyan : root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
+                                Text { id: environmentRowStatus; anchors.right: parent.right; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: root.environmentIsOpenable(modelData) ? (parent.selected ? "SELECIONADO" : "PRONTO") : (modelData.state === "preparing" ? "A PREPARAR" : (modelData.state === "empty" ? "" : "INDISPONÍVEL")); color: parent.selected ? root.cyan : root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                                 BounceMouseArea {
                                     id: environmentChoiceMouse
                                     anchors.fill: parent
-                                    enabled: modelData.state === "stopped" && !root.environmentManagementBusy
+                                    enabled: root.environmentIsOpenable(modelData) && !root.environmentManagementBusy && !root.environmentMetadataBusy
                                     hoverEnabled: true
                                     cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                     onClicked: {
@@ -3468,8 +3908,9 @@ ShellRoot {
 
                         Row {
                             width: parent.width; height: 42; spacing: 6
-                            MenuButton { width: (parent.width - 6) / 2; height: parent.height; label: "CRIAR ENVIRONMENT"; keyboardFocused: root.environmentKeyboardFocus && root.environmentFocusIndex === root.environmentCatalog.length; onActivated: { root.environmentFocusIndex = root.environmentCatalog.length; root.beginEnvironmentCreate() } }
-                            MenuButton { width: (parent.width - 6) / 2; height: parent.height; label: "APAGAR"; keyboardFocused: root.environmentKeyboardFocus && root.environmentFocusIndex === root.environmentCatalog.length + 1; enabled: root.selectedEnvironmentName.length > 0 && !root.environmentManagementBusy; onActivated: { root.environmentFocusIndex = root.environmentCatalog.length + 1; root.requestEnvironmentDelete() } }
+                            MenuButton { width: (parent.width - 12) * 0.44; height: parent.height; label: "CRIAR"; keyboardFocused: root.environmentKeyboardFocus && root.environmentFocusIndex === root.environmentCatalog.length; enabled: !root.environmentManagementBusy && !root.environmentMetadataBusy; onActivated: { root.environmentFocusIndex = root.environmentCatalog.length; root.beginEnvironmentCreate() } }
+                            MenuButton { width: (parent.width - 12) * 0.31; height: parent.height; label: "EDITAR"; keyboardFocused: root.environmentKeyboardFocus && root.environmentFocusIndex === root.environmentCatalog.length + 1; enabled: root.selectedEnvironmentName.length > 0 && !root.environmentManagementBusy && !root.environmentMetadataBusy; onActivated: { root.environmentFocusIndex = root.environmentCatalog.length + 1; root.beginEnvironmentEdit() } }
+                            MenuButton { width: (parent.width - 12) * 0.25; height: parent.height; label: "APAGAR"; keyboardFocused: root.environmentKeyboardFocus && root.environmentFocusIndex === root.environmentCatalog.length + 2; enabled: root.selectedEnvironmentName.length > 0 && !root.environmentManagementBusy && !root.environmentMetadataBusy; onActivated: { root.environmentFocusIndex = root.environmentCatalog.length + 2; root.requestEnvironmentDelete() } }
                         }
 
                         Rectangle {
@@ -3477,7 +3918,7 @@ ShellRoot {
                             width: parent.width; height: visible ? 57 : 0; radius: 8; color: "#29181d"; border.width: 1; border.color: "#7d3947"
                             Column { anchors.left: parent.left; anchors.leftMargin: 10; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 162; spacing: 2
                                 Text { width: parent.width; text: "Apagar " + root.selectedEnvironmentName + "?"; color: "#ffb2bf"; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true; elide: Text.ElideRight }
-                                Text { width: parent.width; text: "Os dados não poderão ser recuperados."; color: "#b98992"; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideRight }
+                                Text { width: parent.width; text: root.environmentIsNative(root.environmentSelection()) ? "Apaga a partição e devolve todo o espaço ao APX após reiniciar." : "Purga total: dados, VM, cópias e metadados."; color: "#b98992"; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideRight }
                             }
                             Row { anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; spacing: 5
                                 Rectangle { width: 62; height: 31; radius: 6; color: root.environmentDeleteFocusIndex === 0 ? "#244b55" : "#21161a"; border.width: root.environmentDeleteFocusIndex === 0 ? 1 : 0; border.color: "#a6f3ff"
@@ -3489,6 +3930,66 @@ ShellRoot {
                                     BounceMouseArea { id: confirmDeleteMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.environmentDeleteFocusIndex = 1; root.destroySelectedEnvironment() } }
                                 }
                             }
+                        }
+                    }
+
+                    Column {
+                        width: parent.width; spacing: 9
+                        visible: root.isHub && root.environmentEditOpen
+                        Row {
+                            width: parent.width; height: 32; spacing: 8
+                            Rectangle {
+                                width: 92; height: parent.height; radius: 6
+                                color: root.environmentEditFocusIndex === 0 ? "#1d4650" : (environmentEditBackMouse.containsMouse ? root.cyanDim : "#101920")
+                                border.width: root.environmentEditFocusIndex === 0 ? 1 : 0
+                                border.color: "#a6f3ff"
+                                Text { anchors.centerIn: parent; text: "‹  VOLTAR"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
+                                BounceMouseArea { id: environmentEditBackMouse; anchors.fill: parent; enabled: !root.environmentMetadataBusy; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: { root.environmentEditFocusIndex = 0; root.cancelEnvironmentEdit() } }
+                            }
+                            Text { width: parent.width - 100; anchors.verticalCenter: parent.verticalCenter; text: "EDITAR APRESENTAÇÃO"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
+                        }
+                        Text { width: parent.width; text: "O identificador interno “" + root.selectedEnvironmentName + "” não muda."; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; elide: Text.ElideRight }
+                        Rectangle {
+                            width: parent.width; height: 42; radius: 7; color: "#0b151a"; border.width: 1; border.color: environmentEditTitleInput.activeFocus || root.environmentEditFocusIndex === 1 ? root.cyan : "#31505d"
+                            TextInput {
+                                id: environmentEditTitleInput; anchors.fill: parent; anchors.leftMargin: 11; anchors.rightMargin: 11; verticalAlignment: TextInput.AlignVCenter
+                                text: root.environmentEditTitle; onTextChanged: root.environmentEditTitle = text; maximumLength: 64; enabled: !root.environmentMetadataBusy
+                                color: root.textMain; selectionColor: root.cyanDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize
+                                onActiveFocusChanged: if (activeFocus) root.environmentEditFocusIndex = 1
+                                onAccepted: { root.environmentEditFocusIndex = 2; environmentEditDescriptionInput.forceActiveFocus() }
+                                Keys.priority: Keys.BeforeItem
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Tab) { root.environmentEditFocusIndex = 2; environmentEditDescriptionInput.forceActiveFocus(); event.accepted = true }
+                                    else if (event.key === Qt.Key_Backtab) { root.environmentEditFocusIndex = 0; environmentMenu.forceActiveFocus(); event.accepted = true }
+                                    else if (event.key === Qt.Key_Escape) { root.cancelEnvironmentEdit(); event.accepted = true }
+                                }
+                            }
+                            Text { anchors.left: parent.left; anchors.leftMargin: 11; anchors.verticalCenter: parent.verticalCenter; visible: !environmentEditTitleInput.text.length; text: "Título do Environment"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
+                        }
+                        Rectangle {
+                            width: parent.width; height: 42; radius: 7; color: "#0b151a"; border.width: 1; border.color: environmentEditDescriptionInput.activeFocus || root.environmentEditFocusIndex === 2 ? root.cyan : "#31505d"
+                            TextInput {
+                                id: environmentEditDescriptionInput; anchors.fill: parent; anchors.leftMargin: 11; anchors.rightMargin: 11; verticalAlignment: TextInput.AlignVCenter
+                                text: root.environmentEditDescription; onTextChanged: root.environmentEditDescription = text; maximumLength: 120; enabled: !root.environmentMetadataBusy
+                                color: root.textMain; selectionColor: root.cyanDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize
+                                onActiveFocusChanged: if (activeFocus) root.environmentEditFocusIndex = 2
+                                onAccepted: { root.environmentEditFocusIndex = 3; environmentMenu.forceActiveFocus() }
+                                Keys.priority: Keys.BeforeItem
+                                Keys.onPressed: function(event) {
+                                    if (event.key === Qt.Key_Tab) { root.environmentEditFocusIndex = 3; environmentMenu.forceActiveFocus(); event.accepted = true }
+                                    else if (event.key === Qt.Key_Backtab) { root.environmentEditFocusIndex = 1; environmentEditTitleInput.forceActiveFocus(); event.accepted = true }
+                                    else if (event.key === Qt.Key_Escape) { root.cancelEnvironmentEdit(); event.accepted = true }
+                                }
+                            }
+                            Text { anchors.left: parent.left; anchors.leftMargin: 11; anchors.verticalCenter: parent.verticalCenter; visible: !environmentEditDescriptionInput.text.length; text: "Legenda (opcional)"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
+                        }
+                        MenuButton {
+                            width: parent.width; height: 42
+                            label: root.environmentMetadataBusy ? "A GUARDAR…" : "GUARDAR ALTERAÇÕES"
+                            accent: true
+                            keyboardFocused: root.environmentEditFocusIndex === 3
+                            enabled: !root.environmentMetadataBusy && root.environmentEditTitle.trim().length > 0
+                            onActivated: { root.environmentEditFocusIndex = 3; root.saveEnvironmentMetadata() }
                         }
                     }
 
@@ -3553,19 +4054,36 @@ ShellRoot {
                             }
                             Text { anchors.left: parent.left; anchors.leftMargin: 11; anchors.verticalCenter: parent.verticalCenter; visible: !environmentDescriptionInput.text.length; text: "Descrição (opcional)"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
                         }
-                        Text { width: parent.width; text: "ESCOLHE UM PONTO DE PARTIDA"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
+                        Text { width: parent.width; text: "BASE DO ENVIRONMENT"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
                         Row {
                             width: parent.width; height: 78; spacing: 6
-                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "BÁSICO · BASE APX"; description: "Desktop APX sem aplicações adicionais."; additions: "EXTRAS · NENHUM"; selected: root.environmentDesktopPreset === "basic"; keyboardFocused: root.environmentCreateFocusIndex === 3; onActivated: { root.environmentCreateFocusIndex = 3; root.applyEnvironmentPreset("basic") } }
-                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "INTERMÉDIO · DIA A DIA"; description: "Base APX, Internet, ficheiros e multimédia."; additions: "+ BRAVE · PDF · MPV"; selected: root.environmentDesktopPreset === "intermediate"; keyboardFocused: root.environmentCreateFocusIndex === 4; onActivated: { root.environmentCreateFocusIndex = 4; root.applyEnvironmentPreset("intermediate") } }
-                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "COMPLETO · TRABALHO"; description: "Tudo do Intermédio, Office, periféricos e programação."; additions: "+ LIBREOFFICE · DEV · IMPRESSÃO"; selected: root.environmentDesktopPreset === "complete"; keyboardFocused: root.environmentCreateFocusIndex === 5; onActivated: { root.environmentCreateFocusIndex = 5; root.applyEnvironmentPreset("complete") } }
+                            PresetCard { width: (parent.width - 6) / 2; height: parent.height; title: "APX · NATIVO"; description: "Environment isolado diretamente sobre o kernel do Host."; additions: "MÁXIMA INTEGRAÇÃO"; selected: root.environmentSystemKind === "arch"; keyboardFocused: root.environmentCreateFocusIndex === 3; onActivated: { root.environmentCreateFocusIndex = 3; root.environmentSystemKind = "arch" } }
+                            PresetCard { width: (parent.width - 6) / 2; height: parent.height; title: "WINDOWS · NATIVO"; description: root.nativeWindowsExists() ? "Já existe uma instalação física Windows." : "Windows numa partição física com desempenho total."; additions: root.nativeWindowsExists() ? "LIMITE ATUAL · 1" : "REINÍCIO · GPU NATIVA"; enabled: !root.nativeWindowsExists(); selected: root.environmentSystemKind === "windows-native"; keyboardFocused: root.environmentCreateFocusIndex === 4; onActivated: { root.environmentCreateFocusIndex = 4; root.environmentSystemKind = "windows-native"; root.environmentDraftName = "windows" } }
+                        }
+                        Text { visible: root.environmentSystemKind === "windows-native"; width: parent.width; height: visible ? implicitHeight : 0; text: "TAMANHO DA PARTIÇÃO WINDOWS"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
+                        Row {
+                            visible: root.environmentSystemKind === "windows-native"; height: visible ? 62 : 0
+                            width: parent.width; spacing: 6
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "80 GiB"; description: "Uso essencial"; additions: "MÍNIMO"; selected: root.environmentNativeWindowsSizeGib === 80; keyboardFocused: root.environmentCreateFocusIndex === 6; onActivated: { root.environmentCreateFocusIndex = 6; root.environmentNativeWindowsSizeGib = 80 } }
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "120 GiB"; description: "Apps e estudo"; additions: "RECOMENDADO"; selected: root.environmentNativeWindowsSizeGib === 120; keyboardFocused: root.environmentCreateFocusIndex === 7; onActivated: { root.environmentCreateFocusIndex = 7; root.environmentNativeWindowsSizeGib = 120 } }
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "160 GiB"; description: "Jogos e projetos"; additions: "MÁXIMO"; selected: root.environmentNativeWindowsSizeGib === 160; keyboardFocused: root.environmentCreateFocusIndex === 8; onActivated: { root.environmentCreateFocusIndex = 8; root.environmentNativeWindowsSizeGib = 160 } }
+                        }
+                        Text { visible: root.environmentSystemKind === "arch"; width: parent.width; height: visible ? implicitHeight : 0; text: "ESCOLHE UM PONTO DE PARTIDA"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
+                        Row {
+                            visible: root.environmentSystemKind === "arch"; height: visible ? 78 : 0
+                            width: parent.width; spacing: 6
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "BÁSICO · BASE APX"; description: "Desktop APX sem aplicações adicionais."; additions: "EXTRAS · NENHUM"; selected: root.environmentDesktopPreset === "basic"; keyboardFocused: root.environmentCreateFocusIndex === 6; onActivated: { root.environmentCreateFocusIndex = 6; root.applyEnvironmentPreset("basic") } }
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "INTERMÉDIO · DIA A DIA"; description: "Base APX, Internet, ficheiros e multimédia."; additions: "+ BRAVE · PDF · MPV"; selected: root.environmentDesktopPreset === "intermediate"; keyboardFocused: root.environmentCreateFocusIndex === 7; onActivated: { root.environmentCreateFocusIndex = 7; root.applyEnvironmentPreset("intermediate") } }
+                            PresetCard { width: (parent.width - 12) / 3; height: parent.height; title: "COMPLETO · TRABALHO"; description: "Tudo do Intermédio, Office, periféricos e programação."; additions: "+ LIBREOFFICE · DEV · IMPRESSÃO"; selected: root.environmentDesktopPreset === "complete"; keyboardFocused: root.environmentCreateFocusIndex === 8; onActivated: { root.environmentCreateFocusIndex = 8; root.applyEnvironmentPreset("complete") } }
                         }
                         Row {
-                            width: parent.width; height: 20
+                            visible: root.environmentSystemKind === "arch"; height: visible ? 20 : 0
+                            width: parent.width
                             Text { width: parent.width * 0.65; text: "FUNCIONALIDADES"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
                             Text { width: parent.width * 0.35; horizontalAlignment: Text.AlignRight; text: root.selectedEnvironmentModuleKeys().length + "/18  ·  ~" + root.environmentEstimatedMib() + " MiB"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
                         }
                         Column {
+                            visible: root.environmentSystemKind === "arch"; height: visible ? implicitHeight : 0
                             width: parent.width; spacing: 5
                             Repeater {
                                 model: root.environmentModuleGroups
@@ -3576,13 +4094,13 @@ ShellRoot {
                                     width: parent ? parent.width : 660; spacing: 4
                                     Rectangle {
                                         width: parent.width; height: 34; radius: 7
-                                        property bool keyboardFocused: root.environmentCreateFocusIndex === 6 + index
+                                        property bool keyboardFocused: root.environmentCreateFocusIndex === 9 + index
                                         color: keyboardFocused ? "#1d4650" : (featureDrawerMouse.containsMouse ? "#20343d" : "#13252c")
                                         border.width: keyboardFocused || root.environmentFeatureDrawer === modelData.key ? 1 : 0
                                         border.color: keyboardFocused ? "#a6f3ff" : root.cyanDim
                                         Text { anchors.left: parent.left; anchors.leftMargin: 11; anchors.right: parent.right; anchors.rightMargin: 34; anchors.verticalCenter: parent.verticalCenter; text: modelData.label; color: root.environmentFeatureDrawer === modelData.key ? root.cyan : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true; elide: Text.ElideRight }
                                         Text { anchors.right: parent.right; anchors.rightMargin: 11; anchors.verticalCenter: parent.verticalCenter; text: root.environmentFeatureDrawer === modelData.key ? "▴" : "▾"; color: root.textDim; font.pixelSize: 14 }
-                                        BounceMouseArea { id: featureDrawerMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.environmentCreateFocusIndex = 6 + featureGroup.index; root.environmentFeatureDrawer = root.environmentFeatureDrawer === modelData.key ? "" : modelData.key; root.environmentFeatureInfo = "" } }
+                                        BounceMouseArea { id: featureDrawerMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.environmentCreateFocusIndex = 9 + featureGroup.index; root.environmentFeatureDrawer = root.environmentFeatureDrawer === modelData.key ? "" : modelData.key; root.environmentFeatureInfo = "" } }
                                     }
                                     Grid {
                                         visible: root.environmentFeatureDrawer === modelData.key
@@ -3608,7 +4126,7 @@ ShellRoot {
                                 }
                             }
                         }
-                        Text { width: parent.width; text: "A palavra-passe de sudo será herdada do HUB. Dependências são ativadas automaticamente."; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; wrapMode: Text.WordWrap }
+                        Text { width: parent.width; text: root.environmentSystemKind === "windows-native" ? "A criação reinicia para manutenção segura e depois abre o instalador Windows interno." : "A palavra-passe de sudo será herdada do HUB. Dependências são ativadas automaticamente."; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; wrapMode: Text.WordWrap }
                         MenuButton { width: parent.width; height: 42; label: root.environmentManagementBusy ? "A CRIAR…" : "CRIAR ENVIRONMENT"; accent: true; keyboardFocused: root.environmentCreateFocusIndex === root.environmentCreateSubmitFocusIndex; enabled: !root.environmentManagementBusy; onActivated: { root.environmentCreateFocusIndex = root.environmentCreateSubmitFocusIndex; root.createEnvironment(environmentNameInput.text, environmentDescriptionInput.text) } }
                     }
 
@@ -3617,6 +4135,21 @@ ShellRoot {
                         width: parent.width; height: visible ? 34 : 0; radius: 7; color: "#101f25"
                         Text { anchors.left: parent.left; anchors.leftMargin: 9; anchors.top: parent.top; anchors.topMargin: 5; text: root.environmentManagementState.message || "A preparar…"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
                         Rectangle { anchors.left: parent.left; anchors.leftMargin: 9; anchors.right: parent.right; anchors.rightMargin: 9; anchors.bottom: parent.bottom; anchors.bottomMargin: 6; height: 4; radius: 2; color: "#263941"; Rectangle { width: parent.width * Math.max(2, Math.min(100, root.environmentManagementState.progress || 2)) / 100; height: parent.height; radius: 2; color: root.cyan } }
+                    }
+
+                    Rectangle {
+                        visible: root.isHub && root.nativeWindowsRecoveryAvailable()
+                        width: parent.width; height: visible ? 92 : 0; radius: 8
+                        color: "#291f18"; border.width: 1; border.color: "#765334"
+                        Column {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 6
+                            Text { width: parent.width; text: "A criação Windows parou em segurança. Podes recomeçar apenas essa instalação ou devolver o espaço ao APX."; wrapMode: Text.WordWrap; color: "#e5c29c"; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize }
+                            Row {
+                                width: parent.width; height: 34; spacing: 6
+                                MenuButton { visible: root.environmentManagementState.native_retry === true; width: visible ? (root.environmentManagementState.native_discard === true ? (parent.width - 6) * 0.5 : parent.width) : 0; height: parent.height; label: "RETOMAR WINDOWS"; accent: true; enabled: !environmentActionProcess.running; onActivated: root.recoverNativeWindows("retry") }
+                                MenuButton { visible: root.environmentManagementState.native_discard === true; width: visible ? (root.environmentManagementState.native_retry === true ? (parent.width - 6) * 0.5 : parent.width) : 0; height: parent.height; label: root.nativeRecoveryDiscardConfirm ? "CONFIRMAR APAGAR" : (root.environmentManagementState.native_retry === true ? "APAGAR INCOMPLETO" : "TENTAR APAGAR"); enabled: !environmentActionProcess.running; onActivated: { if (root.nativeRecoveryDiscardConfirm) root.recoverNativeWindows("discard"); else root.nativeRecoveryDiscardConfirm = true } }
+                            }
+                        }
                     }
 
                     MenuButton {

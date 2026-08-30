@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge the exact Lenovo ITE brightness keys into the running Hub shell."""
+"""Bridge the exact Lenovo ITE function row into the running Hub shell."""
 
 from __future__ import annotations
 
@@ -15,11 +15,27 @@ import subprocess
 ITE_NAME = "ITE Tech. Inc. ITE Device(8910) Keyboard"
 AT_NAME = "AT Raw Set 2 keyboard"
 EV_KEY = 1
+KEY_F1 = 59
+KEY_F2 = 60
+KEY_F3 = 61
 KEY_F5 = 63
 KEY_F6 = 64
+KEY_F4 = 62
+KEY_F7 = 65
+KEY_F8 = 66
+KEY_F9 = 67
+KEY_F10 = 68
+KEY_F11 = 87
+KEY_F12 = 88
+KEY_PRINT = 99
+KEY_MUTE = 113
+KEY_VOLUMEDOWN = 114
+KEY_VOLUMEUP = 115
 KEY_BRIGHTNESSDOWN = 224
 KEY_BRIGHTNESSUP = 225
+KEY_MICMUTE = 248
 EVENT = struct.Struct("llHHI")
+LAPTOP_ACTION = "/home/apx/.local/bin/apx-laptop-action-v1"
 
 
 def _ioc_read(kind: int, number: int, size: int) -> int:
@@ -57,18 +73,39 @@ def open_exact_keyboards() -> dict[int, str]:
 
 
 def call_shell(method: str) -> None:
-    subprocess.run(
-        ("/usr/bin/quickshell", "-c", "apx", "ipc", "call", "host", method),
-        check=False,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        timeout=3,
-    )
+    try:
+        subprocess.run(
+            ("/usr/bin/quickshell", "-c", "apx", "ipc", "call", "host", method),
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # A transient shell restart must not terminate the keyboard bridge.
+        return
+
+
+def launch_action(action: str) -> None:
+    try:
+        subprocess.Popen(
+            (LAPTOP_ACTION, action),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError:
+        call_shell("hotkeyFailed")
 
 
 def main() -> int:
     keyboards = open_exact_keyboards()
+    # Observe the exact ITE interface without grabbing it exclusively. The
+    # physical follow-up after enabling an exclusive grab reported a non-responsive
+    # keyboard and repeated clean compositor exits, so exclusivity remains
+    # disabled until the complete key/modifier stream is proved safe.
     poller = select.poll()
     for descriptor in keyboards:
         poller.register(descriptor, select.POLLIN | select.POLLERR | select.POLLHUP)
@@ -81,15 +118,40 @@ def main() -> int:
                 _, _, event_type, code, value = EVENT.unpack_from(data, offset)
                 if event_type != EV_KEY or value != 1:
                     continue
-                is_ite_brightness = keyboards[descriptor] == ITE_NAME \
-                    and code in (KEY_BRIGHTNESSDOWN, KEY_BRIGHTNESSUP)
-                is_at_function = keyboards[descriptor] == AT_NAME and code in (KEY_F5, KEY_F6)
-                if not is_ite_brightness and not is_at_function:
-                    continue
-                if code in (KEY_BRIGHTNESSDOWN, KEY_F5):
+                name = keyboards[descriptor]
+                # The physical Fn row is mirrored as raw F4--F12 only by the
+                # exact internal ITE interface. Plain F keys arrive through the
+                # AT interface, so this does not consume application F4--F12.
+                if name == ITE_NAME and code in (KEY_F1, KEY_MUTE):
+                    call_shell("volumeMute")
+                elif name == ITE_NAME and code in (KEY_F2, KEY_VOLUMEDOWN):
+                    call_shell("volumeDown")
+                elif name == ITE_NAME and code in (KEY_F3, KEY_VOLUMEUP):
+                    call_shell("volumeUp")
+                elif name == ITE_NAME and code in (KEY_F4, KEY_MICMUTE):
+                    call_shell("microphoneMute")
+                elif name == ITE_NAME and code == KEY_F5:
                     call_shell("brightnessDown")
-                elif code in (KEY_BRIGHTNESSUP, KEY_F6):
+                elif name == ITE_NAME and code == KEY_F6:
                     call_shell("brightnessUp")
+                elif name == ITE_NAME and code == KEY_F7:
+                    launch_action("display-cycle")
+                elif name == ITE_NAME and code == KEY_F8:
+                    launch_action("airplane-status")
+                elif name == ITE_NAME and code == KEY_F9:
+                    launch_action("apps")
+                elif name == ITE_NAME and code == KEY_F10:
+                    call_shell("hotkeyTouchpadToggled")
+                elif name == ITE_NAME and code == KEY_F11:
+                    launch_action("overview")
+                elif name == ITE_NAME and code == KEY_F12:
+                    launch_action("calculator")
+                elif code == KEY_BRIGHTNESSDOWN:
+                    call_shell("brightnessDown")
+                elif code == KEY_BRIGHTNESSUP:
+                    call_shell("brightnessUp")
+                elif name == AT_NAME and code == KEY_PRINT:
+                    launch_action("screenshot")
 
 
 if __name__ == "__main__":

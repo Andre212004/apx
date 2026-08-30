@@ -34,9 +34,12 @@ def exchange(operation: str, payload: dict[str, object]) -> dict[str, object]:
 
 def open_console() -> None:
     size = os.get_terminal_size(sys.stdin.fileno())
+    ticket = os.environ.pop("APX_HOST_CONSOLE_TICKET", "")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
         connection.connect(SOCKET)
-        connection.sendall(request_bytes("console.open", {"rows": size.lines, "columns": size.columns}))
+        connection.sendall(request_bytes("console.open", {
+            "rows": size.lines, "columns": size.columns, "ticket": ticket,
+        }))
         header = bytearray()
         while b"\n" not in header:
             header.extend(connection.recv(4096))
@@ -45,9 +48,8 @@ def open_console() -> None:
         if not value.get("ok"):
             raise RuntimeError(str(value.get("error")))
         result = value["result"]
-        action = "SESSÃO ANTERIOR REANEXADA" if result.get("reattached") else "NOVA SESSÃO"
-        print(f"\n=== APX HOST ROOT :: {action} ===")
-        print("=== Ctrl-D ou 'exit' termina; fechar a janela apenas desanexa ===\n")
+        print("\n=== APX HOST ROOT :: NOVA SESSÃO ===")
+        print("=== Ctrl-D, 'exit' ou fechar a janela termina esta consola ===\n")
         if remainder:
             os.write(sys.stdout.fileno(), remainder)
         old = termios.tcgetattr(sys.stdin.fileno())

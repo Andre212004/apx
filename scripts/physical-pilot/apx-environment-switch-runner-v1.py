@@ -18,6 +18,7 @@ from typing import Callable
 LOCK = Path("/run/apx/environment-handoff-v1.lock")
 HANDOFF_PROOF = Path("/run/apx/authenticated-handoff-v1")
 WORKLOAD_ACTIVE = Path("/run/apx/active-graphical-environment-v1.json")
+NEXT_ENVIRONMENT = Path("/run/apx/environment-switch-next-v1.json")
 HUB = "/var/lib/apx/official-hub-v1/apx-official-hub-graphical-v1.py"
 GENERAL = "/usr/lib/apx/apx-graphical-environment-v1.py"
 FAILSAFE_UNIT = "apx-environment-switch-failsafe-v1"
@@ -213,6 +214,49 @@ def workload_ready(name: str) -> bool:
     ) and type(active.get("pid")) is int and active["pid"] > 1
 
 
+def consume_next_environment(source: str) -> str | None:
+    try:
+        metadata = NEXT_ENVIRONMENT.lstat()
+        data = NEXT_ENVIRONMENT.read_bytes()
+    except FileNotFoundError:
+        return None
+    if NEXT_ENVIRONMENT.is_symlink() or not NEXT_ENVIRONMENT.is_file() \
+            or (metadata.st_uid, metadata.st_gid) != (0, 0) \
+            or len(data) > 2048:
+        raise RuntimeError("o pedido de troca direta não é confiável")
+    try:
+        value = json.loads(data)
+    finally:
+        current = NEXT_ENVIRONMENT.lstat()
+        if (current.st_dev, current.st_ino) == (metadata.st_dev, metadata.st_ino):
+            NEXT_ENVIRONMENT.unlink()
+    if set(value) != {"schema", "profile", "source", "target", "generation"} \
+            or value.get("schema") != 1 or value.get("profile") != "apx-environment-next-v1" \
+            or value.get("source") != source:
+        raise RuntimeError("a identidade da troca direta difere")
+    target, generation = value.get("target"), value.get("generation")
+    if type(target) is not str or re.fullmatch(r"[a-z](?:[a-z0-9]|-(?=[a-z0-9])){0,26}", target) is None \
+            or target in {"hub", source} or type(generation) is not str:
+        raise RuntimeError("o destino da troca direta difere")
+    registration = Path("/var/lib/apx/environments") / target / "registration.json"
+    try:
+        registration_metadata = registration.lstat()
+        registration_data = registration.read_bytes()
+        record = json.loads(registration_data)
+    except (FileNotFoundError, OSError, json.JSONDecodeError) as error:
+        raise RuntimeError("o registo do destino da troca direta não é confiável") from error
+    if registration.is_symlink() or not registration.is_file() \
+            or (registration_metadata.st_uid, registration_metadata.st_gid) != (0, 0) \
+            or len(registration_data) > 8192 or type(record) is not dict:
+        raise RuntimeError("o registo do destino da troca direta não é confiável")
+    if (record.get("name"), record.get("role"), record.get("release"),
+            record.get("generation"), record.get("state")) != (
+        target, "graphical-base", "hyprland-base-v2", generation, "stopped",
+    ):
+        raise RuntimeError("o destino da troca direta mudou")
+    return target
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -237,26 +281,42 @@ def main() -> int:
             run_authenticated((HUB, "--interactive"), "A ABRIR O HUB", 68)
             return 0
         workload_failure: Exception | None = None
-        try:
-            assert name is not None
-            arm_failsafe(name)
-            run_authenticated((GENERAL, "--environment", name, "--interactive"),
-                              "A ABRIR " + name.upper(), 62,
-                              readiness=lambda: workload_ready(name),
-                              on_ready=disarm_failsafe)
-        except Exception as error:
-            workload_failure = error
-        finally:
-            disarm_failsafe()
-            transition_screen("A REGRESSAR AO HUB", 34)
-            run((GENERAL, "--environment", name, "--recover"), False)
+        assert name is not None
+        while True:
             try:
-                wait_recovered()
+                arm_failsafe(name)
+                run_authenticated((GENERAL, "--environment", name, "--interactive"),
+                                  "A ABRIR " + name.upper(), 62,
+                                  readiness=lambda: workload_ready(name),
+                                  on_ready=disarm_failsafe)
             except Exception as error:
+                workload_failure = error
+            finally:
+                disarm_failsafe()
+                transition_screen("A FECHAR " + name.upper(), 34)
+                run((GENERAL, "--environment", name, "--recover"), False)
+                try:
+                    wait_recovered()
+                except Exception as error:
+                    if workload_failure is None:
+                        workload_failure = error
+                    else:
+                        print(f"APX workload recovery also failed: {error}", file=sys.stderr, flush=True)
+            try:
+                next_name = consume_next_environment(name)
+            except Exception as error:
+                # A malformed or stale direct-switch request must never strand
+                # the owner at tty1.  Preserve the failure and follow the same
+                # guaranteed Hub-restoration path used for workload failures.
+                next_name = None
                 if workload_failure is None:
                     workload_failure = error
                 else:
-                    print(f"APX workload recovery also failed: {error}", file=sys.stderr, flush=True)
+                    print(f"APX direct switch also failed: {error}", file=sys.stderr, flush=True)
+            if workload_failure is not None or next_name is None:
+                break
+            name = next_name
+            transition_screen("A TROCAR PARA " + name.upper(), 48)
         transition_screen("A ABRIR O HUB", 64)
         release_handoff_lock(descriptor, lock_metadata.st_dev, lock_metadata.st_ino)
         owns_transition = False

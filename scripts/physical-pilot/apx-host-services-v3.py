@@ -32,6 +32,7 @@ from apx_captive_portal import (  # noqa: E402
 )
 
 SOCKET = Path("/run/apx/host-services-v3.sock")
+RFKILL_ROOT = Path("/sys/class/rfkill")
 WIFI_INTERFACE = "wlan0"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 MAX_CLIENTS = 16
@@ -43,7 +44,7 @@ CAPABILITIES = {
                    "bluetooth.power", "bluetooth.scan", "bluetooth.status",
                    "capabilities.get", "events.subscribe", "network.connect", "network.disconnect",
                    "network.connectivity-check", "network.forget", "network.portal.open",
-                   "network.scan", "network.status", "snapshot.get"],
+                   "network.scan", "network.status", "radio.status", "snapshot.get"],
     "security": {"bluetooth_pairing_agent": "KeyboardDisplay", "enterprise_wifi": False,
                  "secret_transport": "unix-socket-body", "shell": False},
 }
@@ -147,6 +148,25 @@ def network_state() -> dict[str, object]:
     state, identity = _network_state()
     state.update(_cached_connectivity(identity, bool(state["connected"])))
     return state
+
+
+def radio_state() -> dict[str, object]:
+    radios: dict[str, list[bool]] = {"wlan": [], "bluetooth": []}
+    for directory in sorted(RFKILL_ROOT.glob("rfkill*")):
+        try:
+            kind = (directory / "type").read_text(encoding="ascii").strip()
+            blocked = (directory / "soft").read_text(encoding="ascii").strip() == "1"
+        except OSError:
+            continue
+        if kind in radios:
+            radios[kind].append(blocked)
+    present = bool(radios["wlan"]) and bool(radios["bluetooth"])
+    return {
+        "airplane_mode": present and all(radios["wlan"] + radios["bluetooth"]),
+        "bluetooth_soft_blocked": bool(radios["bluetooth"]) and all(radios["bluetooth"]),
+        "radios_present": present,
+        "wlan_soft_blocked": bool(radios["wlan"]) and all(radios["wlan"]),
+    }
 
 
 def _default_route() -> bool:
@@ -347,7 +367,7 @@ def snapshot() -> dict[str, object]:
     timedate = run(("/usr/bin/timedatectl", "show", "-p", "Timezone", "-p", "NTP", "-p", "NTPSynchronized"))
     values = dict(line.split("=", 1) for line in timedate.stdout.splitlines() if "=" in line)
     return {"bluetooth": bluetooth_state(), "capabilities": CAPABILITIES, "health": "ok",
-            "network": network_state(), "power": power_state(),
+            "network": network_state(), "power": power_state(), "radio": radio_state(),
             "time": {"ntp_enabled": values.get("NTP") == "yes", "synchronized": values.get("NTPSynchronized") == "yes",
                      "timezone": values.get("Timezone", "Etc/UTC")}, "version": 3}
 
@@ -410,6 +430,7 @@ def apply(operation: str, payload: dict[str, object]) -> object:
         emit("bluetooth.scan_completed" if operation == "bluetooth.scan" else "bluetooth.changed")
         return bluetooth_state()
     if operation == "network.status": return network_state()
+    if operation == "radio.status": return radio_state()
     if operation == "network.connectivity-check": return perform_connectivity_check()
     if operation == "network.portal.open": return portal_open()
     before = network_state()

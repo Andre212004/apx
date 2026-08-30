@@ -1,0 +1,391 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+readonly vm_dir="$HOME/VMs/Windows11"
+readonly disk="$vm_dir/Windows11.qcow2"
+readonly installer="$vm_dir/Windows11.iso"
+readonly nvram="$vm_dir/OVMF_VARS.4m.fd"
+readonly tpm_dir="$vm_dir/tpm2"
+readonly tpm_socket="$vm_dir/swtpm.sock"
+readonly tpm_pid="$vm_dir/swtpm.pid"
+readonly qmp_socket="$vm_dir/qmp.sock"
+readonly spice_socket="$vm_dir/spice.sock"
+readonly looking_glass_client="$HOME/.local/bin/looking-glass-client"
+readonly looking_glass_certification="$HOME/.local/share/apx/looking-glass-no-fuse-v1"
+readonly looking_glass_disabled="$HOME/.local/share/apx/looking-glass-disabled-v1"
+readonly tools_dir="$HOME/APXTools"
+readonly state_dir="$HOME/.local/state/apx-windows11-vm"
+readonly log="$state_dir/launcher.log"
+readonly owner_state_dir="$HOME/.local/state/apx-system-vm"
+readonly ready_marker="$owner_state_dir/ready-v1"
+readonly presentation_marker="$owner_state_dir/presentation-ready-v1"
+readonly state_file="$owner_state_dir/state-v1"
+readonly ovmf_code=/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd
+readonly ovmf_vars=/usr/share/edk2/x64/OVMF_VARS.4m.fd
+
+looking_glass_active=false
+if [[ ! -e $looking_glass_disabled \
+        && -x $looking_glass_client && -c /dev/kvmfr0 \
+        && -f $looking_glass_certification \
+        && $(/usr/bin/cat -- "$looking_glass_certification" 2>/dev/null) == apx-looking-glass-no-fuse-v1 ]]; then
+    looking_glass_active=true
+fi
+
+environment_label=$(/run/apx/environment-switch-client-v1.py identity 2>/dev/null \
+    | /usr/bin/python3 -c 'import json,sys; v=json.load(sys.stdin); print(v.get("display_name") or v.get("name") or "APX")' \
+    2>/dev/null || /usr/bin/printf 'APX')
+
+mkdir -p "$vm_dir" "$tpm_dir" "$state_dir" "$owner_state_dir"
+/usr/bin/rm -f -- "$ready_marker" "$ready_marker.tmp" \
+    "$presentation_marker" "$presentation_marker.tmp" "$state_file.tmp"
+if [[ -f $log ]] && (( $(/usr/bin/stat -c %s "$log") > 1048576 )); then
+    /usr/bin/mv -f -- "$log" "$log.previous"
+fi
+exec >>"$log" 2>&1
+printf '\n=== APX Windows 11 VM launcher %(%Y-%m-%dT%H:%M:%S%z)T ===\n' -1
+exec 9>"$vm_dir/run.lock"
+if ! /usr/bin/flock -n 9; then
+    exit 0
+fi
+
+if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+    printf 'APX: o Faculdade não recebeu a capacidade KVM.\n' >&2
+    exit 3
+fi
+if [[ ! -f $disk ]]; then
+    /usr/bin/qemu-img create -f qcow2 "$disk" 120G
+fi
+if [[ ! -f $nvram ]]; then
+    /usr/bin/cp --reflink=auto "$ovmf_vars" "$nvram"
+    /usr/bin/chmod 0600 "$nvram"
+fi
+
+# A forced Environment stop can leave only filesystem endpoints behind. No
+# process is reused across launches; the per-VM lock above serialises cleanup.
+/usr/bin/rm -f -- "$tpm_socket" "$tpm_pid" "$qmp_socket" "$spice_socket"
+
+/usr/bin/swtpm socket --tpm2 \
+    --tpmstate "dir=$tpm_dir" \
+    --ctrl "type=unixio,path=$tpm_socket" \
+    --pid "file=$tpm_pid" --terminate --daemon
+
+cleanup() {
+    /usr/bin/rm -f -- "$ready_marker" "$ready_marker.tmp" \
+        "$presentation_marker" "$presentation_marker.tmp" "$state_file.tmp"
+    if [[ -s $tpm_pid ]]; then
+        tpm_process=$(/usr/bin/head -n 1 "$tpm_pid")
+        if [[ $tpm_process =~ ^[0-9]+$ ]]; then
+            /usr/bin/kill "$tpm_process" 2>/dev/null || true
+        fi
+    fi
+    /usr/bin/rm -f -- "$tpm_socket" "$tpm_pid" "$qmp_socket" "$spice_socket"
+}
+trap cleanup EXIT INT TERM
+
+publish_state() {
+    /usr/bin/printf '%s\n' "$1" >"$state_file.tmp"
+    /usr/bin/chmod 0600 "$state_file.tmp"
+    /usr/bin/mv -f -- "$state_file.tmp" "$state_file"
+}
+
+visible_failure() {
+    publish_state "error:$1"
+    /usr/bin/rofi -e "APX · WINDOWS 11\n\n$1\n\nPrima Enter para regressar ao HUB.\nDiagnóstico: $log" \
+        -theme-str 'window { width: 620px; border: 2px; border-color: #55e6ffff; background-color: #102832f2; }' \
+        -theme-str 'textbox { padding: 28px; text-color: #e8fbffff; font: "monospace 13"; }' \
+        >/dev/null 2>&1 || true
+}
+
+allocated_bytes=$(( $(/usr/bin/stat -c %b "$disk") * 512 ))
+boot_policy=menu=on
+if [[ -f $installer && $allocated_bytes -lt 536870912 ]]; then
+    boot_policy=once=d,menu=on
+fi
+
+qemu=(
+    # Keep two complete physical cores (logical pairs 4/10 and 5/11) free for
+    # the AMD display path, Looking Glass and the APX supervisor.  The target
+    # Legion exposes SMT siblings as 0/6, 1/7, ... 3/9.
+    /usr/bin/taskset --cpu-list 0-3,6-9 /usr/bin/qemu-system-x86_64
+    -name "Windows 11 · $environment_label"
+    -machine q35,accel=kvm,smm=on
+    -cpu host,topoext=on,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time
+    -smp 8,sockets=1,cores=4,threads=2
+    -m 12G
+    -drive "if=pflash,format=raw,readonly=on,file=$ovmf_code"
+    -drive "if=pflash,format=raw,file=$nvram"
+    -global driver=cfi.pflash01,property=secure,value=on
+    -chardev "socket,id=chrtpm,path=$tpm_socket"
+    -tpmdev emulator,id=tpm0,chardev=chrtpm
+    -device tpm-tis,tpmdev=tpm0
+    # Threaded writeback avoids the native-AIO errors observed with qcow2 on
+    # this Btrfs-backed Environment while retaining discard/zero detection.
+    -drive "if=none,id=system,format=qcow2,cache=writeback,aio=threads,discard=unmap,detect-zeroes=unmap,file=$disk"
+    -device nvme,drive=system,serial=APX-WINDOWS11
+    -device vfio-pci,host=01:00.0,multifunction=on,x-vga=on
+    -device vfio-pci,host=01:00.1
+    -device qemu-xhci
+    -device usb-kbd
+    # Relative input matches Looking Glass raw-mouse capture and avoids the
+    # absolute USB tablet path that can add pointer resampling through SPICE.
+    -device usb-mouse
+    -nic user,model=e1000e
+    -spice "unix=on,addr=$spice_socket,disable-ticketing=on"
+    -audiodev pipewire,id=audio0
+    -device ich9-intel-hda
+    -device hda-duplex,audiodev=audio0
+    -vga none
+    -qmp "unix:$qmp_socket,server=on,wait=off"
+    -rtc base=localtime,clock=host,driftfix=slew
+    -boot "$boot_policy"
+)
+
+if [[ $looking_glass_active == true ]]; then
+    # The B7 client owns the only Host window. Until the Windows Host/IDD is
+    # installed it presents this VGA through its built-in SPICE recovery path;
+    # once KVMFR frames arrive it switches to the RTX path automatically. No
+    # hidden GTK application or manual Linux-side readiness marker is needed.
+    qemu+=( -device VGA,xres=1920,yres=1080,refresh_rate=120,vgamem_mb=64
+            -display none )
+else
+    # Installation/recovery uses the direct QEMU window.  Faculdade keeps this
+    # path forced until its guest acceleration install is physically accepted.
+    qemu+=( -device VGA,xres=1920,yres=1080,refresh_rate=120,vgamem_mb=64
+            -display gtk,zoom-to-fit=on,grab-on-hover=off,show-tabs=off
+            -full-screen )
+fi
+
+if [[ -c /dev/kvmfr0 ]]; then
+    qemu+=(
+        -object memory-backend-file,id=looking-glass,mem-path=/dev/kvmfr0,size=128M,share=on
+        -device ivshmem-plain,id=shmem0,memdev=looking-glass
+    )
+fi
+
+if [[ -f $installer ]]; then
+    qemu+=(
+        -drive "if=none,id=installer,format=raw,readonly=on,file=$installer"
+        -device ide-cd,drive=installer,bus=ide.0
+    )
+fi
+if [[ -d $tools_dir ]]; then
+    qemu+=( -drive "if=none,id=apxtools,format=raw,readonly=on,file=fat:ro:$tools_dir"
+            -device usb-storage,drive=apxtools )
+fi
+
+# The Windows DVD accepts input for only a short interval. On a genuinely empty
+# disk, inject a bounded key sequence while that prompt is active. Once setup
+# writes substantial guest data, future process starts boot NVMe directly.
+if [[ -f $installer && $allocated_bytes -lt 536870912 ]]; then
+    /usr/bin/python3 - "$qmp_socket" >>"$log" 2>&1 <<'PY' &
+import json
+import socket
+import sys
+import time
+
+path = sys.argv[1]
+deadline = time.monotonic() + 30
+connection = socket.socket(socket.AF_UNIX)
+while True:
+    try:
+        connection.connect(path)
+        break
+    except (FileNotFoundError, ConnectionRefusedError):
+        if time.monotonic() >= deadline:
+            raise SystemExit(0)
+        time.sleep(0.05)
+connection.settimeout(0.5)
+buffer = b""
+def message():
+    global buffer
+    while time.monotonic() < deadline:
+        if b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line:
+                return json.loads(line)
+        try:
+            chunk = connection.recv(4096)
+        except TimeoutError:
+            continue
+        if not chunk:
+            raise SystemExit(0)
+        buffer += chunk
+    raise SystemExit(0)
+if "QMP" not in message():
+    raise SystemExit(0)
+connection.sendall(b'{"execute":"qmp_capabilities"}\n')
+while "return" not in message():
+    pass
+# A cold OVMF start is not tied to one exact wall-clock instant. Three keys in
+# one narrow window cover the DVD prompt without reaching the much later setup
+# UI, removing the former single 7.2-second race.
+for delay in (5.5, 2.0, 2.0):
+    time.sleep(delay)
+    command = {"execute": "human-monitor-command", "arguments": {"command-line": "sendkey ret 300"}}
+    connection.sendall((json.dumps(command) + "\n").encode())
+connection.close()
+PY
+fi
+
+publish_state qemu-starting
+printf 'APX: preflight concluido; a iniciar QEMU.\n'
+"${qemu[@]}" >>"$log" 2>&1 &
+qemu_pid=$!
+trap 'kill "$qemu_pid" 2>/dev/null || true; cleanup' EXIT INT TERM
+
+# A process ID alone is not readiness: VFIO can fail immediately after QEMU
+# forks. Require a live QMP monitor reporting a running guest before the Host
+# supervisor accepts this Environment and disarms its Hub recovery failsafe.
+if ! /usr/bin/python3 - "$qmp_socket" >>"$log" 2>&1 <<'PY'
+import json
+import socket
+import sys
+import time
+
+path = sys.argv[1]
+deadline = time.monotonic() + 30
+connection = socket.socket(socket.AF_UNIX)
+while True:
+    try:
+        connection.connect(path)
+        break
+    except (FileNotFoundError, ConnectionRefusedError):
+        if time.monotonic() >= deadline:
+            raise SystemExit("APX: QMP não ficou disponível")
+        time.sleep(0.05)
+connection.settimeout(0.5)
+buffer = b""
+def message():
+    global buffer
+    while time.monotonic() < deadline:
+        if b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line:
+                return json.loads(line)
+        try:
+            chunk = connection.recv(4096)
+        except TimeoutError:
+            continue
+        if not chunk:
+            raise SystemExit("APX: QMP terminou durante a inicialização")
+        buffer += chunk
+    raise SystemExit("APX: QMP não respondeu dentro do prazo")
+greeting = message()
+if "QMP" not in greeting:
+    raise SystemExit("APX: saudação QMP inválida")
+def reply():
+    while True:
+        value = message()
+        if "return" in value or "error" in value:
+            return value
+connection.sendall(b'{"execute":"qmp_capabilities"}\n')
+reply()
+connection.sendall(b'{"execute":"query-status"}\n')
+value = reply()
+connection.close()
+status = value.get("return", {}).get("status")
+if status != "running":
+    raise SystemExit(f"APX: estado QMP inesperado: {status}")
+PY
+then
+    kill "$qemu_pid" 2>/dev/null || true
+    wait "$qemu_pid" 2>/dev/null || true
+    visible_failure "O motor da VM não ficou pronto dentro de 30 segundos."
+    exit 4
+fi
+publish_state qmp-running
+/usr/bin/printf 'apx-system-vm-ready-v1\n' >"$ready_marker.tmp"
+/usr/bin/chmod 0600 "$ready_marker.tmp"
+/usr/bin/mv -f -- "$ready_marker.tmp" "$ready_marker"
+
+if [[ $looking_glass_active == true ]]; then
+    # Super+E remains owned by the outer APX compositor even while the client
+    # has focus; the guest receives every ordinary Windows shortcut directly.
+    "$looking_glass_client" -f /dev/kvmfr0 -F -c "$spice_socket" -p 0 \
+        app:allowDMA=yes app:framePollInterval=1000 app:cursorPollInterval=1000 \
+        spice:enable=yes win:setGuestRes=yes win:jitRender=yes \
+        "win:title=Windows 11 · $environment_label" win:appId=apx-system-vm \
+        win:ignoreQuit=yes win:quickSplash=yes win:disableWaitingMessage=no \
+        input:captureOnFocus=yes input:autoCapture=yes input:rawMouse=yes \
+        input:grabKeyboard=yes spice:audio=no spice:usbAudio=no \
+        spice:clipboard=no clipboard:toVM=no clipboard:toLocal=no >>"$log" 2>&1 &
+    looking_glass_pid=$!
+    trap 'kill "$looking_glass_pid" "$qemu_pid" 2>/dev/null || true; cleanup' EXIT INT TERM
+
+    # QMP running proves the guest, while a connected SPICE channel proves the
+    # sole Looking Glass window reached a usable recovery-video/input path.
+    # Accelerated KVMFR/RTX frames may replace that source later without
+    # changing this presentation contract.
+    if ! /usr/bin/python3 - "$qmp_socket" >>"$log" 2>&1 <<'PY'
+import json
+import socket
+import sys
+import time
+
+path = sys.argv[1]
+deadline = time.monotonic() + 20
+connection = socket.socket(socket.AF_UNIX)
+while True:
+    try:
+        connection.connect(path)
+        break
+    except (FileNotFoundError, ConnectionRefusedError):
+        if time.monotonic() >= deadline:
+            raise SystemExit("APX: QMP desapareceu antes da apresentação")
+        time.sleep(0.05)
+connection.settimeout(0.5)
+buffer = b""
+def message():
+    global buffer
+    while time.monotonic() < deadline:
+        if b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line:
+                return json.loads(line)
+        try:
+            chunk = connection.recv(4096)
+        except TimeoutError:
+            continue
+        if not chunk:
+            raise SystemExit("APX: QMP terminou antes da apresentação")
+        buffer += chunk
+    raise SystemExit("APX: Looking Glass não ligou ao vídeo de recuperação")
+def reply():
+    while True:
+        value = message()
+        if "return" in value or "error" in value:
+            return value
+if "QMP" not in message():
+    raise SystemExit("APX: saudação QMP inválida durante a apresentação")
+connection.sendall(b'{"execute":"qmp_capabilities"}\n')
+reply()
+while time.monotonic() < deadline:
+    connection.sendall(b'{"execute":"query-spice"}\n')
+    value = reply()
+    if value.get("return", {}).get("channels"):
+        connection.close()
+        raise SystemExit(0)
+    time.sleep(0.1)
+raise SystemExit("APX: Looking Glass não publicou um canal SPICE visível")
+PY
+    then
+        kill "$looking_glass_pid" "$qemu_pid" 2>/dev/null || true
+        wait "$looking_glass_pid" 2>/dev/null || true
+        wait "$qemu_pid" 2>/dev/null || true
+        visible_failure "O Windows arrancou, mas o ecrã Looking Glass não ficou visível."
+        exit 5
+    fi
+    /usr/bin/printf 'apx-system-vm-presentation-ready-v1\n' >"$presentation_marker.tmp"
+    /usr/bin/chmod 0600 "$presentation_marker.tmp"
+    /usr/bin/mv -f -- "$presentation_marker.tmp" "$presentation_marker"
+    publish_state presentation-ready
+    wait "$looking_glass_pid" 2>/dev/null || true
+    kill "$qemu_pid" 2>/dev/null || true
+    wait "$qemu_pid" 2>/dev/null || true
+else
+    /usr/bin/printf 'apx-system-vm-presentation-ready-v1\n' >"$presentation_marker.tmp"
+    /usr/bin/chmod 0600 "$presentation_marker.tmp"
+    /usr/bin/mv -f -- "$presentation_marker.tmp" "$presentation_marker"
+    publish_state presentation-ready
+    wait "$qemu_pid"
+fi

@@ -57,6 +57,9 @@ HOST_CONSOLE_SOCKET = Path("/run/apx/host-console-v1.sock")
 HOST_CONSOLE_CLIENT = Path("/usr/lib/apx/apx-host-console-client-v1.py")
 HOST_CONSOLE_CONTRACT = Path("/usr/lib/apx/apx_host_console_contract.py")
 HOST_CONSOLE_ENABLED = True
+HOST_SERVICES_ENABLED = True
+AUDIO_STATE_ENABLED = True
+MODEL_STORE_ENABLED = True
 ENVIRONMENT_SWITCH_SOCKET = Path("/run/apx/environment-switch-v1.sock")
 ENVIRONMENT_SWITCH_CLIENT = Path("/usr/lib/apx/apx-environment-switch-client-v1.py")
 ENVIRONMENT_SWITCH_CONTRACT = Path("/usr/lib/apx/apx_environment_switch_contract.py")
@@ -70,6 +73,9 @@ SESSION_RUNTIME = "/run/apx/session-1000"
 RECOVERY_LOCK = Path("/run/apx/official-hub-recovery-v1.lock")
 DEVICE_LEASE_DIR = Path("/dev/apx-official-hub-device-leases-v1")
 DEVICE_LEASE_STATE = DEVICE_LEASE_DIR / "state.json"
+EXTRA_DEVICE_NODES: tuple[str, ...] = ()
+VFIO_GUEST_MODE = False
+VFIO_MEMLOCK_LIMIT = "14G"
 USER_NAMESPACE_LENGTH = 65536
 LOCAL_ADMIN_PROOF = "/etc/sudoers.d/11-apx-graphical-proof"
 SEATD_SOCKET = Path("/run/seatd.sock")
@@ -101,6 +107,14 @@ INPUT_IDENTITIES = {
     },
 }
 AUDIO_ID_PATH = "pci-0000:05:00.6"
+CAMERA_IDENTITY = {
+    "ID_PATH": "pci-0000:05:00.3-usb-0:3:1.0",
+    "ID_VENDOR_ID": "5986",
+    "ID_MODEL_ID": "212b",
+    "ID_USB_DRIVER": "uvcvideo",
+    "ID_USB_INTERFACE_NUM": "00",
+    "ID_V4L_CAPABILITIES": ":capture:",
+}
 AMD_PCI = "0000:05:00.0"
 NVIDIA_PCI = "0000:01:00.0"
 HARDWARE_PROFILE = Path("/var/lib/apx/system-power-v1/hardware-profile.json")
@@ -213,6 +227,26 @@ def resolve_audio_devices() -> dict[str, str]:
         "audio_capture": capture,
         "audio_timer": "/dev/snd/timer",
     }
+
+
+def resolve_camera_device() -> str:
+    matches: list[str] = []
+    for node in sorted(Path("/dev").glob("video*")):
+        if re.fullmatch(r"/dev/video[0-9]+", str(node)) is None:
+            continue
+        result = run(("udevadm", "info", "--query=property", f"--name={node}"), False)
+        if result.returncode:
+            continue
+        properties = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+        if properties.get("DEVNAME") == str(node) and all(
+            properties.get(key) == expected for key, expected in CAMERA_IDENTITY.items()
+        ):
+            matches.append(str(node))
+    if len(matches) != 1:
+        raise OfficialHubGraphicalError(
+            "the admitted internal camera capture identity is absent or ambiguous"
+        )
+    return matches[0]
 
 
 def ensure_audio_master_playback(audio: dict[str, str]) -> None:
@@ -611,6 +645,12 @@ def resolve_nvidia_auxiliary_devices() -> dict[str, str]:
 
 
 def resolve_graphics() -> dict[str, str]:
+    if VFIO_GUEST_MODE:
+        return {
+            "policy": "vfio-guest",
+            "display_card": resolve_drm_device(AMD_PCI, "card", "0x1002", "0x1638"),
+            "display_render": resolve_drm_device(AMD_PCI, "render", "0x1002", "0x1638"),
+        }
     policy = effective_gpu_policy()
     if policy == "nvidia":
         display_pci, vendor, device = NVIDIA_PCI, "0x10de", "0x2560"
@@ -628,7 +668,9 @@ def resolve_graphics() -> dict[str, str]:
     return graphics
 
 
-def validate_devices(inputs: dict[str, str], audio: dict[str, str], graphics: dict[str, str]) -> None:
+def validate_devices(
+    inputs: dict[str, str], audio: dict[str, str], graphics: dict[str, str], camera: str,
+) -> None:
     expected = {Path("/dev/tty2"): (4, 2)}
     for path, device in expected.items():
         metadata = path.stat()
@@ -652,7 +694,12 @@ def validate_devices(inputs: dict[str, str], audio: dict[str, str], graphics: di
         metadata = os.stat(node)
         if not stat.S_ISCHR(metadata.st_mode) or os.major(metadata.st_rdev) != 116:
             raise OfficialHubGraphicalError("resolved audio node is not an ALSA character device")
-    if graphics.get("policy") not in {"hybrid", "nvidia"} \
+    camera_metadata = os.stat(camera)
+    if re.fullmatch(r"/dev/video[0-9]+", camera) is None \
+            or not stat.S_ISCHR(camera_metadata.st_mode) \
+            or os.major(camera_metadata.st_rdev) != 81:
+        raise OfficialHubGraphicalError("resolved camera node is not a V4L character device")
+    if graphics.get("policy") not in {"hybrid", "nvidia", "vfio-guest"} \
             or not re.fullmatch(r"/dev/dri/card[0-9]+", graphics.get("display_card", "")) \
             or not re.fullmatch(r"/dev/dri/renderD[0-9]+", graphics.get("display_render", "")):
         raise OfficialHubGraphicalError("resolved display GPU catalogue differs")
@@ -660,12 +707,24 @@ def validate_devices(inputs: dict[str, str], audio: dict[str, str], graphics: di
             not re.fullmatch(r"/dev/dri/card[0-9]+", graphics.get("offload_card", ""))
             or not re.fullmatch(r"/dev/dri/renderD[0-9]+", graphics.get("offload_render", ""))):
         raise OfficialHubGraphicalError("resolved NVIDIA display/offload nodes differ")
-    if tuple(graphics.get(label) for label in (
-            "nvidia_device", "nvidia_control", "nvidia_modeset",
-            "nvidia_uvm", "nvidia_uvm_tools",
-    )) != ("/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-modeset",
-            "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools"):
-        raise OfficialHubGraphicalError("resolved NVIDIA auxiliary catalogue differs")
+    if not VFIO_GUEST_MODE:
+        if tuple(graphics.get(label) for label in (
+                "nvidia_device", "nvidia_control", "nvidia_modeset",
+                "nvidia_uvm", "nvidia_uvm_tools",
+        )) != ("/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-modeset",
+                "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools"):
+            raise OfficialHubGraphicalError("resolved NVIDIA auxiliary catalogue differs")
+    for node in EXTRA_DEVICE_NODES:
+        metadata = os.stat(node)
+        valid_kvm = node == "/dev/kvm" \
+            and (os.major(metadata.st_rdev), os.minor(metadata.st_rdev)) == (10, 232)
+        valid_vfio_control = node == "/dev/vfio/vfio" \
+            and (os.major(metadata.st_rdev), os.minor(metadata.st_rdev)) == (10, 196)
+        valid_vfio_group = re.fullmatch(r"/dev/vfio/[1-9][0-9]*", node) is not None
+        valid_kvmfr = node == "/dev/kvmfr0"
+        if not stat.S_ISCHR(metadata.st_mode) or not (
+                valid_kvm or valid_vfio_control or valid_vfio_group or valid_kvmfr):
+            raise OfficialHubGraphicalError("optional KVM device identity differs")
 
 
 def stop_text_hub_if_needed() -> None:
@@ -714,12 +773,12 @@ def _device_lease_state() -> tuple[dict[str, object], ...]:
     if type(value) is not dict:
         raise OfficialHubGraphicalError("graphical device lease state is not an object")
     leases = value.get("leases")
-    if value.get("schema") != 1 or type(leases) is not list or not 1 <= len(leases) <= 20:
+    if value.get("schema") != 1 or type(leases) is not list or not 1 <= len(leases) <= 21:
         raise OfficialHubGraphicalError("graphical device lease state is malformed")
     for index, lease in enumerate(leases):
         if type(lease) is not dict or set(lease) != {"node", "proxy", "major", "minor"} \
                 or not re.fullmatch(
-                    r"/dev/(?:dri/(?:card|renderD)[0-9]+|input/event[0-9]+|snd/(?:controlC[0-9]+|pcmC[0-9]+D0[pc]|timer)|nvidia(?:[0-9]+|ctl|-modeset|-uvm(?:-tools)?)|tty2)",
+                    r"/dev/(?:dri/(?:card|renderD)[0-9]+|input/event[0-9]+|snd/(?:controlC[0-9]+|pcmC[0-9]+D0[pc]|timer)|video[0-9]+|nvidia(?:[0-9]+|ctl|-modeset|-uvm(?:-tools)?)|vfio/(?:vfio|[1-9][0-9]*)|kvmfr[0-9]+|kvm|tty2)",
                     str(lease.get("node")),
                 ) or lease.get("proxy") != str(DEVICE_LEASE_DIR / f"device-{index}") \
                 or type(lease.get("major")) is not int or type(lease.get("minor")) is not int:
@@ -794,6 +853,10 @@ def unlink_if_present(path: Path) -> None:
     path.unlink()
 
 
+def before_publish_stopped() -> None:
+    """Hook for workload-specific resources needed by the returning Hub."""
+
+
 def _recover() -> None:
     run(("systemctl", "-M", MACHINE, "stop", INNER_UNIT + ".service"), False)
     if machine_running():
@@ -809,6 +872,7 @@ def _recover() -> None:
     cleanup_device_leases()
     run(("chvt", "1"), False)
     run((str(NETWORK), "remove", "--environment", "hub"), False)
+    before_publish_stopped()
     if REGISTRATION.is_file():
         write_registration_state("stopped")
     ACTIVE.unlink(missing_ok=True)
@@ -897,19 +961,22 @@ def start_outer(
     audio_nodes = tuple(audio[label] for label in (
         "audio_control", "audio_playback", "audio_capture", "audio_timer"
     ))
-    if not HOST_SERVICES_SOCKET.is_socket() or not HOST_SERVICES_CLIENT.is_file() \
-            or not HOST_SERVICES_CONTRACT.is_file() or not HOST_SERVICES_V2_SOCKET.is_socket() \
-            or not HOST_SERVICES_V2_CLIENT.is_file() or not HOST_SERVICES_V2_CONTRACT.is_file() \
-            or not HOST_SERVICES_V3_SOCKET.is_socket() or not HOST_SERVICES_V3_CLIENT.is_file() \
-            or not HOST_SERVICES_V3_CONTRACT.is_file() or not HOST_SERVICES_UI_V3.is_file() \
-            or not DESKTOP_MENU_V2.is_file() or not AUDIO_STATE_SOCKET.is_socket() \
-            or not AUDIO_STATE_CLIENT.is_file() or not AUDIO_STATE_CONTRACT.is_file() \
+    if HOST_SERVICES_ENABLED and (not HOST_SERVICES_SOCKET.is_socket()
+            or not HOST_SERVICES_CLIENT.is_file() or not HOST_SERVICES_CONTRACT.is_file()
+            or not HOST_SERVICES_V2_SOCKET.is_socket() or not HOST_SERVICES_V2_CLIENT.is_file()
+            or not HOST_SERVICES_V2_CONTRACT.is_file() or not HOST_SERVICES_V3_SOCKET.is_socket()
+            or not HOST_SERVICES_V3_CLIENT.is_file() or not HOST_SERVICES_V3_CONTRACT.is_file()
+            or not HOST_SERVICES_UI_V3.is_file() or not DESKTOP_MENU_V2.is_file()) \
+            or AUDIO_STATE_ENABLED and (not AUDIO_STATE_SOCKET.is_socket()
+                or not AUDIO_STATE_CLIENT.is_file() or not AUDIO_STATE_CONTRACT.is_file()) \
             or UPDATE_ENABLED and (not UPDATE_SOCKET.is_socket() or not UPDATE_CLIENT.is_file()) \
             or POWER_ENABLED and (not POWER_SOCKET.is_socket() or not POWER_CLIENT.is_file()
                 or not POWER_CONTRACT.is_file() or not BRIGHTNESS_KEYS.is_file()) \
-            or not MODEL_STORE_SOCKET.is_socket() or not MODEL_STORE_CLIENT.is_file() \
+            or MODEL_STORE_ENABLED and (not MODEL_STORE_SOCKET.is_socket()
+                or not MODEL_STORE_CLIENT.is_file()) \
             or not ENVIRONMENT_SWITCH_SOCKET.is_socket() or not ENVIRONMENT_SWITCH_CLIENT.is_file() \
-            or not ENVIRONMENT_SWITCH_CONTRACT.is_file() or not ENVIRONMENT_FEATURES.is_file() \
+            or not ENVIRONMENT_SWITCH_CONTRACT.is_file() \
+            or HOST_SERVICES_ENABLED and not ENVIRONMENT_FEATURES.is_file() \
             or HOST_CONSOLE_ENABLED and (not HOST_CONSOLE_SOCKET.is_socket()
                 or not HOST_CONSOLE_CLIENT.is_file() or not HOST_CONSOLE_CONTRACT.is_file()):
         raise OfficialHubGraphicalError("read-only Host-services bundle is unavailable")
@@ -927,6 +994,7 @@ def start_outer(
         f"--property=CPUQuota={HUB_CPU_QUOTA}", f"--property=CPUWeight={HUB_CPU_WEIGHT}",
         f"--property=IOWeight={HUB_IO_WEIGHT}", f"--property=MemoryHigh={HUB_MEMORY_HIGH}",
         f"--property=MemoryMax={HUB_MEMORY_MAX}", f"--property=TasksMax={HUB_TASKS_MAX}",
+        *((f"--property=LimitMEMLOCK={VFIO_MEMLOCK_LIMIT}",) if VFIO_GUEST_MODE else ()),
         "--property=DevicePolicy=closed",
         *(f"--property=DeviceAllow={node} rw" for node in bindings),
         "--", "systemd-nspawn", "--quiet",
@@ -936,20 +1004,22 @@ def start_outer(
         "--private-users=pick",
         "--private-users-ownership=chown", f"--bind={HOME}:/home:idmap",
         f"--bind-ro={SESSION}:/run/apx/official-hub-session",
-        f"--bind={HOST_SERVICES_SOCKET}:{HOST_SERVICES_SOCKET}",
-        f"--bind-ro={HOST_SERVICES_CLIENT}:/run/apx/host-services-client-v1.py",
-        f"--bind-ro={HOST_SERVICES_CONTRACT}:/usr/lib/apx/apx_host_services_contract.py",
-        f"--bind={HOST_SERVICES_V2_SOCKET}:{HOST_SERVICES_V2_SOCKET}",
-        f"--bind-ro={HOST_SERVICES_V2_CLIENT}:/run/apx/host-services-client-v2.py",
-        f"--bind-ro={HOST_SERVICES_V2_CONTRACT}:/usr/lib/apx/apx_host_services_v2_contract.py",
-        f"--bind={HOST_SERVICES_V3_SOCKET}:/run/apx/host-services-v3.sock",
-        f"--bind-ro={HOST_SERVICES_V3_CLIENT}:/run/apx/host-services-client-v3.py",
-        f"--bind-ro={HOST_SERVICES_V3_CONTRACT}:/usr/lib/apx/apx_host_services_v3_contract.py",
-        f"--bind-ro={HOST_SERVICES_UI_V3}:/run/apx/host-services-ui-v3.py",
-        f"--bind-ro={DESKTOP_MENU_V2}:/run/apx/desktop-menu-v2.py",
-        f"--bind={AUDIO_STATE_SOCKET}:/run/apx/audio-state-v1.sock",
-        f"--bind-ro={AUDIO_STATE_CLIENT}:/run/apx/audio-state-client-v1.py",
-        f"--bind-ro={AUDIO_STATE_CONTRACT}:/usr/lib/apx/apx_audio_state_contract.py",
+        *((f"--bind={HOST_SERVICES_SOCKET}:{HOST_SERVICES_SOCKET}",
+           f"--bind-ro={HOST_SERVICES_CLIENT}:/run/apx/host-services-client-v1.py",
+           f"--bind-ro={HOST_SERVICES_CONTRACT}:/usr/lib/apx/apx_host_services_contract.py",
+           f"--bind={HOST_SERVICES_V2_SOCKET}:{HOST_SERVICES_V2_SOCKET}",
+           f"--bind-ro={HOST_SERVICES_V2_CLIENT}:/run/apx/host-services-client-v2.py",
+           f"--bind-ro={HOST_SERVICES_V2_CONTRACT}:/usr/lib/apx/apx_host_services_v2_contract.py",
+           f"--bind={HOST_SERVICES_V3_SOCKET}:/run/apx/host-services-v3.sock",
+           f"--bind-ro={HOST_SERVICES_V3_CLIENT}:/run/apx/host-services-client-v3.py",
+           f"--bind-ro={HOST_SERVICES_V3_CONTRACT}:/usr/lib/apx/apx_host_services_v3_contract.py",
+           f"--bind-ro={HOST_SERVICES_UI_V3}:/run/apx/host-services-ui-v3.py",
+           f"--bind-ro={DESKTOP_MENU_V2}:/run/apx/desktop-menu-v2.py")
+          if HOST_SERVICES_ENABLED else ()),
+        *((f"--bind={AUDIO_STATE_SOCKET}:/run/apx/audio-state-v1.sock",
+           f"--bind-ro={AUDIO_STATE_CLIENT}:/run/apx/audio-state-client-v1.py",
+           f"--bind-ro={AUDIO_STATE_CONTRACT}:/usr/lib/apx/apx_audio_state_contract.py")
+          if AUDIO_STATE_ENABLED else ()),
         *((f"--bind={UPDATE_SOCKET}:/run/apx/coordinated-update-v1.sock",
            f"--bind-ro={UPDATE_CLIENT}:/run/apx/coordinated-update-client-v1.py")
           if UPDATE_ENABLED else ()),
@@ -958,12 +1028,14 @@ def start_outer(
            f"--bind-ro={POWER_CONTRACT}:/usr/lib/apx/apx_system_power_contract.py",
            f"--bind-ro={BRIGHTNESS_KEYS}:/usr/lib/apx/apx-legion-brightness-keys-v1.py")
           if POWER_ENABLED else ()),
-        f"--bind={MODEL_STORE_SOCKET}:/run/apx/model-store-control-v1.sock",
-        f"--bind-ro={MODEL_STORE_CLIENT}:/run/apx/model-store-client-v1.py",
+        *((f"--bind={MODEL_STORE_SOCKET}:/run/apx/model-store-control-v1.sock",
+           f"--bind-ro={MODEL_STORE_CLIENT}:/run/apx/model-store-client-v1.py")
+          if MODEL_STORE_ENABLED else ()),
         f"--bind={ENVIRONMENT_SWITCH_SOCKET}:/run/apx/environment-switch-v1.sock",
         f"--bind-ro={ENVIRONMENT_SWITCH_CLIENT}:/run/apx/environment-switch-client-v1.py",
         f"--bind-ro={ENVIRONMENT_SWITCH_CONTRACT}:/usr/lib/apx/apx_environment_switch_contract.py",
-        f"--bind-ro={ENVIRONMENT_FEATURES}:/usr/lib/apx/apx_environment_features.py",
+        *((f"--bind-ro={ENVIRONMENT_FEATURES}:/usr/lib/apx/apx_environment_features.py",)
+          if HOST_SERVICES_ENABLED else ()),
         *((f"--bind-ro={HANDOFF_PROOF}:/run/apx/authenticated-handoff-v1",)
           if authenticated_handoff else ()),
         *((f"--bind={HOST_CONSOLE_SOCKET}:/run/apx/host-console-v1.sock",
@@ -977,7 +1049,8 @@ def start_outer(
         # nvidia/initstate as an unloaded driver and refuses the otherwise
         # admitted control device. Expose only this module's read-only sysfs
         # subtree; do not expose the Host module catalogue or module loader.
-        "--bind-ro=/sys/module/nvidia:/sys/module/nvidia",
+        *(("--bind-ro=/sys/module/nvidia:/sys/module/nvidia",)
+          if not VFIO_GUEST_MODE else ()),
         *(f"--bind={proxy}:{node}" for node, proxy in bindings.items()),
     )
     run(command)
@@ -1013,7 +1086,9 @@ def resolve_user_namespace() -> int:
 
 def start_inner(inputs: dict[str, str], audio: dict[str, str], graphics: dict[str, str]) -> None:
     arguments = [
-        "systemd-run", "-M", MACHINE, f"--unit={INNER_UNIT}", "--collect",
+        # Keep the stopped unit loaded until the container is recovered so the
+        # Host can distinguish an intentional compositor exit from a crash.
+        "systemd-run", "-M", MACHINE, f"--unit={INNER_UNIT}",
         "--property=Type=simple", "--property=KillMode=mixed",
         "--property=TimeoutStopSec=3s",
     ]
@@ -1027,6 +1102,32 @@ def start_inner(inputs: dict[str, str], audio: dict[str, str], graphics: dict[st
         arguments.append(f"--setenv=APX_NVIDIA_RENDER_DEVICE={graphics['offload_render']}")
     arguments.extend(("--", "/run/apx/official-hub-session"))
     run(tuple(arguments))
+
+
+def inner_session_outcome() -> dict[str, str]:
+    observed = run((
+        "systemctl", "-M", MACHINE, "show", INNER_UNIT + ".service",
+        "--property=LoadState", "--property=ActiveState", "--property=Result",
+        "--property=ExecMainCode", "--property=ExecMainStatus",
+    ), False)
+    if observed.returncode:
+        raise OfficialHubGraphicalError("graphical session result is unavailable")
+    values = dict(
+        line.split("=", 1) for line in observed.stdout.splitlines() if "=" in line
+    )
+    required = {"LoadState", "ActiveState", "Result", "ExecMainCode", "ExecMainStatus"}
+    if set(values) != required or values["LoadState"] != "loaded" \
+            or values["ActiveState"] not in {"inactive", "failed"}:
+        raise OfficialHubGraphicalError("graphical session result is malformed")
+    # systemd exposes CLD_EXITED as the numeric waitid value 1 here.
+    if values["Result"] != "success" or values["ExecMainCode"] != "1" \
+            or values["ExecMainStatus"] != "0":
+        raise OfficialHubGraphicalError(
+            "graphical session failed: "
+            f"result={values['Result']} code={values['ExecMainCode']} "
+            f"status={values['ExecMainStatus']}"
+        )
+    return values
 
 
 def process_pids(process_name: bytes, proc: Path = Path("/proc")) -> list[int]:
@@ -1458,14 +1559,18 @@ def launch(test_mode: bool, authenticated_handoff: bool = False) -> dict[str, ob
     inputs = resolve_input_devices()
     audio = resolve_audio_devices()
     graphics = resolve_graphics()
-    validate_devices(inputs, audio, graphics)
+    camera = resolve_camera_device()
+    validate_devices(inputs, audio, graphics, camera)
     ensure_audio_master_playback(audio)
     device_nodes = tuple(dict.fromkeys((
         *inputs.values(), *audio.values(), graphics["display_card"], graphics["display_render"],
         *((graphics["offload_card"], graphics["offload_render"])
           if "offload_render" in graphics else ()),
-        graphics["nvidia_device"], graphics["nvidia_control"], graphics["nvidia_modeset"],
-        graphics["nvidia_uvm"], graphics["nvidia_uvm_tools"],
+        *((graphics["nvidia_device"], graphics["nvidia_control"], graphics["nvidia_modeset"],
+           graphics["nvidia_uvm"], graphics["nvidia_uvm_tools"])
+          if not VFIO_GUEST_MODE else ()),
+        camera,
+        *EXTRA_DEVICE_NODES,
         "/dev/tty2",
     )))
     bindings = prepare_device_leases(device_nodes)
@@ -1524,6 +1629,9 @@ def launch(test_mode: bool, authenticated_handoff: bool = False) -> dict[str, ob
                 ("systemctl", "-M", MACHINE, "is-active", "--quiet", INNER_UNIT + ".service"), False
             ).returncode == 0:
                 time.sleep(0.5)
+            if not machine_running():
+                raise OfficialHubGraphicalError("graphical container ended before the owner session")
+            inner_session_outcome()
             result = {"classification": "session-ended", "owner_exit": True}
     finally:
         recover()

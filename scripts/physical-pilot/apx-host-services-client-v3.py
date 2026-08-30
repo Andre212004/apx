@@ -35,7 +35,7 @@ def main() -> int:
                                                "bluetooth-remove", "bluetooth-scan", "bluetooth-status",
                                                "capabilities", "events", "snapshot", "wifi-connect",
                                                "wifi-connectivity-check", "wifi-disconnect", "wifi-forget",
-                                               "wifi-portal-open", "wifi-scan", "wifi-status"))
+                                               "wifi-portal-open", "wifi-scan", "wifi-status", "radio-status"))
     parser.add_argument("target", nargs="?")
     parser.add_argument("--credential-stdin", action="store_true",
                         help="read one passphrase from stdin; never pass it as an argument")
@@ -50,7 +50,7 @@ def main() -> int:
                "wifi-connect": "network.connect", "wifi-disconnect": "network.disconnect",
                "wifi-connectivity-check": "network.connectivity-check", "wifi-forget": "network.forget",
                "wifi-portal-open": "network.portal.open", "wifi-scan": "network.scan",
-               "wifi-status": "network.status"}
+               "wifi-status": "network.status", "radio-status": "radio.status"}
     payload: dict[str, object] = {}
     if arguments.operation in {"bluetooth-connect", "bluetooth-disconnect", "bluetooth-pair", "bluetooth-remove"}:
         if arguments.target is None: parser.error("this operation requires a Bluetooth address")

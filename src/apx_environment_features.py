@@ -30,12 +30,10 @@ PRESETS = {
     "complete": MODULES,
 }
 
-# Additional packages beyond the admitted graphical base. Hardware-facing
-# capabilities remain Host-mediated and are represented in registration.
-BASE_PACKAGES = (
-    "egl-gbm", "lib32-mesa", "lib32-nvidia-utils", "lib32-vulkan-icd-loader",
-    "lib32-vulkan-radeon", "vulkan-tools",
-)
+# The admitted graphical release already owns its GPU stack. Reinstalling that
+# stack into every snapshot wastes space and can create a partial-upgrade
+# conflict when the Host repositories move ahead of the immutable release.
+# Modules therefore add only applications absent from that release.
 PACKAGES = {
     "web-documents": ("evince",),
     "multimedia": ("ffmpeg", "gst-libav", "gst-plugins-good", "mpv"),
@@ -51,7 +49,6 @@ PACKAGES = {
 LOCAL_PACKAGES = {
     "web-documents": ("brave-bin",),
 }
-BASE_LOCAL_PACKAGES = ("nvidia-utils",)
 
 ESTIMATED_MIB = {
     "system": 420, "cli-aur": 260, "graphical": 520,
@@ -88,14 +85,12 @@ def validate_selection(preset: object, values: object) -> tuple[str, tuple[str, 
 
 def packages_for(values: object) -> tuple[str, ...]:
     modules = normalize_modules(values)
-    return tuple(sorted({*BASE_PACKAGES,
-                         *(package for module in modules for package in PACKAGES.get(module, ())) }))
+    return tuple(sorted({package for module in modules for package in PACKAGES.get(module, ())}))
 
 
 def local_packages_for(values: object) -> tuple[str, ...]:
     modules = normalize_modules(values)
-    return tuple(sorted({*BASE_LOCAL_PACKAGES,
-                         *(package for module in modules for package in LOCAL_PACKAGES.get(module, ())) }))
+    return tuple(sorted({package for module in modules for package in LOCAL_PACKAGES.get(module, ())}))
 
 
 def estimated_mib(values: object) -> int:

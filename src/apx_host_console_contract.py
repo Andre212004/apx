@@ -8,7 +8,7 @@ SCHEMA = 1
 PROFILE = "apx-host-console-v1"
 MAX_MESSAGE_BYTES = 8192
 OPERATIONS = {
-    "capabilities.get", "console.open",
+    "capabilities.get", "console.open", "console.ticket",
 }
 
 

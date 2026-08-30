@@ -1,0 +1,15 @@
+[Unit]
+Description=APX one-shot offline native Windows storage lifecycle
+DefaultDependencies=no
+ConditionKernelCommandLine=apx.native_windows_lifecycle=1
+After=dev-mapper-cryptroot.device systemd-cryptsetup@cryptroot.service
+After=systemd-fsck@dev-mapper-cryptroot.service
+Before=sysroot.mount initrd-root-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/apx-native-windows-lifecycle-initrd-v1
+StandardInput=null
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=infinity

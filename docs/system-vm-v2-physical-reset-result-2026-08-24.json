@@ -1,0 +1,87 @@
+{
+  "completed_at": "2026-08-24T20:09:07+01:00",
+  "destroyed": {
+    "faculdade": "ba865d3f-e592-4281-8e76-6bba8402ff2a",
+    "trabalho": "bd9caf9d-aa17-411e-a0e3-4c9ca21cbe2e"
+  },
+  "deployment_backup": "/var/lib/apx/backups/20260824-system-vm-v2-v20",
+  "environments": {
+    "faculdade": {
+      "generation": "3a2de127-176a-457a-97b4-a3010a4ca4d2",
+      "guest_disk": false,
+      "nvram": false,
+      "state": "stopped",
+      "system_kind": "windows11",
+      "tpm": false
+    },
+    "trabalho": {
+      "generation": "c03e65b5-3310-4ff2-8a37-165769da1205",
+      "guest_disk": false,
+      "nvram": false,
+      "state": "stopped",
+      "system_kind": "windows11",
+      "tpm": false
+    }
+  },
+  "failed_units": 0,
+  "guest_content_in_deployment_backups": false,
+  "hub": {
+    "generation": "6f63f9a9-daea-40d1-969f-e25ff0752f4d",
+    "sole_active_machine": true,
+    "state": "running"
+  },
+  "iso_sha256": "c74c96aa06e2548f14c76b5fd6600514c0d4f6eb05a731e4272ab005e8f48ce3",
+  "nocow_vm_directories": true,
+  "profile": "apx-system-vm-v2-physical-reset-result-v1",
+  "profile_access_repair": {
+    "faculdade_uid_1000_read": true,
+    "first_entry_reached_qemu": true,
+    "guest_state_created_by_failed_entry": true,
+    "repaired_directories": [
+      ".config",
+      ".config/apx",
+      ".config/hypr",
+      ".local",
+      ".local/bin"
+    ],
+    "trabalho_uid_1000_read": true
+  },
+  "qemu_startup_repair": {
+    "failed_before_firmware": true,
+    "failed_attempt_artifacts_removed": [
+      "Windows11.raw",
+      "OVMF_VARS.4m.fd",
+      "tpm2",
+      "run.lock"
+    ],
+    "forced_mlockall_removed": true,
+    "last_error": "qemu-system-x86_64: locking memory failed",
+    "logs_preserved": true,
+    "measured_guest_cpu_list": "0-9",
+    "measured_host_reserved_cpus": [10, 11]
+  },
+  "installer_boot_input_repair": {
+    "blank_attempt_reset": true,
+    "direct_grab_on_hover": true,
+    "disk_was_empty": true,
+    "iso_prompt_reached": true,
+    "key_injection_added": false,
+    "logs_preserved": true
+  },
+  "qemu_running": false,
+  "schema": 1,
+  "source_hashes": {
+    "graphical_environment_launcher": "faa336797d4fc265bb710c56dee1d2a77f77897c64d3c762fcce3f0cbd6eb23c",
+    "hyprland": "d2f01feef415b4ca37e8ae05c0281c16446693297f79d530d43b14e437b93faf",
+    "provisioner": "754443848fe94177d5e59b11822b6f00efd612c33b1f53e7c3e62068474400a0",
+    "runtime": "aadebf461455a6e9f00f301c614b90ca297825a29d18eee0c7f1f107550824b1",
+    "vfio": "9324964f12909fa2e138f246296e7f436689bc71bedea0d1446a1764604cacbe",
+    "windows_profile": "5445d46d0a55619d0a55c8ed357685a2a62e36b7d31ae2e2480c66810054ae84"
+  },
+  "source_host_environment_hashes_match": true,
+  "tests": {
+    "passed": 1065,
+    "skipped": 11
+  },
+  "vfio_active": false
+}
