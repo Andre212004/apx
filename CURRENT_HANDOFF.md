@@ -2893,6 +2893,16 @@ remaining defect is APX accounting: the two-attempt limit counted one WinPE
 launch plus one Windows launch, hiding retry exactly when normal Windows setup
 needed its next boot. Installation attempts and first-boot continuations are
 now separated. WinPE remains capped at two; authenticated `boot-prepared`
-continuations are manual and capped at four. The menu labels the latter
+continuations are manual and capped at eight. The menu labels the latter
 `PROSSEGUIR WINDOWS`. No automatic boot or permanent BootOrder change is
 introduced. See `docs/native-windows-first-boot-continuation-2026-08-30.md`.
+
+The subsequent physical OOBE run proved why four was insufficient. OOBE
+reached `IMAGE_STATE_COMPLETE`; Windows Update installed a ZDP update and
+requested a reboot, which safely returned to Linux after consuming the
+one-shot BootNext. The current pending generation is still `boot-prepared`
+with `explicit_attempts=1` and `boot_attempts=4`. The manual OOBE budget is now
+eight, so the Hub can expose `PROSSEGUIR WINDOWS` again without any automatic
+retry. SetupComplete's Realtek provisioning also treated an already-present,
+up-to-date driver as failure; the idempotent check now verifies the INF through
+`pnputil /enum-drivers /files` before recording success with a warning.

@@ -23,7 +23,10 @@ ENTRY_FILE = Path("/boot/loader/entries/apx-native-windows-lifecycle-v1.conf")
 FINALIZER = "apx-native-windows-lifecycle-finalize-v1.service"
 MAINTENANCE_LABEL = "APX Windows Maintenance"
 MAX_EXPLICIT_INSTALL_ATTEMPTS = 2
-MAX_EXPLICIT_BOOT_ATTEMPTS = 4
+# OOBE may legitimately restart for setup phase transitions, language changes,
+# and zero-day patch (ZDP) updates. Every continuation remains a user-approved
+# one-shot BootNext; this larger budget does not introduce automatic retries.
+MAX_EXPLICIT_BOOT_ATTEMPTS = 8
 GENERATION = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
 

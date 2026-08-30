@@ -23,7 +23,7 @@ o botão quando o Windows solicitava o reboot normal anterior ao OOBE.
 ## Contrato corrigido
 
 - tentativas WinPE continuam limitadas a duas;
-- continuações de `boot-prepared` têm um contador separado, limitado a quatro;
+- continuações de `boot-prepared` têm um contador separado, limitado a oito;
 - nenhuma continuação é automática;
 - cada clique revalida Host, energia, p3 NTFS/PARTUUID, status espelhado da
   geração, Windows Boot Manager e ausência de BootNext;
@@ -32,6 +32,20 @@ o botão quando o Windows solicitava o reboot normal anterior ao OOBE.
 - ao atingir o limite, a operação permanece recuperável sem reboot automático;
 - o menu distingue `PROSSEGUIR WINDOWS` de `RETOMAR WINDOWS`.
 
+O limite inicial de quatro revelou-se insuficiente na execução física: o OOBE
+concluiu com `IMAGE_STATE_COMPLETE`, mas uma atualização ZDP instalou
+`KB5121003`, marcou reboot obrigatório e devolveu corretamente ao Linux depois
+de consumir o BootNext único. O Windows documenta reinícios durante OOBE para
+ZDP, alterações de idioma e atualizações do sistema. O orçamento passou para
+oito cliques explícitos; não existe loop nem rearmamento automático.
+
+O mesmo post-mortem encontrou `SetupComplete.cmd` com exit `1`, embora o
+`pnputil` tenha registado que `netrtwlane6.inf` já existia e estava atualizado
+no dispositivo. O provisioning passou a aceitar esse resultado apenas depois
+de uma segunda verificação independente em `pnputil /enum-drivers /files`,
+registando `hardware.warning` e `hardware.complete`. Uma ausência real do INF
+continua terminal em `hardware.failed`.
+
 Para a geração física observada, o journal demonstra uma aplicação WinPE e
 uma continuação Windows. A migração lógica preserva o pending original num
 backup root-only e representa esse histórico como `explicit_attempts=1` e
@@ -39,8 +53,8 @@ backup root-only e representa esse histórico como `explicit_attempts=1` e
 
 ## Próxima ação física
 
-Depois de instalar e validar esta correção, o proprietário pode usar uma vez
-`PROSSEGUIR WINDOWS`. O esperado é o Windows continuar para o OOBE. Se o
-Windows pedir outro reboot durante a preparação, o Linux volta a aparecer e o
-mesmo botão continua disponível dentro do limite. Não usar `CRIAR ENVIRONMENT`:
+Depois de instalar e validar esta correção, o proprietário pode usar
+`PROSSEGUIR WINDOWS`. O esperado é o Windows continuar o OOBE já aplicado. Se
+o Windows pedir outro reboot durante a preparação, o Linux volta a aparecer e
+o mesmo botão continua disponível dentro do limite. Não usar `CRIAR ENVIRONMENT`:
 isso inicia uma geração nova e reaplica a imagem desde o princípio.

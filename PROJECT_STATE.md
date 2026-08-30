@@ -4736,7 +4736,14 @@ desenhado. Não houve crash Windows.
 
 O limite anterior misturava duas operações diferentes. As duas tentativas
 WinPE continuam limitadas a duas, mas `boot-prepared` passa a usar um contador
-separado de até quatro continuações manuais. Cada continuação autentica a
+separado de até oito continuações manuais. Cada continuação autentica a
 geração, p3, status espelhado e Windows Boot Manager, arma um BootNext único e
 nunca reconstrói o instalador. O Hub apresenta `PROSSEGUIR WINDOWS` nesta fase.
 Detalhes: `docs/native-windows-first-boot-continuation-2026-08-30.md`.
+
+A execução física posterior consumiu quatro continuações porque o OOBE
+instalou uma atualização ZDP e pediu reinício. O limite de quatro ocultou o
+botão apesar de não existir falha de boot. O orçamento manual passou para oito,
+sem retry automático; o limite WinPE continua em dois. O `SetupComplete.cmd`
+também passou a reconhecer idempotentemente o driver Realtek já instalado,
+confirmando o INF através de uma segunda enumeração antes de aceitar o aviso.

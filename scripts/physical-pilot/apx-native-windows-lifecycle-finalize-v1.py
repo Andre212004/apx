@@ -29,6 +29,8 @@ UKI = Path("/boot/EFI/APX/apx-native-windows-lifecycle-v1.efi")
 ENTRY = Path("/boot/loader/entries/apx-native-windows-lifecycle-v1.conf")
 GENERATION = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 TERMINAL_STAGES = {"failed", "recovery-required"}
+MAX_EXPLICIT_INSTALL_ATTEMPTS = 2
+MAX_EXPLICIT_BOOT_ATTEMPTS = 8
 EXPECTED_RETURN_HASHES = {
     "ProgramData/APX/ReturnToHub/APX-ReturnToHub.ps1": "fbd55f62c4abe4d0456832b7e5d0397989da0876e0f5952adf36c2092bb708a4",
     "ProgramData/APX/ReturnToHub/README.txt": "0434aa1e310d7a4e20400300f0d8b6062caf8f4ac023ae4a8560a5c203926349",
@@ -504,8 +506,10 @@ def main() -> int:
         raise RuntimeError("a operação Windows pendente difere")
     install_attempts = pending.get("explicit_attempts", 0)
     boot_attempts = pending.get("boot_attempts", 0)
-    if type(install_attempts) is not int or not 0 <= install_attempts <= 2 \
-            or type(boot_attempts) is not int or not 0 <= boot_attempts <= 4:
+    if type(install_attempts) is not int \
+            or not 0 <= install_attempts <= MAX_EXPLICIT_INSTALL_ATTEMPTS \
+            or type(boot_attempts) is not int \
+            or not 0 <= boot_attempts <= MAX_EXPLICIT_BOOT_ATTEMPTS:
         raise RuntimeError("os limites explícitos da operação Windows diferem")
     allowed = ({"maintenance", "preparing-installer", "prepared", "installing",
                 "boot-prepared", "failed", "recovery-required", "finalizing"}

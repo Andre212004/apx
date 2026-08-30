@@ -192,7 +192,7 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
     def test_explicit_retry_is_bounded_to_two(self) -> None:
         subject = load(RECOVERY, "apx_windows_recovery_limit")
         self.assertEqual(subject.MAX_EXPLICIT_INSTALL_ATTEMPTS, 2)
-        self.assertEqual(subject.MAX_EXPLICIT_BOOT_ATTEMPTS, 4)
+        self.assertEqual(subject.MAX_EXPLICIT_BOOT_ATTEMPTS, 8)
         pending = {
             "action": "create", "stage": "recovery-required",
             "requested_size_gib": 160,
@@ -209,10 +209,27 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
             "action": "create", "stage": "boot-prepared",
             "requested_size_gib": 160,
             "generation": "12345678-1234-4234-9234-123456789abc",
-            "explicit_attempts": 1, "boot_attempts": 4,
+            "explicit_attempts": 1, "boot_attempts": 8,
         }
         with self.assertRaisesRegex(RuntimeError, "limite de continuações"):
             subject.retry(pending, b"{}\n")
+
+    def test_four_oobe_continuations_do_not_exhaust_manual_budget(self) -> None:
+        subject = load(RECOVERY, "apx_windows_oobe_zdp_budget")
+        pending = {
+            "action": "create", "stage": "boot-prepared",
+            "requested_size_gib": 160,
+            "generation": "12345678-1234-4234-9234-123456789abc",
+            "explicit_attempts": 1, "boot_attempts": 4,
+        }
+        with mock.patch.object(subject, "exact_windows_entry", return_value="0006"), \
+                mock.patch.object(subject, "checked", return_value="BootNext: 0006"), \
+                mock.patch.object(subject, "write_json") as write_json, \
+                mock.patch.object(subject, "write_state"), \
+                mock.patch.object(subject, "run", return_value=mock.Mock(returncode=0)):
+            subject.retry(pending, b"{}\n")
+        self.assertEqual(pending["boot_attempts"], 5)
+        write_json.assert_called_once_with(subject.PENDING, pending, 0o400)
 
     def test_no_existing_bootnext_is_already_safe(self) -> None:
         subject = load(FINALIZER, "apx_windows_finalizer_no_bootnext")

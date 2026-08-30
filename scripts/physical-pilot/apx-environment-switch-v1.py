@@ -50,6 +50,8 @@ SYSTEM_METADATA = "system-environment-v1.json"
 WINDOWS_STORAGE = NATIVE_ENVIRONMENTS / "windows-storage-v1.json"
 NAME = re.compile(r"[a-z](?:[a-z0-9]|-(?=[a-z0-9])){0,26}")
 GENERATION = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+MAX_EXPLICIT_INSTALL_ATTEMPTS = 2
+MAX_EXPLICIT_BOOT_ATTEMPTS = 8
 
 
 def trusted_environment(name: str) -> dict[str, object]:
@@ -185,10 +187,12 @@ def trusted_windows_pending() -> dict[str, object]:
     if attempts is not None and (type(attempts) is not int or not 0 <= attempts <= 12):
         raise PermissionError("as retomas Windows pendentes diferem")
     explicit_attempts = value.get("explicit_attempts", 0)
-    if type(explicit_attempts) is not int or not 0 <= explicit_attempts <= 2:
+    if type(explicit_attempts) is not int \
+            or not 0 <= explicit_attempts <= MAX_EXPLICIT_INSTALL_ATTEMPTS:
         raise PermissionError("as tentativas Windows explícitas diferem")
     boot_attempts = value.get("boot_attempts", 0)
-    if type(boot_attempts) is not int or not 0 <= boot_attempts <= 4:
+    if type(boot_attempts) is not int \
+            or not 0 <= boot_attempts <= MAX_EXPLICIT_BOOT_ATTEMPTS:
         raise PermissionError("as continuações do primeiro arranque Windows diferem")
     return value
 
@@ -326,9 +330,11 @@ def management_state() -> dict[str, object]:
             boot_attempts = pending.get("boot_attempts", 0)
             stage = pending.get("stage")
             can_retry = recoverable_idle and pending.get("action") == "create" and (
-                (stage == "boot-prepared" and type(boot_attempts) is int and boot_attempts < 4)
+                (stage == "boot-prepared" and type(boot_attempts) is int
+                 and boot_attempts < MAX_EXPLICIT_BOOT_ATTEMPTS)
                 or (stage in {"prepared", "failed", "recovery-required"}
-                    and type(install_attempts) is int and install_attempts < 2)
+                    and type(install_attempts) is int
+                    and install_attempts < MAX_EXPLICIT_INSTALL_ATTEMPTS)
             )
             can_discard = recoverable_idle and (
                 (pending.get("action") == "create" and pending.get("stage") in {
@@ -476,9 +482,11 @@ def start_native_recovery(action: str, generation: str) -> dict[str, object]:
     boot_attempts = pending.get("boot_attempts", 0)
     stage = pending.get("stage")
     retryable = pending.get("action") == "create" and (
-        (stage == "boot-prepared" and type(boot_attempts) is int and boot_attempts < 4)
+        (stage == "boot-prepared" and type(boot_attempts) is int
+         and boot_attempts < MAX_EXPLICIT_BOOT_ATTEMPTS)
         or (stage in {"prepared", "failed", "recovery-required"}
-            and type(install_attempts) is int and install_attempts < 2)
+            and type(install_attempts) is int
+            and install_attempts < MAX_EXPLICIT_INSTALL_ATTEMPTS)
     )
     discardable = (pending.get("action") == "create" and pending.get("stage") in {
         "prepared", "installing", "boot-prepared", "failed", "recovery-required",

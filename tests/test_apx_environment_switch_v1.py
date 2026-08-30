@@ -292,6 +292,9 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn("status = shell.Run(command, 0, True)", supervisor)
         self.assertIn("WScript.Sleep 2000", supervisor)
         self.assertIn("pnputil.exe", provisioning)
+        self.assertIn("/enum-drivers /files", provisioning)
+        self.assertIn('/C:"netrtwlane6.inf"', provisioning)
+        self.assertIn("hardware.warning", provisioning)
         self.assertIn("hardware.complete", provisioning)
         self.assertFalse((ROOT / "config/native-windows-return-v1/REGRESSAR AO APX.cmd").exists())
 
@@ -634,7 +637,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn('state.get("action") not in {"native-create", "native-delete", "native-retry", "native-discard"}', source)
         self.assertIn('checked((REFRESH, str(size), generation))', source)
         self.assertIn('MAX_EXPLICIT_INSTALL_ATTEMPTS = 2', source)
-        self.assertIn('MAX_EXPLICIT_BOOT_ATTEMPTS = 4', source)
+        self.assertIn('MAX_EXPLICIT_BOOT_ATTEMPTS = 8', source)
         self.assertIn('pending["explicit_attempts"] = install_attempts + 1', source)
         self.assertIn('pending["boot_attempts"] = boot_attempts + 1', source)
         self.assertIn('pending["action"] = "delete"; pending["stage"] = "maintenance"', source)
@@ -708,7 +711,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertEqual(pending["explicit_attempts"], 1)
         self.assertEqual(pending["boot_attempts"], 2)
         write_json.assert_called_once_with(subject.PENDING, pending, 0o400)
-        self.assertIn("2/4", write_state.call_args.args[3])
+        self.assertIn("2/8", write_state.call_args.args[3])
         run.assert_called_once_with(("/usr/bin/systemctl", "--no-block", "reboot"))
 
     def test_failed_native_create_exposes_one_explicit_hub_retry(self) -> None:
@@ -746,7 +749,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
     def test_boot_prepared_hub_retry_uses_separate_continuation_limit(self) -> None:
         subject = load_switch_service()
         pending = {
-            "action": "create", "boot_attempts": 1, "created_at": 1,
+            "action": "create", "boot_attempts": 4, "created_at": 1,
             "explicit_attempts": 2,
             "generation": "12345678-1234-4234-9234-123456789abc",
             "name": "windows", "profile": "apx-native-windows-pending-v1",
@@ -770,7 +773,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertTrue(state["native_retry"])
         self.assertEqual(state["pending_stage"], "boot-prepared")
         self.assertEqual(state["pending_install_attempts"], 2)
-        self.assertEqual(state["pending_boot_attempts"], 1)
+        self.assertEqual(state["pending_boot_attempts"], 4)
 
     def test_native_discard_restores_create_marker_if_commit_fails(self) -> None:
         subject = load_native_recovery_runner()
