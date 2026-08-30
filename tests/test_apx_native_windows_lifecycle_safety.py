@@ -87,6 +87,38 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
             self.assertEqual(pending["failure_code"], "APX-WINPE-NO-STATUS")
             run.assert_not_called()
 
+    def test_detailed_winpe_failure_reaches_linux_diagnosis(self) -> None:
+        subject = load(FINALIZER, "apx_windows_finalizer_detailed_failure")
+        pending = {
+            "action": "create", "created_at": 1, "explicit_attempts": 1,
+            "generation": "12345678-1234-4234-9234-123456789abc",
+            "name": "windows", "profile": "apx-native-windows-pending-v1",
+            "requested_size_gib": 160, "resume_attempts": 11,
+            "schema": 1, "stage": "installing",
+        }
+        status = {
+            "profile": "apx-native-windows-install-status-v2",
+            "generation": pending["generation"], "status": "failed",
+            "error": "APX-PART-03", "step": "partition-identities",
+            "detail": "windows-target", "command": "diskpart-partition-probe",
+            "exit_code": "1",
+            "diagnostic": "role=WINDOWS candidates=0 required_label=-",
+        }
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(subject, "PENDING", Path(directory) / "pending.json"), \
+                mock.patch.object(subject, "windows_complete", return_value=None), \
+                mock.patch.object(subject, "installer_status", return_value=status), \
+                mock.patch.object(subject, "ensure_linux_safe"), \
+                mock.patch.object(subject, "archive_failure"), \
+                mock.patch.object(subject, "write_state"):
+            subject.finalize_create(pending)
+            persisted = json.loads(subject.PENDING.read_text())
+        self.assertEqual(persisted["stage"], "failed")
+        self.assertIn("partition-identities/windows-target", persisted["failure_reason"])
+        self.assertIn("comando=diskpart-partition-probe", persisted["failure_reason"])
+        self.assertIn("exit=1", persisted["failure_reason"])
+        self.assertIn("candidates=0", persisted["failure_reason"])
+
     def test_finalizer_has_no_reboot_or_bootnext_arm_path(self) -> None:
         source = FINALIZER.read_text()
         self.assertNotIn('"/usr/bin/efibootmgr", "-n"', source)
@@ -106,7 +138,49 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
         self.assertGreaterEqual(text.count(r"X:\Windows\System32\find.exe"), 9)
         self.assertIn("status=failed", text)
         self.assertIn(r"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini", text)
+        self.assertIn(r"%APX_ESP%\EFI\APX\native-windows\install-log-v2.txt", text)
+        self.assertIn("detail=!APX_DETAIL!", text)
+        self.assertIn("command=!APX_LAST_COMMAND!", text)
+        self.assertIn("exit_code=!APX_LAST_EXIT!", text)
+        self.assertIn("diagnostic=!APX_DIAGNOSTIC!", text)
+        self.assertIn("pause >nul", text)
+        self.assertIn(r"/LogPath:%APX_MEDIA%\APX\dism-apply-v2.log /LogLevel:4", text)
         self.assertEqual((ROOT / ".gitattributes").read_text(), "*.cmd text eol=crlf\n")
+
+    def test_windows_target_avoids_truncated_diskpart_label_but_keeps_full_checks(self) -> None:
+        text = WINPE.read_text()
+        probe = ('call :find_partition WINDOWS '
+                 '"ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" "-" '
+                 '"!APX_WINDOWS_SIZE_TEXT!"')
+        self.assertEqual(text.count(probe), 2)
+        self.assertIn('call :mount_partition !APX_PART_WINDOWS! '
+                      '!APX_LETTER_WINDOWS! WINDOWS "APXWINTARGET"', text)
+        self.assertIn('call :validate_contract "%APX_TARGET%\\APX\\install-contract-v2.ini"', text)
+        self.assertIn("FULL_VOLUME_LABEL role=!APX_MOUNT_ROLE!", text)
+        self.assertLess(text.index("call :mount_partition !APX_PART_EFI!"), text.index(probe))
+        self.assertIn("PARTITION_PROBE role=!APX_ROLE!", text)
+        self.assertIn('>>"%APX_LOG%" type "%APX_DP_OUTPUT%"', text)
+
+    def test_failure_archive_keeps_each_explicit_attempt(self) -> None:
+        subject = load(FINALIZER, "apx_windows_finalizer_failure_history")
+        pending = {
+            "generation": "12345678-1234-4234-9234-123456789abc",
+            "explicit_attempts": 1,
+        }
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(subject, "FAILURES", Path(directory)), \
+                mock.patch.object(subject.time, "time", side_effect=(100, 101)):
+            subject.archive_failure(pending, {"error": "APX-PART-03"}, "first explicit failure")
+            pending["explicit_attempts"] = 2
+            subject.archive_failure(pending, {"error": "APX-APPLY-01"}, "second explicit failure")
+            root = Path(directory) / pending["generation"]
+            self.assertTrue((root / "failure.json").is_file())
+            attempts = sorted(root.glob("failure-*-attempt-*.json"))
+            self.assertEqual(len(attempts), 2)
+            self.assertTrue(attempts[0].name.startswith("failure-100-attempt-1-"))
+            self.assertTrue(attempts[1].name.startswith("failure-101-attempt-2-"))
+            self.assertEqual(json.loads(attempts[0].read_text())["reason"], "first explicit failure")
+            self.assertEqual(json.loads(attempts[1].read_text())["reason"], "second explicit failure")
 
     def test_preparation_never_arms_or_reboots(self) -> None:
         source = PREPARE.read_text()

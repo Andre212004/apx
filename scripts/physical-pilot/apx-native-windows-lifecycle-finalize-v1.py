@@ -134,22 +134,30 @@ def ensure_linux_safe() -> None:
 
 def archive_failure(pending: dict[str, object], status: dict[str, str] | None,
                     reason: str) -> None:
-    """Persist the first terminal diagnosis without deleting any source evidence."""
+    """Persist every terminal diagnosis without deleting earlier evidence."""
     generation = str(pending["generation"])
     FAILURES.mkdir(mode=0o700, parents=True, exist_ok=True)
     root = FAILURES / generation
     root.mkdir(mode=0o700, exist_ok=True)
-    target = root / "failure.json"
-    if target.exists():
-        return
-    write_json(target, {
+    recorded_at = int(time.time())
+    raw_attempt = pending.get("explicit_attempts", 0)
+    attempt = raw_attempt if type(raw_attempt) is int and 0 <= raw_attempt <= 2 else 0
+    record = {
         "schema": 1,
         "profile": "apx-native-windows-failure-v1",
-        "recorded_at": int(time.time()),
+        "recorded_at": recorded_at,
         "reason": reason[:1000],
         "pending": pending.copy(),
         "winpe_status": status,
-    }, 0o400)
+    }
+    first = root / "failure.json"
+    if not first.exists():
+        write_json(first, record, 0o400)
+    digest = hashlib.sha256(json.dumps(record, sort_keys=True,
+                                       separators=(",", ":")).encode()).hexdigest()[:12]
+    target = root / f"failure-{recorded_at}-attempt-{attempt}-{digest}.json"
+    if not target.exists():
+        write_json(target, record, 0o400)
 
 
 def mark_terminal(pending: dict[str, object], stage: str, code: str,
@@ -432,8 +440,13 @@ def finalize_create(pending: dict[str, object]) -> None:
             if status is not None and status.get("status") == "failed":
                 code = status.get("error", "APX-WINPE-FAILED")
                 step = status.get("step", "unknown")
+                detail = status.get("detail", "unknown")
+                command = status.get("command", "unknown")
+                exit_code = status.get("exit_code", "unknown")
+                diagnostic = status.get("diagnostic", "none")
                 mark_terminal(pending, "failed", code, step,
-                              f"o WinPE parou em segurança: {code} ({step})", status)
+                              f"o WinPE parou em segurança: {code} ({step}/{detail}); "
+                              f"comando={command}; exit={exit_code}; diagnóstico={diagnostic}", status)
                 return
             if status is not None and status.get("status") == "boot-prepared":
                 pending["stage"] = "boot-prepared"; write_json(PENDING, pending, 0o400)

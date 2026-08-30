@@ -7,6 +7,9 @@ set "APX_DP_SCRIPT=X:\apx-diskpart-v2.txt"
 set "APX_DP_OUTPUT=X:\apx-diskpart-v2.out"
 set "APX_MOUNT_LIST=X:\apx-mountvol-v2.out"
 set "APX_IMAGE_INFO=X:\apx-image-index-v2.out"
+set "APX_LAST_COMMAND=initialization"
+set "APX_LAST_EXIT=0"
+set "APX_DIAGNOSTIC=none"
 
 >"%APX_LOG%" echo APX native Windows installer v2 started.
 call :load_expected || call :fatal APX-CONTRACT-01 expected-contract
@@ -21,22 +24,26 @@ call :mount_partition !APX_PART_SETUP! !APX_LETTER_SETUP! SETUP "APXWINSETUP" ||
 set "APX_MEDIA=!APX_LETTER_SETUP!:"
 call :validate_contract "%APX_MEDIA%\APX\install-contract-v2.ini" || call :fatal APX-CONTRACT-02 setup-contract
 call :find_partition EFI "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" "APX_EFI" "1024 MB" || call :fatal APX-PART-01 apx-efi
-call :find_partition LINUX "ca7d7ccb-63ed-4c53-861c-1742536059cc" "-" "!APX_LINUX_SIZE_TEXT!" || call :fatal APX-PART-02 apx-linux
-call :find_partition WINDOWS "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" "APXWINTARGET" "!APX_WINDOWS_SIZE_TEXT!" || call :fatal APX-PART-03 windows-target
-
-set "APX_STEP=mount-validated-volumes"
-call :choose_letter WINDOWS C || call :fatal APX-LETTER-02 windows-target
 call :choose_letter EFI S || call :fatal APX-LETTER-03 apx-efi
-call :mount_partition !APX_PART_WINDOWS! !APX_LETTER_WINDOWS! WINDOWS "APXWINTARGET" || call :fatal APX-MOUNT-01 windows-target
 call :mount_partition !APX_PART_EFI! !APX_LETTER_EFI! EFI "APX_EFI" || call :fatal APX-MOUNT-03 apx-efi
-
-set "APX_TARGET=!APX_LETTER_WINDOWS!:"
 set "APX_ESP=!APX_LETTER_EFI!:"
-call :validate_contract "%APX_TARGET%\APX\install-contract-v2.ini" || call :fatal APX-CONTRACT-03 target-contract
 call :validate_contract "%APX_ESP%\EFI\APX\native-windows\install-contract-v2.ini" || call :fatal APX-CONTRACT-04 efi-contract
 if not exist "%APX_ESP%\EFI\systemd\systemd-bootx64.efi" call :fatal APX-ESP-01 linux-boot-manager
 if not exist "%APX_ESP%\EFI\APX\" call :fatal APX-ESP-02 apx-efi-tree
 if exist "%APX_ESP%\EFI\Microsoft\Boot\bootmgfw.efi" call :fatal APX-ESP-03 stale-windows-boot
+call :find_partition LINUX "ca7d7ccb-63ed-4c53-861c-1742536059cc" "-" "!APX_LINUX_SIZE_TEXT!" || call :fatal APX-PART-02 apx-linux
+rem DiskPart truncates its tabular Label field to 11 characters. Locate the
+rem unique Microsoft Basic Data candidate by authenticated disk, type and
+rem size; mount_partition then verifies the complete 12-character label and
+rem the byte-identical APX contract before any destructive command.
+call :find_partition WINDOWS "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" "-" "!APX_WINDOWS_SIZE_TEXT!" || call :fatal APX-PART-03 windows-target
+
+set "APX_STEP=mount-validated-volumes"
+call :choose_letter WINDOWS C || call :fatal APX-LETTER-02 windows-target
+call :mount_partition !APX_PART_WINDOWS! !APX_LETTER_WINDOWS! WINDOWS "APXWINTARGET" || call :fatal APX-MOUNT-01 windows-target
+
+set "APX_TARGET=!APX_LETTER_WINDOWS!:"
+call :validate_contract "%APX_TARGET%\APX\install-contract-v2.ini" || call :fatal APX-CONTRACT-03 target-contract
 if not exist "%APX_MEDIA%\sources\install.swm" call :fatal APX-WIM-01 split-image-first
 if not exist "%APX_MEDIA%\sources\install2.swm" call :fatal APX-WIM-02 split-image-second
 if not exist "%APX_MEDIA%\sources\install3.swm" call :fatal APX-WIM-03 split-image-third
@@ -45,8 +52,11 @@ for %%F in ("%APX_MEDIA%\sources\install*.swm") do if exist "%%~fF" set /A APX_S
 if not "!APX_SWM_COUNT!"=="3" call :fatal APX-WIM-06 split-image-count
 
 set "APX_STEP=image-index"
+set "APX_LAST_COMMAND=dism-get-wim-info"
 X:\Windows\System32\dism.exe /English /Get-WimInfo /WimFile:%APX_MEDIA%\sources\install.swm /Index:6 >"%APX_IMAGE_INFO%" 2>&1
-if errorlevel 1 call :fatal APX-WIM-04 image-metadata
+set "APX_LAST_EXIT=!ERRORLEVEL!"
+>>"%APX_LOG%" echo COMMAND !APX_LAST_COMMAND! exit=!APX_LAST_EXIT!
+if not "!APX_LAST_EXIT!"=="0" call :fatal APX-WIM-04 image-metadata
 type "%APX_IMAGE_INFO%" >>"%APX_LOG%"
 call :file_has_key_value "%APX_IMAGE_INFO%" "Name" "Windows 11 Pro" || call :fatal APX-WIM-05 windows-11-pro-index-6
 
@@ -55,15 +65,18 @@ set "APX_AUTH_DISK=!APX_DISK!"
 set "APX_AUTH_WINDOWS=!APX_PART_WINDOWS!"
 call :find_disk || call :fatal APX-FORMAT-00 disk-revalidation
 if not "!APX_DISK!"=="!APX_AUTH_DISK!" call :fatal APX-FORMAT-00 disk-changed
-call :find_partition WINDOWS "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" "APXWINTARGET" "!APX_WINDOWS_SIZE_TEXT!" || call :fatal APX-FORMAT-00 target-revalidation
+call :find_partition WINDOWS "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" "-" "!APX_WINDOWS_SIZE_TEXT!" || call :fatal APX-FORMAT-00 target-revalidation
 if not "!APX_PART_WINDOWS!"=="!APX_AUTH_WINDOWS!" call :fatal APX-FORMAT-00 target-changed
 call :validate_contract "%APX_TARGET%\APX\install-contract-v2.ini" || call :fatal APX-FORMAT-00 target-contract-revalidation
 >"%APX_DP_SCRIPT%" echo select disk !APX_DISK!
 >>"%APX_DP_SCRIPT%" echo select partition !APX_PART_WINDOWS!
 >>"%APX_DP_SCRIPT%" echo format fs=ntfs quick label=APXWINTARGET
 >>"%APX_DP_SCRIPT%" echo exit
+set "APX_LAST_COMMAND=diskpart-format-windows-target"
 X:\Windows\System32\diskpart.exe /s "%APX_DP_SCRIPT%" >>"%APX_LOG%" 2>&1
-if errorlevel 1 call :fatal APX-FORMAT-01 windows-target
+set "APX_LAST_EXIT=!ERRORLEVEL!"
+>>"%APX_LOG%" echo COMMAND !APX_LAST_COMMAND! exit=!APX_LAST_EXIT!
+if not "!APX_LAST_EXIT!"=="0" call :fatal APX-FORMAT-01 windows-target
 md "%APX_TARGET%\APX" >>"%APX_LOG%" 2>&1
 copy /B /Y "%APX_EXPECTED%" "%APX_TARGET%\APX\install-contract-v2.ini" >>"%APX_LOG%" 2>&1
 if errorlevel 1 call :fatal APX-FORMAT-02 restore-target-contract
@@ -73,8 +86,11 @@ if errorlevel 1 call :fatal APX-FORMAT-04 formatted-target-volume
 X:\Windows\System32\find.exe /I "APXWINTARGET" "%APX_DP_OUTPUT%" >nul || call :fatal APX-FORMAT-04 formatted-target-label
 
 set "APX_STEP=apply-windows-11-pro"
-X:\Windows\System32\dism.exe /Apply-Image /ImageFile:%APX_MEDIA%\sources\install.swm /SWMFile:%APX_MEDIA%\sources\install*.swm /Index:6 /ApplyDir:%APX_TARGET%\ >>"%APX_LOG%" 2>&1
-if errorlevel 1 call :fatal APX-APPLY-01 dism-apply-image
+set "APX_LAST_COMMAND=dism-apply-image"
+X:\Windows\System32\dism.exe /Apply-Image /ImageFile:%APX_MEDIA%\sources\install.swm /SWMFile:%APX_MEDIA%\sources\install*.swm /Index:6 /ApplyDir:%APX_TARGET%\ /LogPath:%APX_MEDIA%\APX\dism-apply-v2.log /LogLevel:4 >>"%APX_LOG%" 2>&1
+set "APX_LAST_EXIT=!ERRORLEVEL!"
+>>"%APX_LOG%" echo COMMAND !APX_LAST_COMMAND! exit=!APX_LAST_EXIT! log=%APX_MEDIA%\APX\dism-apply-v2.log
+if not "!APX_LAST_EXIT!"=="0" call :fatal APX-APPLY-01 dism-apply-image
 if not exist "%APX_TARGET%\Windows\System32\winload.efi" call :fatal APX-APPLY-02 windows-loader
 if not exist "%APX_TARGET%\Windows\System32\config\SOFTWARE" call :fatal APX-APPLY-03 windows-registry
 
@@ -93,8 +109,11 @@ X:\Windows\System32\dism.exe /Image:%APX_TARGET%\ /Add-Driver /Driver:%APX_MEDIA
 if errorlevel 1 call :fatal APX-DRIVER-01 wifi-driver-offline
 
 set "APX_STEP=windows-boot-manager"
+set "APX_LAST_COMMAND=bcdboot"
 X:\Windows\System32\bcdboot.exe %APX_TARGET%\Windows /s %APX_ESP% /f UEFI /v >>"%APX_LOG%" 2>&1
-if errorlevel 1 call :fatal APX-BCD-01 bcdboot
+set "APX_LAST_EXIT=!ERRORLEVEL!"
+>>"%APX_LOG%" echo COMMAND !APX_LAST_COMMAND! exit=!APX_LAST_EXIT!
+if not "!APX_LAST_EXIT!"=="0" call :fatal APX-BCD-01 bcdboot
 if not exist "%APX_ESP%\EFI\Microsoft\Boot\bootmgfw.efi" call :fatal APX-BCD-02 bootmgfw
 if not exist "%APX_ESP%\EFI\Microsoft\Boot\BCD" call :fatal APX-BCD-03 bcd-store
 X:\Windows\System32\bcdedit.exe /store %APX_ESP%\EFI\Microsoft\Boot\BCD /enum {default} /v >"%APX_MEDIA%\APX\bcd-loader-v2.txt" 2>&1
@@ -205,25 +224,43 @@ for /L %%P in (1,1,16) do (
     >>"%APX_DP_SCRIPT%" echo list partition
     >>"%APX_DP_SCRIPT%" echo exit
     X:\Windows\System32\diskpart.exe /s "%APX_DP_SCRIPT%" >"%APX_DP_OUTPUT%" 2>&1
+    set "APX_PROBE_EXIT=!ERRORLEVEL!"
+    set "APX_TYPE_MATCH=0"
+    set "APX_SIZE_MATCH=0"
+    set "APX_LABEL_MATCH=0"
     X:\Windows\System32\find.exe /I "!APX_TYPE!" "%APX_DP_OUTPUT%" >nul
-    if not errorlevel 1 (
-        call :file_selected_size "%APX_DP_OUTPUT%" "!APX_SIZE!"
-        if not errorlevel 1 (
-            if "!APX_LABEL!"=="-" (
-                set /A APX_PART_COUNT+=1
-                set "APX_PART_!APX_ROLE!=%%P"
-            ) else (
-                X:\Windows\System32\find.exe /I "!APX_LABEL!" "%APX_DP_OUTPUT%" >nul
-                if not errorlevel 1 (
-                    set /A APX_PART_COUNT+=1
-                    set "APX_PART_!APX_ROLE!=%%P"
-                )
-            )
-        )
+    if not errorlevel 1 set "APX_TYPE_MATCH=1"
+    call :file_selected_size "%APX_DP_OUTPUT%" "!APX_SIZE!"
+    if not errorlevel 1 set "APX_SIZE_MATCH=1"
+    if "!APX_LABEL!"=="-" (
+        set "APX_LABEL_MATCH=not-required"
+    ) else (
+        X:\Windows\System32\find.exe /I "!APX_LABEL!" "%APX_DP_OUTPUT%" >nul
+        if not errorlevel 1 set "APX_LABEL_MATCH=1"
+    )
+    >>"%APX_LOG%" echo PARTITION_PROBE role=!APX_ROLE! partition=%%P diskpart_exit=!APX_PROBE_EXIT! type_match=!APX_TYPE_MATCH! size_match=!APX_SIZE_MATCH! label_match=!APX_LABEL_MATCH!
+    >>"%APX_LOG%" echo ----- diskpart role=!APX_ROLE! partition=%%P -----
+    >>"%APX_LOG%" type "%APX_DP_OUTPUT%"
+    if "!APX_TYPE_MATCH!:!APX_SIZE_MATCH!:!APX_LABEL_MATCH!"=="1:1:1" (
+        set /A APX_PART_COUNT+=1
+        set "APX_PART_!APX_ROLE!=%%P"
+    )
+    if "!APX_TYPE_MATCH!:!APX_SIZE_MATCH!:!APX_LABEL_MATCH!"=="1:1:not-required" (
+        set /A APX_PART_COUNT+=1
+        set "APX_PART_!APX_ROLE!=%%P"
     )
 )
-if not "!APX_PART_COUNT!"=="1" exit /b 1
->>"%APX_LOG%" echo !APX_ROLE! located as partition !APX_PART_%APX_ROLE%! by GPT type and label.
+if not "!APX_PART_COUNT!"=="1" (
+    set "APX_LAST_COMMAND=diskpart-partition-probe"
+    set "APX_LAST_EXIT=1"
+    set "APX_DIAGNOSTIC=role=!APX_ROLE! candidates=!APX_PART_COUNT! required_type=!APX_TYPE! required_size=!APX_SIZE! required_label=!APX_LABEL!"
+    exit /b 1
+)
+if "!APX_LABEL!"=="-" (
+    >>"%APX_LOG%" echo !APX_ROLE! located as unique partition !APX_PART_%APX_ROLE%! by GPT type and size; full volume identity is still untrusted.
+) else (
+    >>"%APX_LOG%" echo !APX_ROLE! located as unique partition !APX_PART_%APX_ROLE%! by GPT type, size and tabular label.
+)
 exit /b 0
 
 :choose_letter
@@ -263,7 +300,15 @@ X:\Windows\System32\diskpart.exe /s "%APX_DP_SCRIPT%" >"%APX_DP_OUTPUT%" 2>&1
 if errorlevel 1 exit /b 1
 vol !APX_MOUNT_LETTER!: >"%APX_DP_OUTPUT%" 2>&1
 if errorlevel 1 exit /b 1
-X:\Windows\System32\find.exe /I "!APX_MOUNT_LABEL!" "%APX_DP_OUTPUT%" >nul || exit /b 1
+X:\Windows\System32\find.exe /I "!APX_MOUNT_LABEL!" "%APX_DP_OUTPUT%" >nul
+if errorlevel 1 (
+    set "APX_LAST_COMMAND=verify-full-volume-label"
+    set "APX_LAST_EXIT=1"
+    set "APX_DIAGNOSTIC=role=!APX_MOUNT_ROLE! partition=!APX_MOUNT_PART! expected_label=!APX_MOUNT_LABEL!"
+    >>"%APX_LOG%" type "%APX_DP_OUTPUT%"
+    exit /b 1
+)
+>>"%APX_LOG%" echo FULL_VOLUME_LABEL role=!APX_MOUNT_ROLE! partition=!APX_MOUNT_PART! label=!APX_MOUNT_LABEL! match=1
 exit /b 0
 
 :mount_named_volume
@@ -334,10 +379,17 @@ exit /b %ERRORLEVEL%
 :fatal
 set "APX_ERROR=%~1"
 set "APX_DETAIL=%~2"
->>"%APX_LOG%" echo FAILED !APX_ERROR! at !APX_STEP!: !APX_DETAIL!
+set "APX_FATAL_ENTRY_EXIT=!ERRORLEVEL!"
+if "!APX_LAST_EXIT!"=="0" set "APX_LAST_EXIT=!APX_FATAL_ENTRY_EXIT!"
+if "!APX_LAST_EXIT!"=="0" set "APX_LAST_EXIT=1"
+if not defined APX_LAST_COMMAND set "APX_LAST_COMMAND=unknown"
+if not defined APX_DIAGNOSTIC set "APX_DIAGNOSTIC=none"
+>>"%APX_LOG%" echo FAILED !APX_ERROR! at !APX_STEP!: !APX_DETAIL! command=!APX_LAST_COMMAND! exit=!APX_LAST_EXIT! diagnostic=!APX_DIAGNOSTIC!
 echo.
 echo APX Windows installation stopped safely: !APX_ERROR!
 echo Stage: !APX_STEP! / !APX_DETAIL!
+echo Command: !APX_LAST_COMMAND! / exit !APX_LAST_EXIT!
+echo Diagnostic: !APX_DIAGNOSTIC!
 echo Only an authenticated Windows target may have been changed. APX/Linux and setup are retained.
 if defined APX_MEDIA if exist "%APX_MEDIA%\APX\" (
     >"%APX_MEDIA%\APX\install-status-v2.ini" echo profile=apx-native-windows-install-status-v2
@@ -345,15 +397,19 @@ if defined APX_MEDIA if exist "%APX_MEDIA%\APX\" (
     >>"%APX_MEDIA%\APX\install-status-v2.ini" echo status=failed
     >>"%APX_MEDIA%\APX\install-status-v2.ini" echo error=!APX_ERROR!
     >>"%APX_MEDIA%\APX\install-status-v2.ini" echo step=!APX_STEP!
+    >>"%APX_MEDIA%\APX\install-status-v2.ini" echo detail=!APX_DETAIL!
+    >>"%APX_MEDIA%\APX\install-status-v2.ini" echo command=!APX_LAST_COMMAND!
+    >>"%APX_MEDIA%\APX\install-status-v2.ini" echo exit_code=!APX_LAST_EXIT!
+    >>"%APX_MEDIA%\APX\install-status-v2.ini" echo diagnostic=!APX_DIAGNOSTIC!
     copy /B /Y "%APX_LOG%" "%APX_MEDIA%\APX\install-log-v2.txt" >nul 2>&1
 )
 if defined APX_ESP if exist "%APX_ESP%\EFI\APX\native-windows\" (
-    >"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" echo profile=apx-native-windows-install-status-v2
-    >>"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" echo generation=!APX_generation!
-    >>"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" echo status=failed
-    >>"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" echo error=!APX_ERROR!
-    >>"%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" echo step=!APX_STEP!
+    if defined APX_MEDIA if exist "%APX_MEDIA%\APX\install-status-v2.ini" copy /B /Y "%APX_MEDIA%\APX\install-status-v2.ini" "%APX_ESP%\EFI\APX\native-windows\install-status-v2.ini" >nul 2>&1
+    copy /B /Y "%APX_LOG%" "%APX_ESP%\EFI\APX\native-windows\install-log-v2.txt" >nul 2>&1
 )
+echo.
+echo Failure evidence was retained. Press any key to return to APX Linux.
+pause >nul
 X:\Windows\System32\wpeutil.exe reboot
 :fatal_wait
 goto fatal_wait
