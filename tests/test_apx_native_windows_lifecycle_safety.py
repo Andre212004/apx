@@ -191,7 +191,8 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
 
     def test_explicit_retry_is_bounded_to_two(self) -> None:
         subject = load(RECOVERY, "apx_windows_recovery_limit")
-        self.assertEqual(subject.MAX_EXPLICIT_ATTEMPTS, 2)
+        self.assertEqual(subject.MAX_EXPLICIT_INSTALL_ATTEMPTS, 2)
+        self.assertEqual(subject.MAX_EXPLICIT_BOOT_ATTEMPTS, 4)
         pending = {
             "action": "create", "stage": "recovery-required",
             "requested_size_gib": 160,
@@ -200,6 +201,17 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
             "explicit_attempts": 2,
         }
         with self.assertRaisesRegex(RuntimeError, "limite de duas"):
+            subject.retry(pending, b"{}\n")
+
+    def test_first_boot_continuation_has_its_own_bounded_counter(self) -> None:
+        subject = load(RECOVERY, "apx_windows_first_boot_limit")
+        pending = {
+            "action": "create", "stage": "boot-prepared",
+            "requested_size_gib": 160,
+            "generation": "12345678-1234-4234-9234-123456789abc",
+            "explicit_attempts": 1, "boot_attempts": 4,
+        }
+        with self.assertRaisesRegex(RuntimeError, "limite de continuações"):
             subject.retry(pending, b"{}\n")
 
     def test_no_existing_bootnext_is_already_safe(self) -> None:

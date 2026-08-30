@@ -73,7 +73,7 @@ ENVIRONMENT_SHELL_ASSETS = {
     "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
     "local/bin/apx-shell-v1": "f5f8e6aeb729ea92c1561c6fe90c00e4692d17272e469f06ed7f7fbbccf5aca4",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "cca01ed15e4c01da158f1a703ffc9d92f2bd64331baf11fce74ceb6cd734a56e",
+    "quickshell/apx/shell.qml": "d2e40450ca599702197d3e4c14116bb943487bd59f36cf4ad4012b82efbb4cdd",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 RELEASE_IDS = {

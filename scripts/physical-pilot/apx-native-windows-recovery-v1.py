@@ -22,7 +22,8 @@ UKI = Path("/boot/EFI/APX/apx-native-windows-lifecycle-v1.efi")
 ENTRY_FILE = Path("/boot/loader/entries/apx-native-windows-lifecycle-v1.conf")
 FINALIZER = "apx-native-windows-lifecycle-finalize-v1.service"
 MAINTENANCE_LABEL = "APX Windows Maintenance"
-MAX_EXPLICIT_ATTEMPTS = 2
+MAX_EXPLICIT_INSTALL_ATTEMPTS = 2
+MAX_EXPLICIT_BOOT_ATTEMPTS = 4
 GENERATION = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
 
@@ -40,7 +41,7 @@ def checked(arguments: tuple[str, ...]) -> str:
 
 def trusted_pending() -> tuple[dict[str, object], bytes]:
     info = PENDING.lstat(); raw = PENDING.read_bytes(); value = json.loads(raw)
-    allowed = {"action", "created_at", "explicit_attempts", "failed_at", "failure_code", "failure_reason",
+    allowed = {"action", "boot_attempts", "created_at", "explicit_attempts", "failed_at", "failure_code", "failure_reason",
                "failure_step", "generation", "name", "profile", "requested_size_gib",
                "resume_attempts", "schema", "stage"}
     if PENDING.is_symlink() or not PENDING.is_file() or (info.st_uid, info.st_gid) != (0, 0) \
@@ -60,8 +61,12 @@ def trusted_pending() -> tuple[dict[str, object], bytes]:
     if type(attempts) is not int or not 0 <= attempts <= 12:
         raise RuntimeError("as retomas Windows pendentes diferem")
     explicit_attempts = value.get("explicit_attempts", 0)
-    if type(explicit_attempts) is not int or not 0 <= explicit_attempts <= MAX_EXPLICIT_ATTEMPTS:
+    if type(explicit_attempts) is not int \
+            or not 0 <= explicit_attempts <= MAX_EXPLICIT_INSTALL_ATTEMPTS:
         raise RuntimeError("as tentativas Windows explícitas diferem")
+    boot_attempts = value.get("boot_attempts", 0)
+    if type(boot_attempts) is not int or not 0 <= boot_attempts <= MAX_EXPLICIT_BOOT_ATTEMPTS:
+        raise RuntimeError("as continuações do primeiro arranque Windows diferem")
     return value, raw
 
 
@@ -131,7 +136,38 @@ def exact_setup_entry() -> str:
     return matches[0]
 
 
-def exact_windows_entry() -> str:
+def exact_windows_entry(generation: str) -> str:
+    if not Path("/dev/nvme0n1p3").is_block_device() \
+            or checked(("/usr/bin/blkid", "-s", "PARTUUID", "-o", "value",
+                        "/dev/nvme0n1p3")).upper() != "099C31D8-313A-4ABA-B0E0-2B59502C9674" \
+            or checked(("/usr/bin/blkid", "-s", "TYPE", "-o", "value",
+                        "/dev/nvme0n1p3")).lower() != "ntfs":
+        raise RuntimeError("o alvo Windows aplicado difere")
+    status = Path("/boot/EFI/APX/native-windows/install-status-v2.ini")
+    raw = status.read_bytes()
+    values: dict[str, str] = {}
+    try:
+        for line in raw.decode("ascii").splitlines():
+            key, separator, value = line.partition("=")
+            if not separator or key in values:
+                raise ValueError("duplicate or malformed status field")
+            values[key] = value
+    except (UnicodeError, ValueError) as error:
+        raise RuntimeError("o estado espelhado do primeiro arranque Windows difere") from error
+    if status.is_symlink() or not status.is_file() or len(raw) > 4096 or set(values) != {
+            "profile", "generation", "status", "image_index", "windows_partition_guid",
+            "esp_partition_guid", "target_letter", "esp_letter",
+    } or values != {
+            "profile": "apx-native-windows-install-status-v2",
+            "generation": generation,
+            "status": "boot-prepared",
+            "image_index": "6",
+            "windows_partition_guid": "099C31D8-313A-4ABA-B0E0-2B59502C9674",
+            "esp_partition_guid": "9625F250-9ACC-453A-AE63-0C863ADE440F",
+            "target_letter": "R:",
+            "esp_letter": "S:",
+    }:
+        raise RuntimeError("o estado espelhado do primeiro arranque Windows difere")
     output = checked(("/usr/bin/efibootmgr", "-v"))
     matches = []
     for line in output.splitlines():
@@ -180,30 +216,41 @@ def retry(pending: dict[str, object], original: bytes) -> None:
             "prepared", "failed", "recovery-required", "boot-prepared"}:
         raise RuntimeError("a criação Windows já não pode ser retomada")
     size, generation = int(pending["requested_size_gib"]), str(pending["generation"])
-    attempts = pending.get("explicit_attempts", 0)
-    if type(attempts) is not int or not 0 <= attempts < MAX_EXPLICIT_ATTEMPTS:
-        raise RuntimeError("o limite de duas tentativas explícitas foi atingido")
+    install_attempts = pending.get("explicit_attempts", 0)
+    boot_attempts = pending.get("boot_attempts", 0)
     previous_stage = str(pending["stage"])
+    if previous_stage == "boot-prepared":
+        if type(boot_attempts) is not int \
+                or not 0 <= boot_attempts < MAX_EXPLICIT_BOOT_ATTEMPTS:
+            raise RuntimeError("o limite de continuações do primeiro arranque Windows foi atingido")
+    elif type(install_attempts) is not int \
+            or not 0 <= install_attempts < MAX_EXPLICIT_INSTALL_ATTEMPTS:
+        raise RuntimeError("o limite de duas tentativas explícitas de instalação foi atingido")
     try:
         if previous_stage == "boot-prepared":
-            entry = exact_windows_entry()
+            entry = exact_windows_entry(generation)
         else:
             write_state("retry", "applying", 18, "A validar e reconstruir o instalador Windows…")
             pending["stage"] = "installing"
-            pending["explicit_attempts"] = attempts + 1
+            pending["explicit_attempts"] = install_attempts + 1
+            pending.setdefault("boot_attempts", 0)
             for key in ("failed_at", "failure_code", "failure_reason", "failure_step"):
                 pending.pop(key, None)
             write_json(PENDING, pending, 0o400)
             checked((REFRESH, str(size), generation))
             entry = exact_setup_entry()
         if previous_stage == "boot-prepared":
-            pending["explicit_attempts"] = attempts + 1
+            pending["boot_attempts"] = boot_attempts + 1
             write_json(PENDING, pending, 0o400)
         checked(("/usr/bin/efibootmgr", "-n", entry))
         if f"BootNext: {entry}" not in checked(("/usr/bin/efibootmgr",)):
             raise RuntimeError("o arranque Windows explícito não ficou armado")
-        write_state("retry", "applying", 86,
-                    f"Tentativa Windows explícita {attempts + 1}/{MAX_EXPLICIT_ATTEMPTS}…")
+        message = (f"Continuação explícita do primeiro arranque Windows "
+                   f"{boot_attempts + 1}/{MAX_EXPLICIT_BOOT_ATTEMPTS}…") \
+            if previous_stage == "boot-prepared" else \
+            (f"Tentativa explícita de instalação Windows "
+             f"{install_attempts + 1}/{MAX_EXPLICIT_INSTALL_ATTEMPTS}…")
+        write_state("retry", "applying", 86, message)
         result = run(("/usr/bin/systemctl", "--no-block", "reboot"))
         if result.returncode:
             raise RuntimeError("o reinício Windows explícito foi recusado")
@@ -232,6 +279,7 @@ def discard(pending: dict[str, object], original: bytes) -> None:
     pending["action"] = "delete"; pending["stage"] = "maintenance"
     pending.pop("resume_attempts", None)
     pending.pop("explicit_attempts", None)
+    pending.pop("boot_attempts", None)
     try:
         write_json(PENDING, pending, 0o400)
         write_state("discard", "applying", 38, "A reiniciar para devolver o espaço ao APX…")

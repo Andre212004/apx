@@ -165,7 +165,7 @@ def windows_storage_reserved() -> bool:
 
 def trusted_windows_pending() -> dict[str, object]:
     metadata = WINDOWS_PENDING.lstat(); raw = WINDOWS_PENDING.read_bytes(); value = json.loads(raw)
-    allowed = {"action", "created_at", "explicit_attempts", "failed_at", "failure_code", "failure_reason",
+    allowed = {"action", "boot_attempts", "created_at", "explicit_attempts", "failed_at", "failure_code", "failure_reason",
                "failure_step", "generation", "name", "profile", "requested_size_gib",
                "resume_attempts", "schema", "stage"}
     if WINDOWS_PENDING.is_symlink() or not WINDOWS_PENDING.is_file() \
@@ -187,6 +187,9 @@ def trusted_windows_pending() -> dict[str, object]:
     explicit_attempts = value.get("explicit_attempts", 0)
     if type(explicit_attempts) is not int or not 0 <= explicit_attempts <= 2:
         raise PermissionError("as tentativas Windows explícitas diferem")
+    boot_attempts = value.get("boot_attempts", 0)
+    if type(boot_attempts) is not int or not 0 <= boot_attempts <= 4:
+        raise PermissionError("as continuações do primeiro arranque Windows diferem")
     return value
 
 
@@ -319,11 +322,14 @@ def management_state() -> dict[str, object]:
             pending = trusted_windows_pending()
             recoverable_idle = value.get("phase") in {"failed", "prepared", "recovery-required"} \
                 and not MANAGEMENT_LOCK.exists()
-            attempts = pending.get("explicit_attempts", 0)
-            can_retry = recoverable_idle and pending.get("action") == "create" \
-                and pending.get("stage") in {"prepared", "boot-prepared", "failed",
-                                             "recovery-required"} \
-                and type(attempts) is int and attempts < 2
+            install_attempts = pending.get("explicit_attempts", 0)
+            boot_attempts = pending.get("boot_attempts", 0)
+            stage = pending.get("stage")
+            can_retry = recoverable_idle and pending.get("action") == "create" and (
+                (stage == "boot-prepared" and type(boot_attempts) is int and boot_attempts < 4)
+                or (stage in {"prepared", "failed", "recovery-required"}
+                    and type(install_attempts) is int and install_attempts < 2)
+            )
             can_discard = recoverable_idle and (
                 (pending.get("action") == "create" and pending.get("stage") in {
                     "prepared", "installing", "boot-prepared", "failed", "recovery-required",
@@ -335,7 +341,10 @@ def management_state() -> dict[str, object]:
                 "native_retry": can_retry,
                 "native_discard": can_discard,
                 "pending_generation": pending["generation"],
+                "pending_stage": stage,
                 "pending_size_gib": pending["requested_size_gib"],
+                "pending_install_attempts": install_attempts,
+                "pending_boot_attempts": boot_attempts,
             })
         except (OSError, ValueError, KeyError, json.JSONDecodeError, PermissionError):
             value["native_recovery"] = False
@@ -463,10 +472,14 @@ def start_native_recovery(action: str, generation: str) -> dict[str, object]:
             or stat.S_IMODE(info.st_mode) != 0o755:
         raise RuntimeError("o executor de recuperação Windows não é confiável")
     pending = trusted_windows_pending()
-    attempts = pending.get("explicit_attempts", 0)
-    retryable = pending.get("action") == "create" \
-        and pending.get("stage") in {"prepared", "boot-prepared", "failed", "recovery-required"} \
-        and type(attempts) is int and attempts < 2
+    install_attempts = pending.get("explicit_attempts", 0)
+    boot_attempts = pending.get("boot_attempts", 0)
+    stage = pending.get("stage")
+    retryable = pending.get("action") == "create" and (
+        (stage == "boot-prepared" and type(boot_attempts) is int and boot_attempts < 4)
+        or (stage in {"prepared", "failed", "recovery-required"}
+            and type(install_attempts) is int and install_attempts < 2)
+    )
     discardable = (pending.get("action") == "create" and pending.get("stage") in {
         "prepared", "installing", "boot-prepared", "failed", "recovery-required",
     }) or (pending.get("action") == "delete" and pending.get("stage") == "maintenance")

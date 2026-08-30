@@ -2877,3 +2877,22 @@ visible. `RETOMAR WINDOWS` remains the explicit action that revalidates the
 machine, rebuilds and verifies p4 from the corrected source, increments the
 bounded explicit attempt from 1 to 2, arms one BootNext and reboots. No third
 automatic retry exists.
+
+## Current handoff — Windows first-boot continuation
+
+The owner created a fresh generation
+`1c5b5631-fb0e-4384-bf6f-b23eb1798f70`, then explicitly entered WinPE and
+Windows. WinPE published authenticated `boot-prepared`; DISM, driver injection
+and bcdboot succeeded. The Windows Panther log proves essential OOBE services
+started, setup phase 4 completed and setup exited with code `0`. Windeploy then
+requested an immediate reboot before OOBE. No crash dump exists.
+
+That Windows-requested reboot returned to Linux because the one-shot Windows
+BootNext had already been consumed and Linux remains first permanently. The
+remaining defect is APX accounting: the two-attempt limit counted one WinPE
+launch plus one Windows launch, hiding retry exactly when normal Windows setup
+needed its next boot. Installation attempts and first-boot continuations are
+now separated. WinPE remains capped at two; authenticated `boot-prepared`
+continuations are manual and capped at four. The menu labels the latter
+`PROSSEGUIR WINDOWS`. No automatic boot or permanent BootOrder change is
+introduced. See `docs/native-windows-first-boot-continuation-2026-08-30.md`.

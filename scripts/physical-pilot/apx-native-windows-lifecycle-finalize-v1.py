@@ -415,6 +415,7 @@ def finalize_create(pending: dict[str, object]) -> None:
             return
         ensure_linux_safe()
         pending["stage"] = "prepared"; pending["explicit_attempts"] = 0
+        pending["boot_attempts"] = 0
         write_json(PENDING, pending, 0o400)
         write_state("create", "prepared", 72,
                     "Instalador pronto; o arranque Windows requer confirmação explícita.")
@@ -449,7 +450,9 @@ def finalize_create(pending: dict[str, object]) -> None:
                               f"comando={command}; exit={exit_code}; diagnóstico={diagnostic}", status)
                 return
             if status is not None and status.get("status") == "boot-prepared":
-                pending["stage"] = "boot-prepared"; write_json(PENDING, pending, 0o400)
+                pending["stage"] = "boot-prepared"
+                pending.setdefault("boot_attempts", 0)
+                write_json(PENDING, pending, 0o400)
                 ensure_linux_safe()
                 write_state("create", "prepared", 90,
                             "Windows aplicado; o primeiro arranque requer confirmação explícita.")
@@ -499,6 +502,11 @@ def main() -> int:
             or pending.get("requested_size_gib") not in {80, 120, 160} \
             or GENERATION.fullmatch(str(pending.get("generation", ""))) is None:
         raise RuntimeError("a operação Windows pendente difere")
+    install_attempts = pending.get("explicit_attempts", 0)
+    boot_attempts = pending.get("boot_attempts", 0)
+    if type(install_attempts) is not int or not 0 <= install_attempts <= 2 \
+            or type(boot_attempts) is not int or not 0 <= boot_attempts <= 4:
+        raise RuntimeError("os limites explícitos da operação Windows diferem")
     allowed = ({"maintenance", "preparing-installer", "prepared", "installing",
                 "boot-prepared", "failed", "recovery-required", "finalizing"}
                if pending["action"] == "create" else {"maintenance", "finalizing"})

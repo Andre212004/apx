@@ -4725,3 +4725,18 @@ firmware e estado, reconstrói/verifica p4 a partir do WinPE corrigido e só
 então arma uma única entrada Setup. A falha histórica permanece arquivada; os
 campos ativos de falha só são retirados quando essa nova tentativa foi
 explicitamente aceite.
+
+## Continuação segura do primeiro arranque Windows — 2026-08-30
+
+Duas gerações físicas sucessivas provaram o mesmo resultado: WinPE aplicou o
+Windows e `bcdboot` com sucesso; o primeiro boot iniciou serviços OOBE,
+concluiu a fase 4 com código `0` e pediu explicitamente reboot antes do OOBE.
+O BootNext único foi consumido e o BootOrder Linux-first recuperou o Hub, como
+desenhado. Não houve crash Windows.
+
+O limite anterior misturava duas operações diferentes. As duas tentativas
+WinPE continuam limitadas a duas, mas `boot-prepared` passa a usar um contador
+separado de até quatro continuações manuais. Cada continuação autentica a
+geração, p3, status espelhado e Windows Boot Manager, arma um BootNext único e
+nunca reconstrói o instalador. O Hub apresenta `PROSSEGUIR WINDOWS` nesta fase.
+Detalhes: `docs/native-windows-first-boot-continuation-2026-08-30.md`.

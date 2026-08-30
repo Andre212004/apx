@@ -178,6 +178,7 @@ def main() -> int:
         }
         if arguments.action == "create":
             pending["explicit_attempts"] = 0
+            pending["boot_attempts"] = 0
         write_json(PENDING, pending, 0o400); pending_written = True
         write_state(arguments.action, "applying", 24, "A construir a manutenção assinada…")
         checked((BUILD, arguments.action, str(arguments.size_gib), arguments.generation))
