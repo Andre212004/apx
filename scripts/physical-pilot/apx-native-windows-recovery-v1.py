@@ -177,7 +177,7 @@ def validate_host() -> None:
 
 def retry(pending: dict[str, object], original: bytes) -> None:
     if pending.get("action") != "create" or pending.get("stage") not in {
-            "prepared", "recovery-required", "boot-prepared"}:
+            "prepared", "failed", "recovery-required", "boot-prepared"}:
         raise RuntimeError("a criação Windows já não pode ser retomada")
     size, generation = int(pending["requested_size_gib"]), str(pending["generation"])
     attempts = pending.get("explicit_attempts", 0)

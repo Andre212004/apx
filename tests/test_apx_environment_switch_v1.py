@@ -35,6 +35,16 @@ def load_contract():
     return module
 
 
+def load_switch_service():
+    sys.path.insert(0, str(ROOT / "src"))
+    try:
+        spec = importlib.util.spec_from_file_location("switch_service", SERVICE)
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path.pop(0)
+
+
 def load_runner():
     spec = importlib.util.spec_from_file_location("switch_runner", RUNNER)
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -636,7 +646,10 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
     def test_native_retry_refreshes_then_arms_one_explicit_boot(self) -> None:
         subject = load_native_recovery_runner()
         pending = {"requested_size_gib": 160, "generation": "12345678-1234-4234-9234-123456789abc",
-                   "action": "create", "stage": "recovery-required", "resume_attempts": 0}
+                   "action": "create", "stage": "failed", "resume_attempts": 0,
+                   "explicit_attempts": 1, "failure_code": "APX-PART-03",
+                   "failure_reason": "authenticated terminal failure",
+                   "failure_step": "partition-identities", "failed_at": 10}
         calls: list[tuple[str, ...]] = []
 
         def checked(arguments):
@@ -650,15 +663,50 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
                 mock.patch.object(subject, "write_json") as write_json, \
                 mock.patch.object(subject, "write_state"), \
                 mock.patch.object(subject, "run", return_value=mock.Mock(returncode=0)) as run:
-            subject.retry(pending, b'{"stage":"recovery-required"}\n')
+            subject.retry(pending, b'{"stage":"failed"}\n')
 
         self.assertEqual(calls[0], (subject.REFRESH, "160", pending["generation"]))
         self.assertIn(("/usr/bin/efibootmgr", "-n", "0000"), calls)
-        self.assertEqual(pending["explicit_attempts"], 1)
+        self.assertEqual(pending["explicit_attempts"], 2)
         self.assertEqual(pending["resume_attempts"], 0)
         self.assertEqual(pending["stage"], "installing")
+        self.assertNotIn("failure_code", pending)
+        self.assertNotIn("failure_reason", pending)
+        self.assertNotIn("failure_step", pending)
+        self.assertNotIn("failed_at", pending)
         write_json.assert_called_once_with(subject.PENDING, pending, 0o400)
         run.assert_called_once_with(("/usr/bin/systemctl", "--no-block", "reboot"))
+
+    def test_failed_native_create_exposes_one_explicit_hub_retry(self) -> None:
+        subject = load_switch_service()
+        pending = {
+            "action": "create", "created_at": 1, "explicit_attempts": 1,
+            "failed_at": 2, "failure_code": "APX-PART-03",
+            "failure_reason": "authenticated terminal failure",
+            "failure_step": "partition-identities",
+            "generation": "12345678-1234-4234-9234-123456789abc",
+            "name": "windows", "profile": "apx-native-windows-pending-v1",
+            "requested_size_gib": 160, "schema": 1, "stage": "failed",
+        }
+        management = {
+            "schema": 1, "profile": "apx-environment-management-v1",
+            "phase": "failed", "progress": 100, "message": "failed",
+            "target": "windows", "action": "native-create",
+        }
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(subject, "MANAGEMENT_STATE", Path(directory) / "state.json"), \
+                mock.patch.object(subject, "MANAGEMENT_LOCK", Path(directory) / "lock"), \
+                mock.patch.object(subject, "WINDOWS_PENDING", Path(directory) / "pending.json"):
+            subject.MANAGEMENT_STATE.write_text(json.dumps(management))
+            subject.WINDOWS_PENDING.write_text(json.dumps(pending))
+            subject.MANAGEMENT_STATE.chmod(0o600)
+            subject.WINDOWS_PENDING.chmod(0o400)
+            state = subject.management_state()
+
+        self.assertTrue(state["native_recovery"])
+        self.assertTrue(state["native_retry"])
+        self.assertTrue(state["native_discard"])
+        self.assertEqual(state["pending_generation"], pending["generation"])
 
     def test_native_discard_restores_create_marker_if_commit_fails(self) -> None:
         subject = load_native_recovery_runner()

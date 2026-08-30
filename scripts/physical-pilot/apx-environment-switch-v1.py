@@ -321,7 +321,8 @@ def management_state() -> dict[str, object]:
                 and not MANAGEMENT_LOCK.exists()
             attempts = pending.get("explicit_attempts", 0)
             can_retry = recoverable_idle and pending.get("action") == "create" \
-                and pending.get("stage") in {"prepared", "boot-prepared", "recovery-required"} \
+                and pending.get("stage") in {"prepared", "boot-prepared", "failed",
+                                             "recovery-required"} \
                 and type(attempts) is int and attempts < 2
             can_discard = recoverable_idle and (
                 (pending.get("action") == "create" and pending.get("stage") in {
@@ -464,7 +465,7 @@ def start_native_recovery(action: str, generation: str) -> dict[str, object]:
     pending = trusted_windows_pending()
     attempts = pending.get("explicit_attempts", 0)
     retryable = pending.get("action") == "create" \
-        and pending.get("stage") in {"prepared", "boot-prepared", "recovery-required"} \
+        and pending.get("stage") in {"prepared", "boot-prepared", "failed", "recovery-required"} \
         and type(attempts) is int and attempts < 2
     discardable = (pending.get("action") == "create" and pending.get("stage") in {
         "prepared", "installing", "boot-prepared", "failed", "recovery-required",

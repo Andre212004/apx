@@ -74,3 +74,18 @@ Antes de outra tentativa, o código passa a:
 Estas alterações ficam apenas no repositório e nos ficheiros Linux instalados
 até existir uma decisão explícita de preparar uma terceira tentativa. Este
 post-mortem não autoriza reconstruir p4, armar BootNext, formatar ou reiniciar.
+
+## Preparação da próxima tentativa pelo APX Hub
+
+Depois do post-mortem, o proprietário autorizou preparar o percurso interativo
+do Hub, mantendo o próprio clique como fronteira de autorização. O estado
+terminal `failed` passa a expor `RETOMAR WINDOWS` quando a geração continua
+autenticada, não existe operação concorrente e ainda resta uma tentativa
+explícita. Tornar o botão visível não altera p3/p4 nem o firmware.
+
+Ao clicar, o executor usa a mesma geração, volta a validar AC, bateria, Host,
+disco, GPT e UEFI, reconstrói e verifica p4 com o batch corrigido e só depois
+arma um único BootNext para APX Windows Setup. A contagem passa de 1/2 para
+2/2. Qualquer falha anterior ao reboot restaura o pending original e limpa
+BootNext; qualquer falha WinPE regressa ao Linux e fica terminal, sem nova
+retoma automática.

@@ -4706,3 +4706,22 @@ pode ser reconstruído e arrancado numa ação explícita, com AC ligado.
 
 Detalhes e runbook: `docs/native-windows-fail-closed-v2-2026-08-30.md`.
 Auditoria de configuração: `docs/apx-system-state-audit-2026-08-30.md`.
+
+## Retoma explícita da segunda tentativa pelo Hub — 2026-08-30
+
+O segundo arranque físico terminou corretamente em `failed` com
+`APX-PART-03`, depois de provar que o DiskPart truncava o label de 12
+caracteres de p3 na apresentação tabular. A correção preserva a autenticação
+forte de p3 e melhora os diagnósticos persistentes; está descrita em
+`docs/native-windows-second-physical-attempt-postmortem-2026-08-30.md`.
+
+Foi encontrada uma lacuna separada no menu: `failed` era aceite como estado
+terminal e descartável, mas não como origem de uma nova tentativa explícita.
+O Hub passa a oferecer `RETOMAR WINDOWS` também para uma criação autenticada
+em `failed`, desde que não exista lock e `explicit_attempts < 2`. O clique
+continua a ser a única autorização: até lá não reconstrói p4, não arma
+BootNext e não reinicia. Ao clicar, o executor revalida o Host, energia,
+firmware e estado, reconstrói/verifica p4 a partir do WinPE corrigido e só
+então arma uma única entrada Setup. A falha histórica permanece arquivada; os
+campos ativos de falha só são retirados quando essa nova tentativa foi
+explicitamente aceite.

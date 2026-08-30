@@ -2852,3 +2852,28 @@ started while AC is offline, and no automatic process may arm it.
 The complete suite passes 1102 tests with 11 expected skips. See
 `docs/native-windows-fail-closed-v2-2026-08-30.md` and
 `docs/apx-system-state-audit-2026-08-30.md`.
+
+## Current handoff — owner-controlled third attempt from the Hub
+
+The second physical attempt returned safely to Linux and produced authenticated
+`APX-PART-03 / partition-identities / windows-target`. Post-mortem proved p3
+was not formatted during that attempt and still contains only its APX
+contract; DISM and bcdboot did not run. The root cause was DiskPart's
+11-character tabular label display truncating `APXWINTARGET`. Commit
+`e6fd060f7146b95a7516e10b8dd69d86b8643ef3` corrects the p3 probe while
+retaining full-label and byte-identical contract checks after mount and again
+immediately before format. It also persists raw command output, exit codes,
+DISM logs and terminal diagnostics to p4 and APX_EFI and pauses on failure.
+
+The owner now wants to initiate the next attempt from the Hub rather than a
+Host-side command. The durable marker is an authenticated `create/failed`
+generation with `explicit_attempts=1`; Linux is first, BootNext is absent, AC
+is online and battery is charging. The Hub previously exposed retry only for
+`prepared`, `boot-prepared` and `recovery-required`, accidentally hiding the
+button for an authenticated terminal `failed` result. The corrected admission
+includes `failed` in both the status surface and exact-generation recovery
+executor. It does not mutate the pending state or firmware merely by becoming
+visible. `RETOMAR WINDOWS` remains the explicit action that revalidates the
+machine, rebuilds and verifies p4 from the corrected source, increments the
+bounded explicit attempt from 1 to 2, arms one BootNext and reboots. No third
+automatic retry exists.
