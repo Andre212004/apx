@@ -9,6 +9,7 @@ readonly windows_partition=/dev/nvme0n1p3
 readonly installer_partition=/dev/nvme0n1p4
 readonly iso=/var/lib/apx/package-artifacts/system-images-v1/windows11.iso
 readonly iso_sha256=c74c96aa06e2548f14c76b5fd6600514c0d4f6eb05a731e4272ab005e8f48ce3
+readonly fc_exe_sha256=f4d29fd93794e50a6740b9692da5dcad119d0f5a68a812357497c69ed6496ce3
 readonly windows_uuid=099C31D8-313A-4ABA-B0E0-2B59502C9674
 readonly windows_type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
 readonly installer_start=981340160
@@ -146,15 +147,21 @@ stage=patch-winpe
 /usr/bin/wimlib-imagex info "$iso_mount/sources/install.wim" 6 \
     | /usr/bin/grep -Fx 'Name:                   Windows 11 Pro' >/dev/null \
     || fail "Windows 11 Pro is not image index 6"
+/usr/bin/wimlib-imagex extract "$iso_mount/sources/install.wim" 6 Windows/System32/fc.exe \
+    --to-stdout >"$staging/fc.exe"
+[[ -f $staging/fc.exe && ! -L $staging/fc.exe && $(/usr/bin/stat -c %s "$staging/fc.exe") == 49152 \
+        && $(/usr/bin/sha256sum "$staging/fc.exe" | /usr/bin/awk '{print $1}') == "$fc_exe_sha256" ]] \
+    || fail "Windows 11 Pro comparison executable differs"
 /usr/bin/install -m 0600 "$iso_mount/sources/boot.wim" "$staging/boot.wim"
 {
     /usr/bin/printf 'add "%s" /Windows/System32/winpeshl.ini\n' "$winpe_source/winpeshl.ini"
     /usr/bin/printf 'add "%s" /Windows/System32/apx-media.cmd\n' "$winpe_source/apx-media.cmd"
     /usr/bin/printf 'add "%s" /Windows/System32/apx-expected.ini\n' "$contract"
+    /usr/bin/printf 'add "%s" /Windows/System32/fc.exe\n' "$staging/fc.exe"
 } >"$staging/wim-update-commands.txt"
 /usr/bin/wimlib-imagex update "$staging/boot.wim" 2 --check --rebuild <"$staging/wim-update-commands.txt"
 /usr/bin/wimlib-imagex verify "$staging/boot.wim"
-for executable in bcdboot.exe bcdedit.exe cmd.exe diskpart.exe dism.exe fc.exe find.exe mountvol.exe wpeutil.exe xcopy.exe; do
+for executable in bcdboot.exe bcdedit.exe cmd.exe diskpart.exe Dism.exe fc.exe find.exe mountvol.exe wpeutil.exe xcopy.exe; do
     /usr/bin/wimlib-imagex dir "$staging/boot.wim" 2 --path="Windows/System32/$executable" >/dev/null \
         || fail "required WinPE executable is absent: $executable"
 done

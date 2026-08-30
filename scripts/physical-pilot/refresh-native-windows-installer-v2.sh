@@ -6,6 +6,7 @@ set -Eeuo pipefail
 # preserved. A later, separately authenticated finalizer selects setup once.
 
 readonly assets=/usr/share/apx/native-windows-lifecycle-v1
+readonly fc_exe_sha256=f4d29fd93794e50a6740b9692da5dcad119d0f5a68a812357497c69ed6496ce3
 readonly size_gib="${1:-}"
 readonly generation="${2:-}"
 readonly disk=/dev/nvme0n1
@@ -171,6 +172,11 @@ stage=rebuild-winpe
 /usr/bin/install -d -m 0700 "$backup" "$staging" "$staging/extracted"
 /usr/bin/sfdisk --dump "$disk" >"$backup/gpt-before.sfdisk"
 /usr/bin/efibootmgr -v >"$backup/efibootmgr-before.txt"
+/usr/bin/wimlib-imagex extract "$setup_mount/sources/install.swm" 6 Windows/System32/fc.exe \
+    --ref="$setup_mount/sources/install*.swm" --to-stdout >"$staging/fc.exe"
+[[ -f $staging/fc.exe && ! -L $staging/fc.exe && $(/usr/bin/stat -c %s "$staging/fc.exe") == 49152 \
+        && $(/usr/bin/sha256sum "$staging/fc.exe" | /usr/bin/awk '{print $1}') == "$fc_exe_sha256" ]] \
+    || fail 'Windows 11 Pro comparison executable differs'
 /usr/bin/install -m 0600 "$setup_mount/sources/boot.wim" "$staging/boot.wim"
 /usr/bin/install -m 0600 "$staging/boot.wim" "$backup/boot.wim.before"
 /usr/bin/install -m 0600 "$setup_mount/APX/install-contract-v2.ini" "$staging/install-contract-v2.ini"
@@ -180,10 +186,11 @@ stage=rebuild-winpe
     /usr/bin/printf 'add "%s" /Windows/System32/winpeshl.ini\n' "$winpe_source/winpeshl.ini"
     /usr/bin/printf 'add "%s" /Windows/System32/apx-media.cmd\n' "$winpe_source/apx-media.cmd"
     /usr/bin/printf 'add "%s" /Windows/System32/apx-expected.ini\n' "$staging/install-contract-v2.ini"
+    /usr/bin/printf 'add "%s" /Windows/System32/fc.exe\n' "$staging/fc.exe"
 } >"$staging/wim-update-commands.txt"
 /usr/bin/wimlib-imagex update "$staging/boot.wim" 2 --check --rebuild <"$staging/wim-update-commands.txt"
 /usr/bin/wimlib-imagex verify "$staging/boot.wim"
-for executable in bcdboot.exe bcdedit.exe cmd.exe diskpart.exe dism.exe fc.exe find.exe mountvol.exe wpeutil.exe xcopy.exe; do
+for executable in bcdboot.exe bcdedit.exe cmd.exe diskpart.exe Dism.exe fc.exe find.exe mountvol.exe wpeutil.exe xcopy.exe; do
     /usr/bin/wimlib-imagex dir "$staging/boot.wim" 2 --path="Windows/System32/$executable" >/dev/null \
         || fail "required WinPE executable is absent: $executable"
 done

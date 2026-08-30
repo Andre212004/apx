@@ -405,6 +405,11 @@ class NativeWindowsStorageV1Tests(unittest.TestCase):
         self.assertIn('len(set(raw)) != 1', source)
         self.assertIn("wimlib-imagex update", source)
         self.assertIn("wimlib-imagex verify", source)
+        self.assertIn("diskpart.exe Dism.exe fc.exe find.exe", source)
+        self.assertIn('extract "$setup_mount/sources/install.swm" 6 Windows/System32/fc.exe', source)
+        self.assertIn('--ref="$setup_mount/sources/install*.swm" --to-stdout', source)
+        self.assertIn('add "%s" /Windows/System32/fc.exe', source)
+        self.assertIn("f4d29fd93794e50a6740b9692da5dcad119d0f5a68a812357497c69ed6496ce3", source)
         self.assertIn("boot.wim.apx-new", source)
         self.assertIn("boot.wim.apx-original", source)
         self.assertIn('cmp "$backup/gpt-before.sfdisk" "$backup/gpt-after.sfdisk"', source)
@@ -413,6 +418,13 @@ class NativeWindowsStorageV1Tests(unittest.TestCase):
         self.assertNotIn("blkdiscard", source.lower())
         self.assertNotIn("sfdisk --delete", source.lower())
         self.assertNotIn("systemctl reboot", source.lower())
+
+    def test_installer_injects_authenticated_comparison_executable(self) -> None:
+        source = INSTALLER_V2.read_text()
+        self.assertIn('extract "$iso_mount/sources/install.wim" 6 Windows/System32/fc.exe', source)
+        self.assertIn('add "%s" /Windows/System32/fc.exe', source)
+        self.assertIn("diskpart.exe Dism.exe fc.exe find.exe", source)
+        self.assertIn("f4d29fd93794e50a6740b9692da5dcad119d0f5a68a812357497c69ed6496ce3", source)
 
     def test_menu_recovery_rollout_does_not_resume_or_touch_windows_media(self) -> None:
         source = DEPLOY_MENU_RECOVERY_V1.read_text()
