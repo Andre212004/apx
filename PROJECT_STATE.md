@@ -4374,7 +4374,7 @@ The owner then physically proved both directions: opening `Windows · NATIVO`
 from the Hub reached the installed physical Windows, and the Windows return
 action rebooted into the Linux-first Hub. Return v2 removes the Public Desktop
 `REGRESSAR AO APX.cmd` icon entirely. The Common Startup entry now runs a
-hidden supervising VBS loop that keeps the PowerShell `RegisterHotKey` message
+hidden supervising VBS loop that keeps the PowerShell keyboard-hook message
 listener alive and retries after bounded two-second delays if neither hotkey
 can yet be registered. `SUPER+E` is primary and `SUPER+SHIFT+E` remains the
 first-sign-in fallback while Explorer reloads `DisabledHotkeys`.
@@ -4747,3 +4747,19 @@ botão apesar de não existir falha de boot. O orçamento manual passou para oit
 sem retry automático; o limite WinPE continua em dois. O `SetupComplete.cmd`
 também passou a reconhecer idempotentemente o driver Realtek já instalado,
 confirmando o INF através de uma segunda enumeração antes de aceitar o aviso.
+
+Após a conclusão física, `windows.json` ficou `ready` e o perfil `andre` foi
+observado em p3. A integração pós-instalação troca a reserva frágil de WIN+E
+por um hook `WH_KEYBOARD_LL`, com diagnóstico em
+`%LOCALAPPDATA%\APX\ReturnToHub.log`; só a tecla explícita pede reboot e o
+BootOrder Linux-first permanece inalterado. O rádio Bluetooth Realtek
+`USB\VID_0BDA&PID_4852` já tinha recebido com sucesso o pacote WHQL
+1.9.1046.3002 e reiniciado, pelo que não se força outro driver. A descrição do
+cartão Windows foi reduzida para `Windows 11 · 160 GiB`. Ver
+`docs/native-windows-post-install-integration-2026-08-30.md`.
+
+O rollout físico do helper v2 está deliberadamente pendente: `ntfs3` recusou
+p3 read-write por dirty bit, enquanto `ntfsfix -n` confirmou as estruturas
+principais. Nenhum `force`/reparo Linux foi aplicado e p3 não foi escrita. O
+boot runner live conserva os hashes v1 para manter Windows acessível até um
+`chkdsk C: /scan` seguido de reinício limpo pelo próprio Windows.

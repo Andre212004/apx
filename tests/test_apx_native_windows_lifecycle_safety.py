@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -11,6 +12,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 FINALIZER = ROOT / "scripts/physical-pilot/apx-native-windows-lifecycle-finalize-v1.py"
 RECOVERY = ROOT / "scripts/physical-pilot/apx-native-windows-recovery-v1.py"
+BOOT = ROOT / "scripts/physical-pilot/apx-native-boot-runner-v1.py"
 PREPARE = ROOT / "scripts/physical-pilot/prepare-native-windows-installer-v2.sh"
 WINPE = ROOT / "config/system-images-v1/windows-internal-winpe/apx-media.cmd"
 UNIT = ROOT / "config/systemd/apx-native-windows-lifecycle-finalize-v1.service"
@@ -25,6 +27,22 @@ def load(path: Path, name: str):
 
 
 class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
+    def test_return_payload_hashes_match_both_windows_validators(self) -> None:
+        finalizer = load(FINALIZER, "apx_windows_return_hash_finalizer")
+        boot = load(BOOT, "apx_windows_return_hash_boot")
+        sources = {
+            "ProgramData/APX/ReturnToHub/APX-ReturnToHub.ps1":
+                ROOT / "config/native-windows-return-v1/APX-ReturnToHub.ps1",
+            "ProgramData/APX/ReturnToHub/README.txt":
+                ROOT / "config/native-windows-return-v1/README.txt",
+            "ProgramData/Microsoft/Windows/Start Menu/Programs/Startup/APX-ReturnToHub.vbs":
+                ROOT / "config/native-windows-return-v1/APX-ReturnToHub.vbs",
+        }
+        expected = {name: hashlib.sha256(path.read_bytes()).hexdigest()
+                    for name, path in sources.items()}
+        self.assertEqual(finalizer.EXPECTED_RETURN_HASHES, expected)
+        self.assertEqual(boot.EXPECTED_RETURN_HASHES, expected)
+
     def test_incident_terminal_failure_never_arms_bootnext_or_reboots(self) -> None:
         subject = load(FINALIZER, "apx_windows_finalizer_incident")
         pending = {

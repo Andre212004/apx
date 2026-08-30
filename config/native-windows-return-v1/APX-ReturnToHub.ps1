@@ -1,28 +1,61 @@
 $ErrorActionPreference = "Stop"
 
-# Explorer normally owns WIN+E.  Disable only that shell shortcut for this
-# Windows user; the APX helper below then owns it.  The setting is read at the
-# next sign-in, while WIN+SHIFT+E is also registered as a first-run fallback.
+# Older APX releases disabled Explorer's WIN+E action and then tried to claim
+# the same OS-reserved chord through the global-hotkey API. Restore the fallback:
+# the low-level hook below suppresses WIN+E only while APX is actually running.
 $advanced = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
 $disabled = (Get-ItemProperty -Path $advanced -Name DisabledHotkeys -ErrorAction SilentlyContinue).DisabledHotkeys
-if ($null -eq $disabled) { $disabled = "" }
-if (-not $disabled.Contains("E")) {
-    Set-ItemProperty -Path $advanced -Name DisabledHotkeys -Type String -Value ($disabled + "E")
+if ($null -ne $disabled -and $disabled.Contains("E")) {
+    $restored = $disabled.Replace("E", "")
+    if ([String]::IsNullOrEmpty($restored)) {
+        Remove-ItemProperty -Path $advanced -Name DisabledHotkeys -ErrorAction SilentlyContinue
+    } else {
+        Set-ItemProperty -Path $advanced -Name DisabledHotkeys -Type String -Value $restored
+    }
 }
 
 Add-Type -TypeDefinition @"
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
-public static class APXReturnToHubHotkey {
-    private const int PrimaryId = 0x4150;
-    private const int FallbackId = 0x4151;
-    private const uint ModShift = 0x0004;
-    private const uint ModWin = 0x0008;
-    private const uint ModNoRepeat = 0x4000;
-    private const uint VirtualKeyE = 0x45;
-    private const uint WmHotkey = 0x0312;
+public static class APXReturnToHubKeyboardHook {
+    private const int WhKeyboardLl = 13;
+    private const int WmKeyDown = 0x0100;
+    private const int WmSysKeyDown = 0x0104;
+    private const int VirtualKeyE = 0x45;
+    private const int VirtualKeyLeftWin = 0x5B;
+    private const int VirtualKeyRightWin = 0x5C;
+
+    private delegate IntPtr LowLevelKeyboardProc(int code, IntPtr message, IntPtr data);
+    private static readonly LowLevelKeyboardProc Callback = HookCallback;
+    private static IntPtr hook = IntPtr.Zero;
+    private static bool rebootStarted;
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(
+        int hookId, LowLevelKeyboardProc callback, IntPtr module, uint threadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hookHandle);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(
+        IntPtr hookHandle, int code, IntPtr message, IntPtr data);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
+
+    [DllImport("user32.dll")]
+    private static extern int GetMessage(
+        out Message message, IntPtr window, uint minimum, uint maximum);
+
+    [DllImport("user32.dll")]
+    private static extern void PostQuitMessage(int exitCode);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string moduleName);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Point { public int X; public int Y; }
@@ -38,46 +71,71 @@ public static class APXReturnToHubHotkey {
         public uint Private;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
+    private static void Log(string text) {
+        try {
+            string directory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "APX");
+            Directory.CreateDirectory(directory);
+            File.AppendAllText(Path.Combine(directory, "ReturnToHub.log"),
+                DateTimeOffset.Now.ToString("o") + " " + text + Environment.NewLine);
+        } catch { }
+    }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UnregisterHotKey(IntPtr window, int id);
+    private static bool RebootToApx() {
+        try {
+            string shutdown = Environment.ExpandEnvironmentVariables(
+                @"%WINDIR%\System32\shutdown.exe");
+            Process.Start(new ProcessStartInfo {
+                FileName = shutdown,
+                Arguments = "/r /t 0 /d p:0:0 /c \"Regressar ao APX HUB\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
+            Log("WIN+E accepted; APX reboot requested");
+            PostQuitMessage(0);
+            return true;
+        } catch (Exception error) {
+            Log("reboot failed: " + error.GetType().Name + ": " + error.Message);
+            return false;
+        }
+    }
 
-    [DllImport("user32.dll")]
-    private static extern int GetMessage(out Message message, IntPtr window, uint minimum, uint maximum);
-
-    private static void RebootToApx() {
-        string shutdown = Environment.ExpandEnvironmentVariables(@"%WINDIR%\System32\shutdown.exe");
-        Process.Start(new ProcessStartInfo {
-            FileName = shutdown,
-            Arguments = "/r /t 0 /d p:0:0 /c \"Regressar ao APX HUB\"",
-            UseShellExecute = false,
-            CreateNoWindow = true
-        });
+    private static IntPtr HookCallback(int code, IntPtr message, IntPtr data) {
+        long kind = message.ToInt64();
+        if (code >= 0 && (kind == WmKeyDown || kind == WmSysKeyDown) &&
+                Marshal.ReadInt32(data) == VirtualKeyE) {
+            bool windowsPressed = (GetAsyncKeyState(VirtualKeyLeftWin) & 0x8000) != 0 ||
+                                  (GetAsyncKeyState(VirtualKeyRightWin) & 0x8000) != 0;
+            if (windowsPressed && !rebootStarted) {
+                rebootStarted = true;
+                if (RebootToApx()) return new IntPtr(1);
+                rebootStarted = false;
+            }
+        }
+        return CallNextHookEx(hook, code, message, data);
     }
 
     public static int Run() {
-        bool primary = RegisterHotKey(IntPtr.Zero, PrimaryId, ModWin | ModNoRepeat, VirtualKeyE);
-        bool fallback = RegisterHotKey(IntPtr.Zero, FallbackId, ModWin | ModShift | ModNoRepeat, VirtualKeyE);
-        if (!primary && !fallback) return 2;
+        using (Process process = Process.GetCurrentProcess())
+        using (ProcessModule module = process.MainModule) {
+            hook = SetWindowsHookEx(WhKeyboardLl, Callback,
+                GetModuleHandle(module.ModuleName), 0);
+        }
+        if (hook == IntPtr.Zero) {
+            Log("keyboard hook failed; win32=" + Marshal.GetLastWin32Error());
+            return 2;
+        }
+        Log("keyboard hook ready");
         try {
             Message message;
-            while (GetMessage(out message, IntPtr.Zero, 0, 0) > 0) {
-                ulong id = message.WParam.ToUInt64();
-                if (message.Id == WmHotkey &&
-                        (id == (ulong)PrimaryId || id == (ulong)FallbackId)) {
-                    RebootToApx();
-                    return 0;
-                }
-            }
-            return 1;
+            while (GetMessage(out message, IntPtr.Zero, 0, 0) > 0) { }
+            return 0;
         } finally {
-            if (primary) UnregisterHotKey(IntPtr.Zero, PrimaryId);
-            if (fallback) UnregisterHotKey(IntPtr.Zero, FallbackId);
+            UnhookWindowsHookEx(hook);
+            hook = IntPtr.Zero;
         }
     }
 }
 "@
 
-[void][APXReturnToHubHotkey]::Run()
+[void][APXReturnToHubKeyboardHook]::Run()

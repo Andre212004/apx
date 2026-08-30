@@ -32,8 +32,8 @@ TERMINAL_STAGES = {"failed", "recovery-required"}
 MAX_EXPLICIT_INSTALL_ATTEMPTS = 2
 MAX_EXPLICIT_BOOT_ATTEMPTS = 8
 EXPECTED_RETURN_HASHES = {
-    "ProgramData/APX/ReturnToHub/APX-ReturnToHub.ps1": "fbd55f62c4abe4d0456832b7e5d0397989da0876e0f5952adf36c2092bb708a4",
-    "ProgramData/APX/ReturnToHub/README.txt": "0434aa1e310d7a4e20400300f0d8b6062caf8f4ac023ae4a8560a5c203926349",
+    "ProgramData/APX/ReturnToHub/APX-ReturnToHub.ps1": "a63d776336ae7bbdd406a0bab924193e409cc0a03a38fc7b332a9ccee0c54f11",
+    "ProgramData/APX/ReturnToHub/README.txt": "c03fbf0afa374c30c64adf5a22c2f876f80a3d0a288a2414b6091d3ad17206a8",
     "ProgramData/Microsoft/Windows/Start Menu/Programs/Startup/APX-ReturnToHub.vbs": "504a32302dbfc5590e6059dde1ec563e6e04371bfac6c8e352b20b10f044757f",
 }
 
@@ -476,7 +476,7 @@ def finalize_create(pending: dict[str, object]) -> None:
     _output, entries, _order = firmware(); linux = linux_entry(entries)
     record = {
         "schema": 2, "profile": "apx-native-environment-v2", "name": "windows",
-        "display_name": "Windows", "description": f"Windows 11 em partição física · {size} GiB · desempenho nativo",
+        "display_name": "Windows", "description": f"Windows 11 · {size} GiB",
         "category": "system", "environment_kind": "native-boot", "system_kind": "windows-native",
         "system_label": "NATIVO", "release": "windows-11-native-v1", "state": "ready",
         "generation": generation, "requested_size_gib": size, "reserved_bytes": expected_reserved,

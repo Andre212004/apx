@@ -2906,3 +2906,20 @@ eight, so the Hub can expose `PROSSEGUIR WINDOWS` again without any automatic
 retry. SetupComplete's Realtek provisioning also treated an already-present,
 up-to-date driver as failure; the idempotent check now verifies the INF through
 `pnputil /enum-drivers /files` before recording success with a warning.
+
+Windows subsequently completed and the finalizer published the physical
+generation as `ready`. Post-install integration replaces the unreliable global
+WIN+E registration with a `WH_KEYBOARD_LL` listener that suppresses Explorer's
+chord only while APX is active, logs to `%LOCALAPPDATA%\APX\ReturnToHub.log`,
+and reboots only on the explicit key event. Offline evidence shows the Realtek
+Bluetooth `USB\VID_0BDA&PID_4852` driver 1.9.1046.3002 installed, services
+created, device restarted and SetupAPI `SUCCESS`; no replacement driver is
+warranted. The Hub description is shortened to `Windows 11 · 160 GiB`. See
+`docs/native-windows-post-install-integration-2026-08-30.md`.
+
+Physical deployment of the v2 helper stopped before writing because ntfs3
+refused dirty p3 read-write. `ntfsfix -n` reports the MFT, MFT mirror and boot
+sector intact; no force option and no Linux-side repair were used. The live
+boot runner intentionally retains v1 hashes, so Windows remains bootable. Run
+an elevated `chkdsk C: /scan` in Windows and choose Restart; after Linux
+returns, deploy the two return files and only then deploy the new validators.
