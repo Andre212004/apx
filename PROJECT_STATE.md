@@ -4789,3 +4789,11 @@ mas continuou a reportar `Restart state: DIRTY` e unclean filesystem com exit
 zero. O preflight passa a rejeitar também essas frases, impedindo que um exit
 code enganador chegue sequer à tentativa de mount RW. Falta uma segunda entrada
 no Windows seguida de Restart normal; p3 permanece sem o helper v2.
+
+A segunda passagem deixou p3 limpa (`Volume Flags 0x0000`, restart CLEAN).
+O helper SUPER+E v2 foi publicado e verificado read-only; os hashes instalados
+coincidem com o executor, o atalho legado continua ausente e o backup físico é
+`/var/lib/apx/backups/20260831-native-windows-return-v2.M9sjPC`. A p3 terminou
+desmontada, o `--validate-only` passou, não existe BootNext e Linux permanece
+primeiro no BootOrder. O próximo arranque Windows serve apenas para validar o
+hook global e o log `%LOCALAPPDATA%\APX\ReturnToHub.log`.

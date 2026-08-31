@@ -97,3 +97,13 @@ o relatório ainda continha `The disk contains an unclean file system` e
 o deployer valida também o conteúdo e recusa explicitamente o journal dirty.
 É necessária a segunda entrada no Windows e um Restart normal antes de voltar
 a avaliar a publicação do helper.
+
+Após essa segunda passagem, p3 apresentou `Volume Flags: 0x0000` e
+`Restart state: CLEAN`. A publicação v2 foi então feita na p3 autenticada,
+com backup em
+`/var/lib/apx/backups/20260831-native-windows-return-v2.M9sjPC`, seguida de
+unmount, remontagem read-only, comparação byte a byte e `--validate-only`.
+O helper global, supervisor e README têm os hashes v2 esperados; o atalho
+legado do desktop permanece ausente. O deployer aceita esse atalho como
+opcional na entrada e preserva corretamente tanto o caso presente como o
+ausente durante rollback. Nenhum BootNext ou reboot foi produzido.

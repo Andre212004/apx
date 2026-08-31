@@ -312,6 +312,8 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn('desktop_target="$mount_dir/Users/Public/Desktop/REGRESSAR AO APX.cmd"', script)
         self.assertIn('/usr/bin/rm -f -- "$desktop_target"', script)
         self.assertIn('[[ ! -e $desktop_target && ! -L $desktop_target ]]', script)
+        self.assertIn('[[ ! -f $desktop_target ]] || /usr/bin/cp -a', script)
+        self.assertIn('the legacy desktop target differs', script)
         self.assertIn("mount -t ntfs3 -o rw,nosuid,nodev,noexec", script)
         self.assertIn("mount -t ntfs3 -o ro,nosuid,nodev,noexec", script)
         self.assertIn("SetWindowsHookEx", powershell)

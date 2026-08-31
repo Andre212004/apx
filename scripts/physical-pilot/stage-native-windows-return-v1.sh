@@ -93,7 +93,11 @@ rollback() {
         /usr/bin/install -m 0644 -- "$backup/APX-ReturnToHub.ps1" "$program_target/APX-ReturnToHub.ps1" || true
         /usr/bin/install -m 0644 -- "$backup/README.txt" "$program_target/README.txt" || true
         /usr/bin/install -m 0644 -- "$backup/APX-ReturnToHub.vbs" "$startup_target" || true
-        /usr/bin/install -m 0644 -- "$backup/REGRESSAR AO APX.cmd" "$desktop_target" || true
+        if [[ -f $backup/REGRESSAR-AO-APX.cmd ]]; then
+            /usr/bin/install -m 0644 -- "$backup/REGRESSAR-AO-APX.cmd" "$desktop_target" || true
+        else
+            /usr/bin/rm -f -- "$desktop_target" || true
+        fi
         if [[ -f $backup/APX-ProvisionHardware.cmd ]]; then
             /usr/bin/install -m 0644 -- "$backup/APX-ProvisionHardware.cmd" "$program_target/APX-ProvisionHardware.cmd" || true
         else
@@ -110,13 +114,15 @@ trap rollback ERR
 /usr/bin/mount -t ntfs3 -o rw,nosuid,nodev,noexec "$windows_partition" "$mount_dir"
 stage=1
 [[ -f $mount_dir/Windows/System32/winload.efi && -d $mount_dir/Users/andre ]] || fail "completed Windows installation differs"
-for target in "$program_target/APX-ReturnToHub.ps1" "$program_target/README.txt" "$startup_target" "$desktop_target"; do
+for target in "$program_target/APX-ReturnToHub.ps1" "$program_target/README.txt" "$startup_target"; do
     [[ -f $target && ! -L $target ]] || fail "the existing APX return target differs"
 done
+[[ ! -e $desktop_target && ! -L $desktop_target || -f $desktop_target && ! -L $desktop_target ]] \
+    || fail "the legacy desktop target differs"
 /usr/bin/cp -a -- "$program_target/APX-ReturnToHub.ps1" "$backup/APX-ReturnToHub.ps1"
 /usr/bin/cp -a -- "$program_target/README.txt" "$backup/README.txt"
 /usr/bin/cp -a -- "$startup_target" "$backup/APX-ReturnToHub.vbs"
-/usr/bin/cp -a -- "$desktop_target" "$backup/REGRESSAR AO APX.cmd"
+[[ ! -f $desktop_target ]] || /usr/bin/cp -a -- "$desktop_target" "$backup/REGRESSAR-AO-APX.cmd"
 [[ ! -e $program_target/APX-ProvisionHardware.cmd ]] \
     || /usr/bin/cp -a -- "$program_target/APX-ProvisionHardware.cmd" "$backup/APX-ProvisionHardware.cmd"
 stage=2

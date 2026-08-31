@@ -2951,3 +2951,13 @@ log still reports `Restart state: DIRTY` and unclean filesystem while returning
 exit zero. The deployer now checks these exact diagnostics as well as the exit
 status. No RW mount was attempted. Boot Windows once more, let it reach the
 desktop, then use normal Restart back to the Hub before re-auditing p3.
+
+The second pass cleaned p3 (`Volume Flags 0x0000`, restart CLEAN). The v2
+SUPER+E helper is now physically installed with read-only hash verification
+and backup at
+`/var/lib/apx/backups/20260831-native-windows-return-v2.M9sjPC`. The legacy
+desktop shortcut was already absent; deployment now safely supports and rolls
+back either legacy state. p3 is unmounted, native `--validate-only` passes,
+BootNext is absent, and Linux remains first. On the next explicit Windows boot,
+wait for the desktop, confirm the helper log says `keyboard hook ready`, then
+press SUPER+E once to test the normal return to the Hub.
