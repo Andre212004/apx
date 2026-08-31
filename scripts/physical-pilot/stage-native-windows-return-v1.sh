@@ -57,8 +57,10 @@ firmware=$(/usr/bin/efibootmgr)
 [[ $firmware == *$'BootCurrent: 0005\n'* && $firmware == *$'BootOrder: 0005,'* \
         && $firmware != *'BootNext:'* ]] || fail "firmware state differs"
 /usr/bin/ntfsfix -n "$windows_partition" >/dev/null || fail "Windows NTFS is not clean"
-/usr/bin/ntfsinfo -m "$windows_partition" >/dev/null 2>&1 \
+ntfs_report=$(/usr/bin/ntfsinfo -m "$windows_partition" 2>&1) \
     || fail "Windows NTFS is dirty or scheduled for check"
+[[ $ntfs_report != *'unclean file system'* && $ntfs_report != *'Restart state: DIRTY'* ]] \
+    || fail "Windows NTFS journal is dirty"
 /usr/lib/apx/apx-native-boot-runner-v1.py --target windows --validate-only >/dev/null \
     || fail "native boot validation differs"
 for source in APX-ReturnToHub.ps1 APX-ReturnToHub.vbs APX-ProvisionHardware.cmd README.txt; do

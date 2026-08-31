@@ -2945,3 +2945,9 @@ is scheduled for check. The deployer now targets authenticated p3 and detects
 this state explicitly. Boot Windows from the Hub, allow AutoChk, run elevated
 `chkdsk C: /f` if requested, and return through normal Restart. Deploy v2 only
 after `ntfsinfo -m /dev/nvme0n1p3` succeeds.
+
+One AutoChk/Windows return removed the scheduled-check refusal, but the NTFS
+log still reports `Restart state: DIRTY` and unclean filesystem while returning
+exit zero. The deployer now checks these exact diagnostics as well as the exit
+status. No RW mount was attempted. Boot Windows once more, let it reach the
+desktop, then use normal Restart back to the Hub before re-auditing p3.

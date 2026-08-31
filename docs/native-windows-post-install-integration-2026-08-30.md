@@ -90,3 +90,10 @@ sector mas não detetava esse estado, pelo que o preflight exige agora também
 Windows explicitamente, deixar o AutoChk terminar, executar `chkdsk C: /f`
 num terminal elevado se ainda for pedido e regressar por um Restart normal.
 Só publicar o helper quando `ntfsinfo -m` aceitar o volume.
+
+Após o primeiro AutoChk/regresso, o flag scheduled-for-check desapareceu, mas
+o relatório ainda continha `The disk contains an unclean file system` e
+`Restart state: DIRTY`. O exit code de `ntfsinfo` é zero neste estado, por isso
+o deployer valida também o conteúdo e recusa explicitamente o journal dirty.
+É necessária a segunda entrada no Windows e um Restart normal antes de voltar
+a avaliar a publicação do helper.

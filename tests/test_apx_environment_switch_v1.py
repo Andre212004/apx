@@ -306,6 +306,8 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn("ntfsfix -n", script)
         self.assertIn("ntfsinfo -m", script)
         self.assertIn("dirty or scheduled for check", script)
+        self.assertIn("Restart state: DIRTY", script)
+        self.assertIn("Windows NTFS journal is dirty", script)
         self.assertIn("ProgramData/APX/ReturnToHub", script)
         self.assertIn('desktop_target="$mount_dir/Users/Public/Desktop/REGRESSAR AO APX.cmd"', script)
         self.assertIn('/usr/bin/rm -f -- "$desktop_target"', script)

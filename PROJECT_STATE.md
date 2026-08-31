@@ -4783,3 +4783,9 @@ mount RW antes de escrever porque p3 continua dirty/scheduled-for-check.
 `ntfsinfo` confirmou o flag, embora `ntfsfix -n` tenha considerado MFT,
 MFTMirr e boot sector íntegros. O instalador foi atualizado para autenticar a
 p3/ESP/layout atuais e exigir ambos os diagnósticos. Não foi usado `force`.
+
+Depois do primeiro AutoChk, `ntfsinfo` deixou de falhar por scheduled check,
+mas continuou a reportar `Restart state: DIRTY` e unclean filesystem com exit
+zero. O preflight passa a rejeitar também essas frases, impedindo que um exit
+code enganador chegue sequer à tentativa de mount RW. Falta uma segunda entrada
+no Windows seguida de Restart normal; p3 permanece sem o helper v2.
