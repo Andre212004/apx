@@ -233,7 +233,8 @@ def request_native_boot() -> dict[str, object]:
         raise RuntimeError("o executor de arranque nativo não é confiável")
     unit = "apx-native-boot-" + secrets.token_hex(5)
     result = subprocess.run((
-        "/usr/bin/systemd-run", f"--unit={unit}", "--collect", "--property=Type=oneshot",
+        "/usr/bin/systemd-run", f"--unit={unit}", "--no-block", "--collect",
+        "--property=Type=oneshot",
         NATIVE_BOOT_RUNNER, "--target", "windows",
     ), text=True, capture_output=True, check=False)
     if result.returncode:

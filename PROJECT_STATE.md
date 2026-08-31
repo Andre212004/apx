@@ -4771,3 +4771,15 @@ admitir `SecureBoot=0, SetupMode=0`, exigindo em simultâneo assinatura APX do
 Linux manager e Microsoft do Windows manager. Setup Mode ou relatório
 incoerente continuam recusados. A transição aceita somente os payloads v1/v2
 completos conhecidos. O `--validate-only` físico passou sem armar BootNext.
+
+O arranque seguinte chegou ao Windows e regressou ao Linux com BootOrder
+inalterado e sem BootNext. Foi corrigida uma corrida apenas observacional: o
+HUB esperava pela ativação de uma unidade que iniciava imediatamente o reboot
+e acabava por reportar falsamente que o executor não arrancara; a submissão da
+unidade transitória usa agora `systemd-run --no-block`.
+
+A publicação física do helper SUPER+E v2 não foi realizada: `ntfs3` recusou o
+mount RW antes de escrever porque p3 continua dirty/scheduled-for-check.
+`ntfsinfo` confirmou o flag, embora `ntfsfix -n` tenha considerado MFT,
+MFTMirr e boot sector íntegros. O instalador foi atualizado para autenticar a
+p3/ESP/layout atuais e exigir ambos os diagnósticos. Não foi usado `force`.

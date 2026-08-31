@@ -2932,3 +2932,16 @@ enabled or disabled User Mode, rejects Setup Mode/mismatched reports, validates
 both boot-manager signatures, and admits only the complete known v1 or v2
 return payload during rollout. Physical `--validate-only` passed with no
 BootNext; the Hub can launch the current Windows again.
+
+The next one-shot launch reached Windows and returned normally: Linux remains
+BootCurrent/first in BootOrder and BootNext is absent. A journal-only false
+rejection was caused by the Hub waiting while the transient executor initiated
+reboot; native boot submission now uses `systemd-run --no-block` and retains
+all validation inside the runner.
+
+Do not force-mount p3. The first v2 return-helper deployment made no write:
+`ntfs3` refused RW because the volume is dirty and `ntfsinfo` reports that it
+is scheduled for check. The deployer now targets authenticated p3 and detects
+this state explicitly. Boot Windows from the Hub, allow AutoChk, run elevated
+`chkdsk C: /f` if requested, and return through normal Restart. Deploy v2 only
+after `ntfsinfo -m /dev/nvme0n1p3` succeeds.

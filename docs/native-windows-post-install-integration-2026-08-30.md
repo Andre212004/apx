@@ -73,3 +73,20 @@ Linux Boot Manager, assinatura Microsoft do Windows Boot Manager, metadata,
 GPT, PARTUUIDs, tamanhos, perfil e driver exatos. Durante o rollout do helper
 v2, aceita apenas dois payloads completos conhecidos (v1 físico ou v2 novo),
 nunca uma mistura. `--validate-only` passou e confirmou ausência de BootNext.
+
+## Primeiro regresso limpo e check NTFS pendente
+
+O primeiro arranque normal pelo HUB chegou ao Windows e regressou ao Linux sem
+deixar BootNext. O serviço transitório concluiu com sucesso, embora a chamada
+do HUB tenha registado uma recusa falsa porque `systemd-run` perdeu a ligação
+durante o reboot. A submissão é agora explicitamente `--no-block`; o executor
+continua a fazer toda a validação fail-closed dentro da unidade transitória.
+
+A tentativa de publicar o helper global SUPER+E foi recusada antes de qualquer
+escrita. O driver `ntfs3` reportou `volume is dirty`, e `ntfsinfo` confirmou
+`Volume is scheduled for check`. `ntfsfix -n` validava MFT/MFTMirr e boot
+sector mas não detetava esse estado, pelo que o preflight exige agora também
+`ntfsinfo -m`. Nunca usar `force` nem limpar este flag pelo Linux. Arrancar o
+Windows explicitamente, deixar o AutoChk terminar, executar `chkdsk C: /f`
+num terminal elevado se ainda for pedido e regressar por um Restart normal.
+Só publicar o helper quando `ntfsinfo -m` aceitar o volume.

@@ -70,6 +70,22 @@ def load_native_recovery_runner():
 
 
 class EnvironmentSwitchV1Tests(unittest.TestCase):
+    def test_native_boot_submission_does_not_race_the_reboot(self) -> None:
+        subject = load_switch_service()
+        runner = mock.Mock()
+        runner.lstat.return_value = mock.Mock(st_uid=0, st_gid=0, st_mode=0o100755)
+        runner.is_symlink.return_value = False
+        runner.is_file.return_value = True
+        result = mock.Mock(returncode=0)
+        with mock.patch.object(subject, "Path", return_value=runner), \
+                mock.patch.object(subject.secrets, "token_hex", return_value="1234567890"), \
+                mock.patch.object(subject.subprocess, "run", return_value=result) as launch:
+            response = subject.request_native_boot()
+        self.assertEqual(response["unit"], "apx-native-boot-1234567890.service")
+        arguments = launch.call_args.args[0]
+        self.assertIn("--no-block", arguments)
+        self.assertNotIn("--wait", arguments)
+
     def test_shared_runtime_directory_is_not_owned_by_one_service(self) -> None:
         self.assertIn("d /run/apx 0755 root root -", TMPFILES.read_text())
         for unit in (SWITCH_UNIT, EXECUTOR_UNIT):
@@ -181,6 +197,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn('return start_native_management("delete"', source)
         self.assertIn("def windows_storage_reserved(", source)
         self.assertIn('NATIVE_BOOT_RUNNER, "--target", "windows"', source)
+        self.assertIn('f"--unit={unit}", "--no-block", "--collect"', source)
         self.assertNotIn("def windows_boot_ready(", source)
         self.assertIn('"session_restore": False, "state": record["state"]', source)
         self.assertIn('stat.S_IMODE(metadata.st_mode) != 0o755', source)
@@ -279,10 +296,18 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         powershell = (ROOT / "config/native-windows-return-v1/APX-ReturnToHub.ps1").read_text()
         supervisor = (ROOT / "config/native-windows-return-v1/APX-ReturnToHub.vbs").read_text()
         provisioning = (ROOT / "config/native-windows-return-v1/APX-ProvisionHardware.cmd").read_text()
-        self.assertIn("readonly windows_partition=/dev/nvme0n1p4", script)
-        self.assertIn("readonly windows_size=118261547008", script)
+        self.assertIn("readonly windows_partition=/dev/nvme0n1p3", script)
+        self.assertIn("readonly windows_size=162135015424", script)
+        self.assertIn("readonly linux_esp=/dev/nvme0n1p1", script)
+        self.assertIn("APX_WINDOWS_TARGET", script)
+        self.assertIn("APXWINTARGET", script)
+        self.assertIn("APX_EFI", script)
+        self.assertIn("apx-native-boot-runner-v1.py --target windows --validate-only", script)
+        self.assertIn("ntfsfix -n", script)
+        self.assertIn("ntfsinfo -m", script)
+        self.assertIn("dirty or scheduled for check", script)
         self.assertIn("ProgramData/APX/ReturnToHub", script)
-        self.assertIn('readonly desktop_target="$mount_dir/Users/Public/Desktop/REGRESSAR AO APX.cmd"', script)
+        self.assertIn('desktop_target="$mount_dir/Users/Public/Desktop/REGRESSAR AO APX.cmd"', script)
         self.assertIn('/usr/bin/rm -f -- "$desktop_target"', script)
         self.assertIn('[[ ! -e $desktop_target && ! -L $desktop_target ]]', script)
         self.assertIn("mount -t ntfs3 -o rw,nosuid,nodev,noexec", script)
