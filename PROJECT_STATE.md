@@ -4763,3 +4763,11 @@ p3 read-write por dirty bit, enquanto `ntfsfix -n` confirmou as estruturas
 principais. Nenhum `force`/reparo Linux foi aplicado e p3 não foi escrita. O
 boot runner live conserva os hashes v1 para manter Windows acessível até um
 `chkdsk C: /scan` seguido de reinício limpo pelo próprio Windows.
+
+O primeiro `native.boot` após `ready` expôs ainda uma gate incompatível:
+Secure Boot esteve desativado em todos os boots físicos, embora o firmware
+permaneça em User Mode com chaves e binários assinados. O executor passa a
+admitir `SecureBoot=0, SetupMode=0`, exigindo em simultâneo assinatura APX do
+Linux manager e Microsoft do Windows manager. Setup Mode ou relatório
+incoerente continuam recusados. A transição aceita somente os payloads v1/v2
+completos conhecidos. O `--validate-only` físico passou sem armar BootNext.

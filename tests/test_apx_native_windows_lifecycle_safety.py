@@ -42,6 +42,25 @@ class NativeWindowsLifecycleSafetyTests(unittest.TestCase):
                     for name, path in sources.items()}
         self.assertEqual(finalizer.EXPECTED_RETURN_HASHES, expected)
         self.assertEqual(boot.EXPECTED_RETURN_HASHES, expected)
+        self.assertIn(expected, boot.TRUSTED_RETURN_HASHES)
+        self.assertIn(boot.LEGACY_RETURN_HASHES, boot.TRUSTED_RETURN_HASHES)
+
+    def test_native_boot_accepts_disabled_secure_boot_only_in_user_mode(self) -> None:
+        boot = load(BOOT, "apx_windows_secure_boot_disabled_user")
+        with mock.patch.object(boot, "checked", return_value="Secure Boot: disabled"), \
+                mock.patch.object(boot, "efi_boolean", side_effect=(0, 0)):
+            boot.validate_secure_boot_policy()
+        with mock.patch.object(boot, "checked", return_value="Secure Boot: disabled"), \
+                mock.patch.object(boot, "efi_boolean", side_effect=(0, 1)), \
+                self.assertRaisesRegex(RuntimeError, "Setup Mode"):
+            boot.validate_secure_boot_policy()
+
+    def test_native_boot_rejects_incoherent_secure_boot_report(self) -> None:
+        boot = load(BOOT, "apx_windows_secure_boot_incoherent")
+        with mock.patch.object(boot, "checked", return_value="Secure Boot: enabled (user)"), \
+                mock.patch.object(boot, "efi_boolean", side_effect=(0, 0)), \
+                self.assertRaisesRegex(RuntimeError, "incoerente"):
+            boot.validate_secure_boot_policy()
 
     def test_incident_terminal_failure_never_arms_bootnext_or_reboots(self) -> None:
         subject = load(FINALIZER, "apx_windows_finalizer_incident")

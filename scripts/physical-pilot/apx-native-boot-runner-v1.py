@@ -27,6 +27,15 @@ EXPECTED_RETURN_HASHES = {
     "ProgramData/APX/ReturnToHub/README.txt": "c03fbf0afa374c30c64adf5a22c2f876f80a3d0a288a2414b6091d3ad17206a8",
     "ProgramData/Microsoft/Windows/Start Menu/Programs/Startup/APX-ReturnToHub.vbs": "504a32302dbfc5590e6059dde1ec563e6e04371bfac6c8e352b20b10f044757f",
 }
+LEGACY_RETURN_HASHES = {
+    "ProgramData/APX/ReturnToHub/APX-ReturnToHub.ps1": "fbd55f62c4abe4d0456832b7e5d0397989da0876e0f5952adf36c2092bb708a4",
+    "ProgramData/APX/ReturnToHub/README.txt": "0434aa1e310d7a4e20400300f0d8b6062caf8f4ac023ae4a8560a5c203926349",
+    "ProgramData/Microsoft/Windows/Start Menu/Programs/Startup/APX-ReturnToHub.vbs": "504a32302dbfc5590e6059dde1ec563e6e04371bfac6c8e352b20b10f044757f",
+}
+TRUSTED_RETURN_HASHES = (EXPECTED_RETURN_HASHES, LEGACY_RETURN_HASHES)
+EFI_GLOBAL_GUID = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+SECURE_BOOT_VARIABLE = Path(f"/sys/firmware/efi/efivars/SecureBoot-{EFI_GLOBAL_GUID}")
+SETUP_MODE_VARIABLE = Path(f"/sys/firmware/efi/efivars/SetupMode-{EFI_GLOBAL_GUID}")
 
 
 def run(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
@@ -129,11 +138,14 @@ def mounted_read_only(device: Path, filesystem: str):
 
 
 def validate_hardware_and_return(root: Path) -> None:
-    for relative, expected in EXPECTED_RETURN_HASHES.items():
+    observed: dict[str, str] = {}
+    for relative in EXPECTED_RETURN_HASHES:
         path = root / relative
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > 32768 \
-                or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 32768:
             raise RuntimeError("o helper de regresso ao APX difere")
+        observed[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if observed not in TRUSTED_RETURN_HASHES:
+        raise RuntimeError("o helper de regresso ao APX difere")
     desktop_fallback = root / "Users/Public/Desktop/REGRESSAR AO APX.cmd"
     if desktop_fallback.exists() or desktop_fallback.is_symlink():
         raise RuntimeError("o Ambiente de Trabalho Windows ainda contém o atalho APX antigo")
@@ -184,6 +196,11 @@ def validate_windows(value: dict[str, object]) -> None:
                         "a assinatura do Windows Boot Manager não pôde ser validada")
     if "image signature certificates" not in signature or "Microsoft" not in signature:
         raise RuntimeError("o Windows Boot Manager não tem uma assinatura Microsoft válida")
+    linux_signature = checked(("/usr/bin/sbverify", "--list", str(linux_manager)),
+                              "a assinatura do Linux Boot Manager não pôde ser validada")
+    if "image signature certificates" not in linux_signature \
+            or "SecureBoot signing key on host apx-host" not in linux_signature:
+        raise RuntimeError("o Linux Boot Manager não tem a assinatura APX esperada")
     with mounted_read_only(WINDOWS, "ntfs3") as root:
         loader = root / "Windows/System32/winload.efi"
         users = root / "Users"
@@ -194,13 +211,33 @@ def validate_windows(value: dict[str, object]) -> None:
         validate_hardware_and_return(root)
 
 
+def efi_boolean(path: Path) -> int:
+    info = path.lstat(); raw = path.read_bytes()
+    if path.is_symlink() or not path.is_file() or info.st_uid != 0 or info.st_gid != 0 \
+            or len(raw) != 5 or raw[4] not in {0, 1}:
+        raise RuntimeError("o estado UEFI Secure Boot difere")
+    return raw[4]
+
+
+def validate_secure_boot_policy() -> None:
+    status = checked(("/usr/bin/bootctl", "status", "--no-pager"),
+                     "o estado Secure Boot não pôde ser lido")
+    secure_boot = efi_boolean(SECURE_BOOT_VARIABLE)
+    setup_mode = efi_boolean(SETUP_MODE_VARIABLE)
+    if setup_mode != 0:
+        raise RuntimeError("o firmware está em Secure Boot Setup Mode")
+    if secure_boot == 1 and "Secure Boot: enabled (user)" in status:
+        return
+    if secure_boot == 0 and "Secure Boot: disabled" in status:
+        return
+    raise RuntimeError("o estado Secure Boot do firmware é incoerente")
+
+
 def validate_target() -> tuple[str, str]:
     if Path("/etc/hostname").read_text().strip() != "apx-host" \
             or Path("/sys/class/dmi/id/product_name").read_text().strip() != "82JU":
         raise RuntimeError("a identidade do computador difere")
-    if checked(("/usr/bin/bootctl", "status", "--no-pager"),
-               "o estado Secure Boot não pôde ser lido").find("Secure Boot: enabled (user)") < 0:
-        raise RuntimeError("Secure Boot não está ativo")
+    validate_secure_boot_policy()
     value = metadata()
     entries = firmware(value)
     validate_windows(value)

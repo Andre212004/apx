@@ -56,3 +56,20 @@ como administrador e escolher **Reiniciar**. Como Linux permanece primeiro no
 BootOrder, esse reboot regressa ao HUB. Só então o helper v2 pode ser copiado
 com montagem NTFS normal e verificado byte-a-byte antes de instalar os novos
 hashes no executor Linux.
+
+## Compatibilidade Secure Boot do executor
+
+Ao tentar abrir o Windows já `ready`, o executor recusou antes de BootNext com
+`Secure Boot não está ativo`. A auditoria confirmou que este Host esteve com
+Secure Boot desativado durante toda a instalação: `SecureBoot=0`, mas
+`SetupMode=0`, chaves APX/Microsoft presentes e ambos os boot managers
+assinados. A exigência estrita só ficou alcançável depois da publicação
+`ready`, criando uma incompatibilidade nova com o estado físico já suportado.
+
+O executor agora aceita os dois estados coerentes em User Mode: enforcement
+ativo ou desativado. Setup Mode e qualquer divergência entre efivars e
+`bootctl` continuam fechados. Mesmo sem enforcement, exige assinatura APX do
+Linux Boot Manager, assinatura Microsoft do Windows Boot Manager, metadata,
+GPT, PARTUUIDs, tamanhos, perfil e driver exatos. Durante o rollout do helper
+v2, aceita apenas dois payloads completos conhecidos (v1 físico ou v2 novo),
+nunca uma mistura. `--validate-only` passou e confirmou ausência de BootNext.

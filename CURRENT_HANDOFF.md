@@ -2923,3 +2923,12 @@ sector intact; no force option and no Linux-side repair were used. The live
 boot runner intentionally retains v1 hashes, so Windows remains bootable. Run
 an elevated `chkdsk C: /scan` in Windows and choose Restart; after Linux
 returns, deploy the two return files and only then deploy the new validators.
+
+The first ready-state native boot was correctly non-mutating but refused due
+to an incompatible Secure Boot gate. This machine had Secure Boot disabled
+throughout installation while remaining in firmware User Mode with enrolled
+keys and signed APX/Microsoft boot managers. The runner now accepts coherent
+enabled or disabled User Mode, rejects Setup Mode/mismatched reports, validates
+both boot-manager signatures, and admits only the complete known v1 or v2
+return payload during rollout. Physical `--validate-only` passed with no
+BootNext; the Hub can launch the current Windows again.
