@@ -44,7 +44,7 @@ class ControlCenterScaleTests(unittest.TestCase):
     def test_every_keyboard_popup_animates_its_bar_button(self) -> None:
         source = SHELL.read_text()
         bar_button = source.split("component BarButton:", 1)[1].split(
-            "component BounceMouseArea:", 1
+            "component PopupBarButtonShield:", 1
         )[0]
         self.assertEqual(bar_button.count("scale: button.alternateActive ? 0.94 : 1"), 1)
         self.assertEqual(bar_button.count("scale: button.alternateActive ? 1 : 0.94"), 1)
@@ -152,6 +152,36 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("WlrLayershell.layer: WlrLayer.Top", dismiss)
         self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", dismiss)
         self.assertIn("onClicked: root.closePopup()", dismiss)
+
+        shield = source.split("component PopupBarButtonShield:", 1)[1].split(
+            "Timer {", 1
+        )[0]
+        self.assertIn("buttonTarget.mapToItem(bar.contentItem, 0, 0).x", shield)
+        self.assertIn("buttonTarget.mapToItem(bar.contentItem, 0, 0).y", shield)
+        self.assertIn("hoverEnabled: true", shield)
+        self.assertIn("cursorShape: Qt.PointingHandCursor", shield)
+        self.assertIn("onClicked: root.togglePopup(popupKind, buttonTarget, true)", shield)
+
+        bar_input = source.split("id: popupBarInputLayer", 1)[1].split(
+            "id: popup\n", 1
+        )[0]
+        self.assertIn("visible: popup.visible", bar_input)
+        self.assertIn("implicitHeight: bar.implicitHeight", bar_input)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", bar_input)
+        self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", bar_input)
+        for button, kind in (
+            ("calendarButton", "calendar"),
+            ("environmentButton", "environments"),
+            ("modelStoreButton", "model"),
+            ("batteryButton", "battery"),
+            ("controlCenterButton", "controls"),
+        ):
+            self.assertIn(
+                f'buttonTarget: {button}; popupKind: "{kind}"', bar_input
+            )
+        self.assertIn(
+            "windows: [bar, popup, popupBarInputLayer, popupDismissLayer]", source
+        )
         popup_frame = source.split("id: popupBackground", 1)[1].split(
             "HoverHandler {", 1
         )[0]

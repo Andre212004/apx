@@ -10,8 +10,8 @@ readonly repository=/root/apx-host-development-mode-v1/apx
 readonly source_ui=$repository/config/environment-shell-v1/quickshell/apx/shell.qml
 readonly hub_ui=/var/lib/apx/environments/hub/home/apx/.config/quickshell/apx/shell.qml
 readonly hub_registration=/var/lib/apx/environments/hub/registration.json
-readonly source_sha256=5b4973d5db51207aed683dc0979b288ca54ace5b9b4556dcbdbdc2efa5112c36
-readonly previous_sha256=72fd55eb9703c7e5ba12d95c3df003b892803433324ac1c7c744dc49afadcaa7
+readonly source_sha256=416b672081ef52eb2ed05bd4c9c8156c6a2d29c40c9a9eeda5699a54b02f6ab6
+readonly previous_sha256=5b4973d5db51207aed683dc0979b288ca54ace5b9b4556dcbdbdc2efa5112c36
 readonly backup="/var/lib/apx/backups/$(date -u +%Y%m%dT%H%M%SZ)-quickshell-popup-interaction-v1"
 
 fail() { echo "APX QuickShell popup deployment refused: $*" >&2; exit 2; }
@@ -115,6 +115,10 @@ layers=$(
 import json, sys
 value = json.load(sys.stdin)
 assert any(layer.get("namespace") == "quickshell" and layer.get("w") == 430
+           for monitor in value.values()
+           for layer in monitor.get("levels", {}).get("3", []))
+assert any(layer.get("namespace") == "quickshell"
+           and layer.get("w", 0) > 1000 and layer.get("h") == 46
            for monitor in value.values()
            for layer in monitor.get("levels", {}).get("3", []))
 assert any(layer.get("namespace") == "quickshell"

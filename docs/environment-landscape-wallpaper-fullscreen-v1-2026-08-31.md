@@ -83,6 +83,14 @@ cursor is declared on both hover and press handlers. The display-brightness
 card now uses the shared neutral Control Centre surface and outline rather than
 its former separate blue-grey colour.
 
+Because opening an Overlay popup can transfer pointer ownership away from the
+Top-layer bar, a transparent 46-pixel Overlay input surface remains over the
+bar for the popup lifetime. Its five zones are mapped directly from the real
+popup buttons, keep the pointing-hand cursor for the full press/release cycle,
+and close or switch the popup only after the click completes. The live
+compositor exposes this surface as `1270×46`, above the original bar and
+separate from both the menu and outside-click dismissal surface.
+
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral
 border, replacing the former cyan/green active gradient around terminals and
@@ -108,7 +116,8 @@ Repository tests cover the semantic Fn route, wallpaper manifest and rotation,
 text-only keyboard action, Hub refusal of `openFiles`, workload file-manager
 availability, both fullscreen bindings, symmetric bar margins and all five
 popup/button active-state mappings. They also cover opaque menu colour,
-exclusive keyboard focus and the outside-click dismissal layer. Physical owner
+exclusive keyboard focus, the outside-click dismissal layer and the stable
+Overlay bar-button targets. Physical owner
 acceptance remains the final check for each key chord and pointer interaction.
 The complete repository suite passes 1124 tests with 11 expected skips. The
 visual wallpaper layer was captured in the active Hub; an earlier final menu

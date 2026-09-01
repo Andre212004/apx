@@ -2866,6 +2866,23 @@ ShellRoot {
         }
     }
 
+    // While a popup owns pointer focus, keep a matching input target above the
+    // bar. This lets the same physical button receive the complete second
+    // click (press and release) instead of losing it during a layer transition.
+    component PopupBarButtonShield: MouseArea {
+        property Item buttonTarget
+        property string popupKind: ""
+        x: buttonTarget ? buttonTarget.mapToItem(bar.contentItem, 0, 0).x : 0
+        y: buttonTarget ? buttonTarget.mapToItem(bar.contentItem, 0, 0).y : 0
+        width: buttonTarget ? buttonTarget.width : 0
+        height: buttonTarget ? buttonTarget.height : 0
+        visible: buttonTarget && buttonTarget.visible
+        acceptedButtons: Qt.LeftButton
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.togglePopup(popupKind, buttonTarget, true)
+    }
+
     Timer {
         id: barAnimationReset
         interval: 150
@@ -3323,6 +3340,36 @@ ShellRoot {
             anchors.fill: parent
             onClicked: root.closePopup()
         }
+    }
+
+    // The popup is an Overlay layer, so opening it can move pointer ownership
+    // away from the Top-layer bar. Keep an Overlay input surface over the bar
+    // until the click is released; its button-sized targets preserve both the
+    // hand cursor and deterministic close/switch behaviour.
+    PanelWindow {
+        id: popupBarInputLayer
+        visible: popup.visible
+        anchors { top: true; left: true; right: true }
+        margins { left: 5; right: 5 }
+        implicitHeight: bar.implicitHeight
+        exclusionMode: ExclusionMode.Ignore
+        exclusiveZone: 0
+        focusable: false
+        color: "transparent"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onClicked: root.closePopup()
+        }
+
+        PopupBarButtonShield { buttonTarget: calendarButton; popupKind: "calendar" }
+        PopupBarButtonShield { buttonTarget: environmentButton; popupKind: "environments" }
+        PopupBarButtonShield { buttonTarget: modelStoreButton; popupKind: "model" }
+        PopupBarButtonShield { buttonTarget: batteryButton; popupKind: "battery" }
+        PopupBarButtonShield { buttonTarget: controlCenterButton; popupKind: "controls" }
     }
 
     PanelWindow {
@@ -5361,7 +5408,7 @@ ShellRoot {
 
     HyprlandFocusGrab {
         id: popupFocusGrab
-        windows: [bar, popup]
+        windows: [bar, popup, popupBarInputLayer, popupDismissLayer]
         active: popup.visible
         onCleared: if (popup.visible) root.closePopup()
     }

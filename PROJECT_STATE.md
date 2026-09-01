@@ -37,6 +37,13 @@ can cancel a release-time tap; the TapHandler itself also keeps the pointing
 hand cursor. The display-brightness card no longer carries a one-off blue-grey
 surface and instead uses the shared neutral Control Centre palette.
 
+The remaining same-button second-click failure is addressed at the
+layer-shell boundary. While a popup is visible, a transparent Overlay surface
+covers the 46-pixel bar and contains input targets mapped exactly to Calendar,
+Environments, Model, Battery and Control Centre. Those targets retain the hand
+cursor for press and release, then close the active menu or switch to another;
+the focus grab explicitly includes both auxiliary input surfaces.
+
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
 application accepting focus while that exclusive claim is active: a
@@ -48,10 +55,11 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`5b4973d5db51207aed683dc0979b288ca54ace5b9b4556dcbdbdc2efa5112c36`;
-rollback is `/var/lib/apx/backups/20260901T004406Z-quickshell-popup-interaction-v1/`.
-The targeted 42-test group, exact live layer topology, one-process QuickShell
-restart and Host health checks passed; the complete repository suite passes
+`416b672081ef52eb2ed05bd4c9c8156c6a2d29c40c9a9eeda5699a54b02f6ab6`;
+rollback is `/var/lib/apx/backups/20260901T004828Z-quickshell-popup-interaction-v1/`.
+The targeted 42-test group, exact live topology including the 1270×46 Overlay
+bar-input surface, one-process QuickShell restart and Host health checks
+passed; the complete repository suite passes
 1124 tests with 11 expected skips. No registered Development Environment
 exists, and the seed, installed runtime, stopped Environments and every other
 dirty-checkout change were intentionally not installed. A physical owner
