@@ -14,8 +14,8 @@ ShellRoot {
     property color cyanDim: "#246879"
     // Keep the bar and menus consistently readable while retaining a modest
     // amount of the background through both surfaces.
-    property color panel: "#cc0a1014"
-    property color popupPanel: "#cc0a1014"
+    property color panel: "#d90a1014"
+    property color popupPanel: "#d90a1014"
     property color card: "#f2162027"
     property color textMain: "#e8f7fa"
     property color textDim: "#8aa3aa"
@@ -726,39 +726,50 @@ ShellRoot {
         return monthNames[calendarDate.getMonth()] + " " + calendarDate.getFullYear()
     }
 
-    function calendarKeyboardActions() {
-        var actions = [
-            { kind: "previous", key: "previous" },
-            { kind: "next", key: "next" },
-            { kind: "view", key: "day" },
-            { kind: "view", key: "month" },
-            { kind: "view", key: "year" }
+    function calendarKeyboardGroups() {
+        var groups = [
+            [{ kind: "previous", key: "previous" },
+             { kind: "next", key: "next" }],
+            [{ kind: "view", key: "day" },
+             { kind: "view", key: "month" },
+             { kind: "view", key: "year" }]
         ]
         var i
         if (calendarView === "month") {
             var days = monthDays()
+            var dateActions = []
             for (i = 0; i < days.length; ++i)
                 if (days[i] !== null)
-                    actions.push({ kind: "date", key: dateKey(days[i]) })
+                    dateActions.push({ kind: "date", key: dateKey(days[i]) })
+            groups.push(dateActions)
         } else if (calendarView === "year") {
+            var monthActions = []
             for (i = 0; i < monthNames.length; ++i)
-                actions.push({ kind: "month", key: "" + i })
+                monthActions.push({ kind: "month", key: "" + i })
+            groups.push(monthActions)
         } else {
             var timelineEvents = sortedEventsForDate(calendarDate)
-            for (i = 0; i < timelineEvents.length; ++i) {
-                actions.push({ kind: "edit", key: timelineEvents[i].id })
-                actions.push({ kind: "delete", key: timelineEvents[i].id })
-            }
+            for (i = 0; i < timelineEvents.length; ++i)
+                groups.push([{ kind: "edit", key: timelineEvents[i].id },
+                             { kind: "delete", key: timelineEvents[i].id }])
         }
-        actions.push({ kind: "today", key: "today" })
-        actions.push({ kind: "new", key: "new" })
+        groups.push([{ kind: "today", key: "today" },
+                     { kind: "new", key: "new" }])
         if (calendarView !== "day") {
             var selectedEvents = eventsForDate(calendarDate)
-            for (i = 0; i < selectedEvents.length; ++i) {
-                actions.push({ kind: "edit", key: selectedEvents[i].id })
-                actions.push({ kind: "delete", key: selectedEvents[i].id })
-            }
+            for (i = 0; i < selectedEvents.length; ++i)
+                groups.push([{ kind: "edit", key: selectedEvents[i].id },
+                             { kind: "delete", key: selectedEvents[i].id }])
         }
+        return groups
+    }
+
+    function calendarKeyboardActions() {
+        var actions = []
+        var groups = calendarKeyboardGroups()
+        for (var group = 0; group < groups.length; ++group)
+            for (var item = 0; item < groups[group].length; ++item)
+                actions.push(groups[group][item])
         return actions
     }
 
@@ -780,6 +791,83 @@ ShellRoot {
         var next = current < 0 ? (step < 0 ? actions.length - 1 : 0)
                                : (current + step + actions.length) % actions.length
         calendarFocusAction = actions[next]
+    }
+
+    function calendarKeyboardPosition(groups) {
+        for (var group = 0; group < groups.length; ++group)
+            for (var item = 0; item < groups[group].length; ++item)
+                if (calendarActionIsFocused(groups[group][item].kind,
+                                            groups[group][item].key))
+                    return ({ group: group, item: item })
+        return ({ group: -1, item: -1 })
+    }
+
+    function setCalendarKeyboardAction(action) {
+        if (!action) return
+        calendarFocusAction = action
+        if (action.kind === "date") {
+            var parts = action.key.split("-")
+            calendarDate = new Date(Number(parts[0]), Number(parts[1]) - 1,
+                                    Number(parts[2]))
+        }
+    }
+
+    function calendarDefaultGroupAction(group, preferredItem) {
+        if (!group || !group.length) return null
+        var currentDateKey = dateKey(calendarDate)
+        for (var i = 0; i < group.length; ++i) {
+            if (group[i].kind === "date" && group[i].key === currentDateKey)
+                return group[i]
+            if (group[i].kind === "view" && group[i].key === calendarView)
+                return group[i]
+            if (group[i].kind === "month"
+                    && Number(group[i].key) === calendarDate.getMonth())
+                return group[i]
+            if (group[i].kind === "today") return group[i]
+        }
+        return group[Math.max(0, Math.min(group.length - 1, preferredItem))]
+    }
+
+    function moveCalendarHorizontal(step) {
+        var groups = calendarKeyboardGroups()
+        var position = calendarKeyboardPosition(groups)
+        if (position.group < 0) {
+            setCalendarKeyboardAction({ kind: "date", key: dateKey(calendarDate) })
+            return
+        }
+        var group = groups[position.group]
+        var next = position.item + step
+        // Horizontal arrows stay inside the current row/subtopic. Calendar
+        // dates and months do not wrap into another row or control group.
+        if (group[position.item].kind === "date"
+                || group[position.item].kind === "month") {
+            if (next < 0 || next >= group.length) return
+        } else {
+            next = (next + group.length) % group.length
+        }
+        setCalendarKeyboardAction(group[next])
+    }
+
+    function moveCalendarVertical(step) {
+        var groups = calendarKeyboardGroups()
+        var position = calendarKeyboardPosition(groups)
+        if (position.group < 0) {
+            setCalendarKeyboardAction({ kind: "date", key: dateKey(calendarDate) })
+            return
+        }
+        var action = groups[position.group][position.item]
+        var stride = action.kind === "date" ? 7 : (action.kind === "month" ? 3 : 0)
+        if (stride > 0) {
+            var nextItem = position.item + step * stride
+            if (nextItem >= 0 && nextItem < groups[position.group].length) {
+                setCalendarKeyboardAction(groups[position.group][nextItem])
+                return
+            }
+        }
+        var nextGroup = position.group + step
+        if (nextGroup < 0 || nextGroup >= groups.length) return
+        setCalendarKeyboardAction(calendarDefaultGroupAction(groups[nextGroup],
+                                                             position.item))
     }
 
     function calendarEventById(id) {
@@ -813,12 +901,22 @@ ShellRoot {
     }
 
     function handleCalendarKey(event) {
-        if (event.key === Qt.Key_Left || event.key === Qt.Key_Up
-                || event.key === Qt.Key_Backtab) {
+        if (event.key === Qt.Key_Left) {
+            moveCalendarHorizontal(-1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Right) {
+            moveCalendarHorizontal(1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Up) {
+            moveCalendarVertical(-1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Down) {
+            moveCalendarVertical(1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Backtab) {
             moveCalendarKeyboardFocus(-1)
             event.accepted = true
-        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Down
-                   || event.key === Qt.Key_Tab) {
+        } else if (event.key === Qt.Key_Tab) {
             moveCalendarKeyboardFocus(1)
             event.accepted = true
         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
@@ -830,14 +928,23 @@ ShellRoot {
             event.accepted = true
         } else if (event.key === Qt.Key_Home) {
             calendarDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+            calendarView = "month"
+            calendarFocusAction = ({ kind: "date", key: dateKey(calendarDate) })
             event.accepted = true
         }
     }
 
-    function focusCalendarMenuAfterOpen() {
+    function focusCalendarMenuAfterOpen(selectToday) {
         Qt.callLater(function() {
             if (root.popupKind !== "calendar" || !popup.visible || root.calendarEditor) return
-            root.calendarFocusAction = ({ kind: "", key: "" })
+            if (selectToday === true) {
+                root.calendarDate = new Date(root.currentDate.getFullYear(),
+                                             root.currentDate.getMonth(),
+                                             root.currentDate.getDate())
+                root.calendarView = "month"
+            }
+            root.calendarFocusAction = ({ kind: "date",
+                                          key: root.dateKey(root.calendarDate) })
             calendarMenu.forceActiveFocus()
         })
     }
@@ -918,7 +1025,7 @@ ShellRoot {
             focusEnvironmentMenuAfterOpen()
         }
         if (kind === "calendar")
-            focusCalendarMenuAfterOpen()
+            focusCalendarMenuAfterOpen(true)
     }
 
     function focusEnvironmentMenuAfterOpen() {
@@ -1023,7 +1130,8 @@ ShellRoot {
     function moveEnvironmentFocus(direction) {
         if (environmentManagementBusy || environmentMetadataBusy) return
         var rows = environmentCatalog.length
-        var indices = []
+        // -1 is the active HUB card shown above the Environment catalogue.
+        var indices = [-1]
         for (var index = 0; index < rows; ++index)
             if (environmentIsOpenable(environmentCatalog[index])) indices.push(index)
         indices.push(rows)
@@ -1049,6 +1157,10 @@ ShellRoot {
 
     function activateEnvironmentFocus() {
         if (environmentManagementBusy || environmentMetadataBusy) return
+        if (environmentFocusIndex === -1) {
+            closePopup()
+            return
+        }
         if (environmentFocusIndex < environmentCatalog.length) {
             var item = environmentCatalog[environmentFocusIndex]
             if (!environmentIsOpenable(item)) return
@@ -2413,6 +2525,9 @@ ShellRoot {
         function popupStatus(): string {
             return JSON.stringify({ kind: root.popupKind, visible: popup.visible,
                                     width: popup.implicitWidth, height: popup.implicitHeight,
+                                    calendar_focus_kind: root.calendarFocusAction.kind,
+                                    calendar_focus_key: root.calendarFocusAction.key,
+                                    environment_focus_index: root.environmentFocusIndex,
                                     environment_error: root.environmentSwitchError,
                                     environment_form_name: environmentNameInput.text,
                                     environment_description_length: environmentDescriptionInput.text.length })
@@ -2481,7 +2596,7 @@ ShellRoot {
             root.popupKind = "calendar"
             root.popupTarget = calendarButton
             root.showPopup()
-            root.focusCalendarMenuAfterOpen()
+            root.focusCalendarMenuAfterOpen(true)
         }
 
         function brightnessUp(): void { root.stepDisplayBrightness(5) }
@@ -3959,7 +4074,12 @@ ShellRoot {
                         }
                     }
                     Rectangle {
-                        width: parent.width; height: 62; radius: 9; color: "#13252c"; border.width: 1; border.color: "#31505d"
+                        id: hubEnvironmentCard
+                        property bool keyboardFocused: root.isHub && root.environmentKeyboardFocus && root.environmentFocusIndex === -1
+                        width: parent.width; height: 62; radius: 9
+                        color: keyboardFocused ? "#1d4650" : "#13252c"
+                        border.width: 1
+                        border.color: keyboardFocused ? "#a6f3ff" : "#31505d"
                         Rectangle { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; width: 9; height: 9; radius: 5; color: root.cyan }
                         Column {
                             anchors.left: parent.left; anchors.leftMargin: 34; anchors.right: activeEnvironmentBadge.left; anchors.rightMargin: 12; anchors.verticalCenter: parent.verticalCenter; spacing: 3
@@ -3971,6 +4091,16 @@ ShellRoot {
                             anchors.right: parent.right; anchors.rightMargin: 10; anchors.verticalCenter: parent.verticalCenter
                             width: 58; height: 24; radius: 12; color: "#173b42"
                             Text { anchors.centerIn: parent; text: "ATIVO"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
+                        }
+                        BounceMouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.environmentKeyboardFocus = true
+                                root.environmentFocusIndex = -1
+                                root.closePopup()
+                            }
                         }
                     }
 

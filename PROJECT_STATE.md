@@ -19,10 +19,18 @@ keyboard navigation away from the terminal, and clicking outside QuickShell
 did not close the menu. The repository candidate moves Control Centre action
 surfaces from saturated blue to the same neutral dark palette as the other
 menus. After visual follow-up, the owner selected one consistent opacity for
-both surfaces: the bar and menus use `#cc0a1014` (80% alpha). The Calendar
+both surfaces: the bar and menus use `#d90a1014` (85% alpha). The Calendar
 month grid alone sits on the existing higher-opacity `root.card` surface with
 a neutral border, improving date readability without making the whole popup
 opaque.
+
+Calendar keyboard focus is grouped by visible row. Left/right move only inside
+the month-navigation pair, Day/Month/Year tabs, current calendar row, or
+Today/New Event pair. Up/down move between those groups; within the month grid
+they advance by seven days, entering the adjacent group at the first or last
+week. A fresh opening resets the month view and focuses today's exact date.
+The Environments focus list now begins with index `-1`, the active HUB card;
+Down continues into the Environment catalogue and action row.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -35,8 +43,8 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`eebcbf439a5b04b1e52f36958338c9e590ef53c4c664aaf2923ca51777571b5d`;
-rollback is `/var/lib/apx/backups/20260901T003135Z-quickshell-popup-interaction-v1/`.
+`72fd55eb9703c7e5ba12d95c3df003b892803433324ac1c7c744dc49afadcaa7`;
+rollback is `/var/lib/apx/backups/20260901T003948Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group, exact live layer topology, one-process QuickShell
 restart and Host health checks passed; the complete repository suite passes
 1124 tests with 11 expected skips. No registered Development Environment

@@ -154,8 +154,8 @@ class ControlCenterScaleTests(unittest.TestCase):
             "HoverHandler {", 1
         )[0]
         self.assertIn("color: root.popupPanel", popup_frame)
-        self.assertIn('property color popupPanel: "#cc0a1014"', source)
-        self.assertIn('property color panel: "#cc0a1014"', source)
+        self.assertIn('property color popupPanel: "#d90a1014"', source)
+        self.assertIn('property color panel: "#d90a1014"', source)
         self.assertIn('border.color: "#26343a"', popup_frame)
         self.assertNotIn("color: root.card", popup_frame)
         self.assertNotIn("border.color: root.cyanDim", popup_frame)
@@ -244,8 +244,17 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("color: root.card", month_surface)
         self.assertIn('border.color: "#26343a"', month_surface)
         self.assertIn('property var calendarFocusAction:', source)
+        self.assertIn("function calendarKeyboardGroups()", source)
         self.assertIn("function calendarKeyboardActions()", source)
         self.assertIn("function moveCalendarKeyboardFocus(step)", source)
+        self.assertIn("function moveCalendarHorizontal(step)", source)
+        self.assertIn("function moveCalendarVertical(step)", source)
+        self.assertIn('action.kind === "date" ? 7', source)
+        self.assertIn('action.kind === "month" ? 3', source)
+        self.assertIn("focusCalendarMenuAfterOpen(true)", source)
+        self.assertIn('calendarFocusAction = ({ kind: "date",', source)
+        self.assertIn("calendar_focus_kind: root.calendarFocusAction.kind", source)
+        self.assertIn("calendar_focus_key: root.calendarFocusAction.key", source)
         self.assertIn("function activateCalendarKeyboardFocus()", source)
         self.assertIn("function handleCalendarKey(event)", source)
         self.assertIn("id: calendarMenu", source)
@@ -263,6 +272,10 @@ class ControlCenterScaleTests(unittest.TestCase):
             "Qt.Key_Space", "Qt.Key_PageUp", "Qt.Key_PageDown", "Qt.Key_Home",
         ):
             self.assertIn(key, handler)
+        self.assertIn("moveCalendarHorizontal(-1)", handler)
+        self.assertIn("moveCalendarHorizontal(1)", handler)
+        self.assertIn("moveCalendarVertical(-1)", handler)
+        self.assertIn("moveCalendarVertical(1)", handler)
 
         # Enter can reach every action class in the calendar overview.
         activation = source.split(

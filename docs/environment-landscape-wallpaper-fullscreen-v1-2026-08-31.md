@@ -64,12 +64,18 @@ surface covers the application area below the Overlay menu and closes the
 popup on the first outside click; the bar is outside that surface and keeps its
 direct toggle behavior. `HyprlandFocusGrab` remains a secondary cleanup
 boundary rather than the only outside-click mechanism.
-All top-level QuickShell menus and the bar use the same `#cc0a1014` surface,
-equivalent to 80% alpha, with a one-pixel `#26343a` border. The Calendar month
+All top-level QuickShell menus and the bar use the same `#d90a1014` surface,
+equivalent to 85% alpha, with a one-pixel `#26343a` border. The Calendar month
 grid has a dedicated matte `root.card` background and neutral border so its
 weekday labels and dates remain readable. Other internal cards retain semantic
 state colours, while Control Centre button surfaces use the same neutral dark
 palette as the other menus instead of saturated blue.
+
+Calendar opens in month view with today's date keyboard-focused. Horizontal
+arrows stay within the visible row (previous/next month, Day/Month/Year, dates,
+or Today/New Event); vertical arrows move between rows and jump exactly one
+week inside the date grid. Environments opens with the active HUB card focused
+before the Environment catalogue.
 
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral
