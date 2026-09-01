@@ -12,12 +12,15 @@ grid has a separate matte `root.card` surface so weekday labels and dates remain
 legible over the translucent menu. Calendar opens on today's date. Left/right
 stay within the current control row; up/down change rows and move by seven days
 inside the month grid. Environments opens with the active HUB card focused.
+Bar buttons now toggle on pointer press rather than the cancellable completed
+tap, while both pointer handlers retain the hand cursor. The display-brightness
+card uses the same neutral button surface and outline as the other controls.
 
 At the owner's explicit exception to the dirty-checkout rule, only the current
 `shell.qml` was installed in the active Hub. Source and live Hub both match
-SHA-256 `72fd55eb9703c7e5ba12d95c3df003b892803433324ac1c7c744dc49afadcaa7`;
+SHA-256 `5b4973d5db51207aed683dc0979b288ca54ace5b9b4556dcbdbdc2efa5112c36`;
 the immediate predecessor is recoverable from
-`/var/lib/apx/backups/20260901T003948Z-quickshell-popup-interaction-v1/`.
+`/var/lib/apx/backups/20260901T004406Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group passed, the live compositor exposed the expected
 430-pixel Overlay menu plus the full application-area Top dismissal surface,
 exactly one QuickShell returned, Hub remains the only running Environment and

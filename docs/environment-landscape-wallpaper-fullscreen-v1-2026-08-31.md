@@ -77,6 +77,12 @@ or Today/New Event); vertical arrows move between rows and jump exactly one
 week inside the date grid. Environments opens with the active HUB card focused
 before the Environment catalogue.
 
+Bar buttons toggle on pointer press instead of waiting for a completed tap, so
+the popup focus transition cannot consume a second click; the pointing-hand
+cursor is declared on both hover and press handlers. The display-brightness
+card now uses the shared neutral Control Centre surface and outline rather than
+its former separate blue-grey colour.
+
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral
 border, replacing the former cyan/green active gradient around terminals and

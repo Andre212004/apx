@@ -2859,7 +2859,10 @@ ShellRoot {
         TapHandler {
             id: tap
             acceptedButtons: Qt.LeftButton
-            onTapped: button.activated()
+            cursorShape: Qt.PointingHandCursor
+            // Act on the press, before a popup focus transition can cancel
+            // the completed-tap signal. Release performs no second toggle.
+            onPressedChanged: if (pressed) button.activated()
         }
     }
 
@@ -4809,8 +4812,8 @@ ShellRoot {
                         width: parent.width; height: visible ? 58 : 0; spacing: 6
                         Rectangle {
                             width: parent.width - 90; height: parent.height; radius: 11
-                            color: "#182731"
-                            border.width: 1; border.color: "#31505d"
+                            color: root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
                             Text {
                                 anchors.left: parent.left; anchors.leftMargin: 12; anchors.top: parent.top; anchors.topMargin: 12
                                 text: "Brilho do ecrã"; color: root.textMain; font.family: "Adwaita Mono"

@@ -32,6 +32,11 @@ week. A fresh opening resets the month view and focuses today's exact date.
 The Environments focus list now begins with index `-1`, the active HUB card;
 Down continues into the Environment catalogue and action row.
 
+Bar buttons invoke their toggle on pointer press, before a popup focus change
+can cancel a release-time tap; the TapHandler itself also keeps the pointing
+hand cursor. The display-brightness card no longer carries a one-off blue-grey
+surface and instead uses the shared neutral Control Centre palette.
+
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
 application accepting focus while that exclusive claim is active: a
@@ -43,8 +48,8 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`72fd55eb9703c7e5ba12d95c3df003b892803433324ac1c7c744dc49afadcaa7`;
-rollback is `/var/lib/apx/backups/20260901T003948Z-quickshell-popup-interaction-v1/`.
+`5b4973d5db51207aed683dc0979b288ca54ace5b9b4556dcbdbdc2efa5112c36`;
+rollback is `/var/lib/apx/backups/20260901T004406Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group, exact live layer topology, one-process QuickShell
 restart and Host health checks passed; the complete repository suite passes
 1124 tests with 11 expected skips. No registered Development Environment

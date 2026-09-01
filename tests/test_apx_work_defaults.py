@@ -95,6 +95,11 @@ class WorkDefaultsTests(unittest.TestCase):
             'root.keyboardBrightness === 0 ? root.controlButtonSurface : root.controlButtonActive',
         ):
             self.assertIn(state_color, source)
+        brightness_card = source.split('text: "Brilho do ecrã"', 1)[0].rsplit(
+            "Rectangle {", 1
+        )[1]
+        self.assertIn("color: root.controlButtonSurface", brightness_card)
+        self.assertIn("border.color: root.controlButtonOutline", brightness_card)
         for removed_state_color in (
             'root.wifiDisplayActive() ? "#173f49" : "#182731"',
             'root.bluetoothDisplayPowered() ? "#173f49" : "#182731"',
