@@ -14,8 +14,8 @@ ShellRoot {
     property color cyanDim: "#246879"
     // Keep the bar and menus consistently readable while retaining a modest
     // amount of the background through both surfaces.
-    property color panel: "#e60a1014"
-    property color popupPanel: "#e60a1014"
+    property color panel: "#cc0a1014"
+    property color popupPanel: "#cc0a1014"
     property color card: "#f2162027"
     property color textMain: "#e8f7fa"
     property color textDim: "#8aa3aa"
@@ -3352,49 +3352,62 @@ ShellRoot {
                             }
                         }
 
-                        Grid {
-                            width: parent.width; columns: 7; rowSpacing: 1; columnSpacing: 3
+                        Rectangle {
+                            id: calendarMonthDaysSurface
+                            width: parent.width
+                            height: visible ? calendarMonthGrid.implicitHeight + 12 : 0
                             visible: root.calendarView === "month"
-                            Repeater {
-                                model: root.weekNames
-                                Text {
-                                    required property string modelData
-                                    width: (menuContent.width - 18) / 7; height: 18; text: modelData
-                                    color: root.textDim; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
-                                    font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
-                                }
-                            }
-                            Repeater {
-                                model: root.monthDays()
-                                Rectangle {
-                                    required property var modelData
-                                    property bool today: modelData !== null && root.sameDay(modelData, root.currentDate)
-                                    property bool selected: modelData !== null && root.sameDay(modelData, root.calendarDate)
-                                    width: (menuContent.width - 18) / 7; height: 30; radius: 6
-                                    color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#244b55" : (selected ? "#15343d" : (dayMouse.containsMouse && modelData !== null ? "#20313a" : "transparent"))
-                                    border.width: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? 2 : (selected ? 2 : 0)
-                                    border.color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#a6f3ff" : root.cyan
-                                    Rectangle {
-                                        visible: parent.today && !parent.selected
-                                        anchors.fill: parent; anchors.margins: parent.selected ? 4 : 2
-                                        radius: 4; color: "transparent"
-                                        border.width: 1; border.color: "#ffb15a"
-                                    }
+                            radius: 8
+                            color: root.card
+                            border.width: 1
+                            border.color: "#26343a"
+
+                            Grid {
+                                id: calendarMonthGrid
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                columns: 7; rowSpacing: 1; columnSpacing: 3
+                                Repeater {
+                                    model: root.weekNames
                                     Text {
-                                        anchors.centerIn: parent
-                                        text: modelData === null ? "" : modelData.getDate()
-                                        color: parent.selected ? root.cyan : (parent.today ? "#ffc36b" : root.textMain)
-                                        font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize
-                                        font.bold: parent.today || parent.selected
+                                        required property string modelData
+                                        width: (calendarMonthGrid.width - 18) / 7; height: 18; text: modelData
+                                        color: root.textDim; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                        font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
                                     }
+                                }
+                                Repeater {
+                                    model: root.monthDays()
                                     Rectangle {
-                                        visible: modelData !== null && root.eventsForDate(modelData).length > 0
-                                        anchors.bottom: parent.bottom; anchors.bottomMargin: 3; anchors.horizontalCenter: parent.horizontalCenter
-                                        width: 4; height: 4; radius: 2; color: root.cyan
-                                    }
-                                    BounceMouseArea {
-                                        id: dayMouse; anchors.fill: parent; enabled: modelData !== null; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.calendarDate = new Date(modelData.getFullYear(), modelData.getMonth(), modelData.getDate())
+                                        required property var modelData
+                                        property bool today: modelData !== null && root.sameDay(modelData, root.currentDate)
+                                        property bool selected: modelData !== null && root.sameDay(modelData, root.calendarDate)
+                                        width: (calendarMonthGrid.width - 18) / 7; height: 30; radius: 6
+                                        color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#244b55" : (selected ? "#15343d" : (dayMouse.containsMouse && modelData !== null ? "#20313a" : "transparent"))
+                                        border.width: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? 2 : (selected ? 2 : 0)
+                                        border.color: modelData !== null && root.calendarActionIsFocused("date", root.dateKey(modelData)) ? "#a6f3ff" : root.cyan
+                                        Rectangle {
+                                            visible: parent.today && !parent.selected
+                                            anchors.fill: parent; anchors.margins: parent.selected ? 4 : 2
+                                            radius: 4; color: "transparent"
+                                            border.width: 1; border.color: "#ffb15a"
+                                        }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData === null ? "" : modelData.getDate()
+                                            color: parent.selected ? root.cyan : (parent.today ? "#ffc36b" : root.textMain)
+                                            font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize
+                                            font.bold: parent.today || parent.selected
+                                        }
+                                        Rectangle {
+                                            visible: modelData !== null && root.eventsForDate(modelData).length > 0
+                                            anchors.bottom: parent.bottom; anchors.bottomMargin: 3; anchors.horizontalCenter: parent.horizontalCenter
+                                            width: 4; height: 4; radius: 2; color: root.cyan
+                                        }
+                                        BounceMouseArea {
+                                            id: dayMouse; anchors.fill: parent; enabled: modelData !== null; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.calendarDate = new Date(modelData.getFullYear(), modelData.getMonth(), modelData.getDate())
+                                        }
                                     }
                                 }
                             }

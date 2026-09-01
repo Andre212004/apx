@@ -19,7 +19,10 @@ keyboard navigation away from the terminal, and clicking outside QuickShell
 did not close the menu. The repository candidate moves Control Centre action
 surfaces from saturated blue to the same neutral dark palette as the other
 menus. After visual follow-up, the owner selected one consistent opacity for
-both surfaces: the bar and menus now use `#e60a1014` (90% alpha).
+both surfaces: the bar and menus use `#cc0a1014` (80% alpha). The Calendar
+month grid alone sits on the existing higher-opacity `root.card` surface with
+a neutral border, improving date readability without making the whole popup
+opaque.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -32,8 +35,8 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`c1ad484038cfb770c9cb31971d4f161790091cbc764f86d32830ca63a7cff525`;
-rollback is `/var/lib/apx/backups/20260901T002831Z-quickshell-popup-interaction-v1/`.
+`eebcbf439a5b04b1e52f36958338c9e590ef53c4c664aaf2923ca51777571b5d`;
+rollback is `/var/lib/apx/backups/20260901T003135Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group, exact live layer topology, one-process QuickShell
 restart and Host health checks passed; the complete repository suite passes
 1124 tests with 11 expected skips. No registered Development Environment

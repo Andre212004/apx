@@ -154,8 +154,8 @@ class ControlCenterScaleTests(unittest.TestCase):
             "HoverHandler {", 1
         )[0]
         self.assertIn("color: root.popupPanel", popup_frame)
-        self.assertIn('property color popupPanel: "#e60a1014"', source)
-        self.assertIn('property color panel: "#e60a1014"', source)
+        self.assertIn('property color popupPanel: "#cc0a1014"', source)
+        self.assertIn('property color panel: "#cc0a1014"', source)
         self.assertIn('border.color: "#26343a"', popup_frame)
         self.assertNotIn("color: root.card", popup_frame)
         self.assertNotIn("border.color: root.cyanDim", popup_frame)
@@ -236,6 +236,13 @@ class ControlCenterScaleTests(unittest.TestCase):
     def test_calendar_is_fully_reachable_from_the_keyboard(self) -> None:
         source = SHELL.read_text()
 
+        self.assertIn("id: calendarMonthDaysSurface", source)
+        self.assertIn("id: calendarMonthGrid", source)
+        month_surface = source.split("id: calendarMonthDaysSurface", 1)[1].split(
+            "id: calendarMonthGrid", 1
+        )[0]
+        self.assertIn("color: root.card", month_surface)
+        self.assertIn('border.color: "#26343a"', month_surface)
         self.assertIn('property var calendarFocusAction:', source)
         self.assertIn("function calendarKeyboardActions()", source)
         self.assertIn("function moveCalendarKeyboardFocus(step)", source)

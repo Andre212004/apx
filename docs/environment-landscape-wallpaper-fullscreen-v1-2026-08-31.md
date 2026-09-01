@@ -64,10 +64,12 @@ surface covers the application area below the Overlay menu and closes the
 popup on the first outside click; the bar is outside that surface and keeps its
 direct toggle behavior. `HyprlandFocusGrab` remains a secondary cleanup
 boundary rather than the only outside-click mechanism.
-All top-level QuickShell menus and the bar use the same `#e60a1014` surface,
-equivalent to 90% alpha, with a one-pixel `#26343a` border. Internal cards
-retain semantic state colours, while Control Centre button surfaces use the
-same neutral dark palette as the other menus instead of saturated blue.
+All top-level QuickShell menus and the bar use the same `#cc0a1014` surface,
+equivalent to 80% alpha, with a one-pixel `#26343a` border. The Calendar month
+grid has a dedicated matte `root.card` background and neutral border so its
+weekday labels and dates remain readable. Other internal cards retain semantic
+state colours, while Control Centre button surfaces use the same neutral dark
+palette as the other menus instead of saturated blue.
 
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral

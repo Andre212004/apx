@@ -3,17 +3,19 @@
 QuickShell popup interaction correction — 2026-09-01: the owner reported that
 menus remained visually transparent, mouse-opened Calendar/Environments left
 keyboard input in the terminal, and an outside click did not dismiss the menu.
-The shared shell now uses consistent `#e60a1014` surfaces (90% alpha), neutral
+The shared shell now uses consistent `#cc0a1014` surfaces (80% alpha), neutral
 dark Control Centre buttons, exclusive keyboard focus for every bar or IPC
 opening, and a transparent non-keyboard Top-layer surface below the Overlay
 menu to consume the first outside click and close it. The menu and bar remain
-directly interactive above/outside that dismissal surface.
+directly interactive above/outside that dismissal surface. The Calendar month
+grid has a separate matte `root.card` surface so weekday labels and dates remain
+legible over the translucent menu.
 
 At the owner's explicit exception to the dirty-checkout rule, only the current
 `shell.qml` was installed in the active Hub. Source and live Hub both match
-SHA-256 `c1ad484038cfb770c9cb31971d4f161790091cbc764f86d32830ca63a7cff525`;
+SHA-256 `eebcbf439a5b04b1e52f36958338c9e590ef53c4c664aaf2923ca51777571b5d`;
 the immediate predecessor is recoverable from
-`/var/lib/apx/backups/20260901T002831Z-quickshell-popup-interaction-v1/`.
+`/var/lib/apx/backups/20260901T003135Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group passed, the live compositor exposed the expected
 430-pixel Overlay menu plus the full application-area Top dismissal surface,
 exactly one QuickShell returned, Hub remains the only running Environment and
