@@ -18,24 +18,32 @@ remains identical before and after a popup opens; pointer ownership therefore
 stays with the real button through the second click. Each button now uses one
 `MouseArea` for hover, hand cursor, press animation and activation; the former
 competing Hover/Tap handlers can no longer reset the cursor to an arrow on
-release. The
+release. The redundant `HyprlandFocusGrab`, which still reset the compositor
+cursor when the popup changed state, is removed; the dedicated outside-click
+surface remains the dismissal authority. The
 display-brightness card uses the same neutral button surface and outline as the
 other controls.
 
-At the owner's explicit exception to the dirty-checkout rule, only the current
+At the owner's explicit exception to the dirty-checkout rule, the current
 `shell.qml` was installed in the active Hub. Source and live Hub both match
-SHA-256 `159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243`;
+SHA-256 `e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f`;
 the immediate predecessor is recoverable from
-`/var/lib/apx/backups/20260901T010626Z-quickshell-popup-interaction-v1/`.
-The targeted 42-test group passed, the live compositor exposed the expected
+`/var/lib/apx/backups/20260901T010958Z-quickshell-popup-interaction-v1/`.
+The targeted 44-test group passed, the live compositor exposed the expected
 430-pixel Overlay menu, the stable 1270×46 Overlay bar and the full
 application-area Top dismissal surface, exactly one QuickShell returned, Hub
 remains the only running Environment and no unit is failed. The complete
-repository suite passes 1125 tests with 11
+repository suite passes 1126 tests with 11
 expected skips. No registered Development Environment exists. Per the
 owner's boundary, no other dirty-checkout change was installed and the active
 seed/runtime remained untouched. The remaining physical acceptance is one
 owner click/keyboard check; repository-wide publication is the next milestone.
+
+Hyprland's native background is now a plain-black safety layer behind
+QuickShell. Both active Lua and legacy fallback disable the default wallpaper,
+logo and splash, while QuickShell keeps its normal rotating landscapes. Live
+options were read back as `0/true/true`; rollback is
+`/var/lib/apx/backups/20260901T011041Z-hyprland-black-fallback-v1/`.
 
 Terminal notification cleanup — 2026-09-01: Mako's default zero timeout left
 old Codex approval notifications permanently visible under `app_name: kitty`

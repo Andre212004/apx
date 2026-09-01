@@ -83,6 +83,19 @@ class WorkDefaultsTests(unittest.TestCase):
         ):
             self.assertIn(required, source)
 
+    def test_hyprland_fallback_is_plain_black_behind_quickshell(self) -> None:
+        lua = (SHELL / "hypr/hyprland.lua").read_text()
+        fallback = (SHELL / "hyprland/hyprland.conf").read_text()
+
+        for source in (lua, fallback):
+            self.assertIn("force_default_wallpaper = 0", source)
+            self.assertIn("disable_hyprland_logo", source)
+            self.assertIn("disable_splash_rendering", source)
+        self.assertIn("disable_hyprland_logo   = true", lua)
+        self.assertIn("disable_splash_rendering = true", lua)
+        self.assertNotIn("force_default_wallpaper = -1", lua + fallback)
+        self.assertNotIn("disable_hyprland_logo   = false", lua)
+
     def test_control_centre_uses_text_instead_of_icons(self) -> None:
         source = (SHELL / "quickshell/apx/shell.qml").read_text()
         # The sole remaining ControlIcon instance belongs to the separate Fn

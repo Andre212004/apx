@@ -62,8 +62,9 @@ for the menu lifetime, so Calendar and Environments accept arrows, Tab and
 Enter immediately after a bar click. A transparent non-keyboard Top-layer
 surface covers the application area below the Overlay menu and closes the
 popup on the first outside click; the bar is outside that surface and keeps its
-direct toggle behavior. `HyprlandFocusGrab` remains a secondary cleanup
-boundary rather than the only outside-click mechanism.
+direct toggle behavior. The redundant `HyprlandFocusGrab` is removed because
+its state changes reset the cursor to an arrow; the explicit input surfaces,
+Escape and same-button toggle fully own dismissal.
 All top-level QuickShell menus and the bar use the same `#d90a1014` surface,
 equivalent to 85% alpha, with a one-pixel `#26343a` border. The Calendar month
 grid has a dedicated matte `root.card` background and neutral border so its
@@ -94,6 +95,11 @@ Every bar button uses one `MouseArea` as the sole owner of hover, cursor, press
 animation and activation. Removing the competing HoverHandler and TapHandler
 prevents a release from restoring the arrow while the pointer is still over
 the same button.
+
+Behind QuickShell, Hyprland now renders plain black: its default wallpaper is
+set to zero and both logo and splash are disabled in the Lua configuration and
+legacy fallback. The rotating landscape remains a QuickShell layer, but a
+shell restart no longer exposes the old Hyprland artwork.
 
 Terminal notifications are bounded as well. A local Hyprland focus watcher
 dismisses only `kitty` and `Alacritty` notifications when their terminal gains
@@ -128,7 +134,7 @@ popup/button active-state mappings. They also cover opaque menu colour,
 exclusive keyboard focus, the outside-click dismissal layer and the stable
 Overlay bar-button targets. Physical owner
 acceptance remains the final check for each key chord and pointer interaction.
-The complete repository suite passes 1125 tests with 11 expected skips. The
+The complete repository suite passes 1126 tests with 11 expected skips. The
 visual wallpaper layer was captured in the active Hub; an earlier final menu
 capture was interrupted by the normal protected session lock and no
 authentication bypass was attempted.

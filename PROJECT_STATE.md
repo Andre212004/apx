@@ -52,21 +52,28 @@ application accepting focus while that exclusive claim is active: a
 transparent, non-keyboard Top-layer surface covers only the application area,
 sits below the Overlay popup and closes the popup on its first click. The bar
 is excluded from that surface so its own buttons retain their established
-toggle behavior. `HyprlandFocusGrab` remains a secondary compositor cleanup
-boundary.
+toggle behavior. The redundant `HyprlandFocusGrab` is removed because its
+state transition reset the cursor to an arrow; dismissal is owned entirely by
+the explicit surface, bar background, Escape handling and same-button toggle.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243`;
-rollback is `/var/lib/apx/backups/20260901T010626Z-quickshell-popup-interaction-v1/`.
-The targeted 43-test group, exact live topology including the stable 1270×46
+`e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f`;
+rollback is `/var/lib/apx/backups/20260901T010958Z-quickshell-popup-interaction-v1/`.
+The targeted 44-test group, exact live topology including the stable 1270×46
 Overlay bar, one-process QuickShell restart and Host health checks
 passed; the complete repository suite passes
-1125 tests with 11 expected skips. No registered Development Environment
+1126 tests with 11 expected skips. No registered Development Environment
 exists, and the seed, installed runtime, stopped Environments and every other
 dirty-checkout change were intentionally not installed. A physical owner
 click/keyboard check remains acceptance evidence rather than an automated
 claim.
+
+The compositor fallback behind QuickShell is deliberately plain black. The
+active Lua and legacy Hyprland configurations set the default wallpaper to
+zero and disable both logo and splash, so a QuickShell restart no longer
+reveals Hyprland artwork. The live options verified as `0/true/true`; rollback
+is `/var/lib/apx/backups/20260901T011041Z-hyprland-black-fallback-v1/`.
 
 Mako no longer retains terminal notifications indefinitely. A user-owned
 watcher consumes Hyprland `activewindow` events and dismisses only notifications

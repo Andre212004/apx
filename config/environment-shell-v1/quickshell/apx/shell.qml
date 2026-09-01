@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 
@@ -5359,10 +5358,4 @@ ShellRoot {
         }
     }
 
-    HyprlandFocusGrab {
-        id: popupFocusGrab
-        windows: [bar, popup, popupDismissLayer]
-        active: popup.visible
-        onCleared: if (popup.visible) root.closePopup()
-    }
 }

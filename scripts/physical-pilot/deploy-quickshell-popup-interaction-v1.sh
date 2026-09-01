@@ -10,8 +10,8 @@ readonly repository=/root/apx-host-development-mode-v1/apx
 readonly source_ui=$repository/config/environment-shell-v1/quickshell/apx/shell.qml
 readonly hub_ui=/var/lib/apx/environments/hub/home/apx/.config/quickshell/apx/shell.qml
 readonly hub_registration=/var/lib/apx/environments/hub/registration.json
-readonly source_sha256=159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243
-readonly previous_sha256=a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d
+readonly source_sha256=e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f
+readonly previous_sha256=159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243
 readonly backup="/var/lib/apx/backups/$(date -u +%Y%m%dT%H%M%SZ)-quickshell-popup-interaction-v1"
 
 fail() { echo "APX QuickShell popup deployment refused: $*" >&2; exit 2; }

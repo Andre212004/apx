@@ -144,7 +144,8 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("visible && root.popupKeyboardRequested", popup)
         self.assertIn("? WlrKeyboardFocus.Exclusive", popup)
         self.assertNotIn("WlrKeyboardFocus.OnDemand", popup)
-        self.assertIn("active: popup.visible", popup)
+        self.assertNotIn("HyprlandFocusGrab", source)
+        self.assertNotIn("import Quickshell.Hyprland", source)
 
         dismiss = source.split("id: popupDismissLayer", 1)[1].split(
             "id: popup\n", 1
@@ -159,7 +160,6 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", bar_window)
         self.assertNotIn("popupBarInputLayer", source)
         self.assertNotIn("PopupBarButtonShield", source)
-        self.assertIn("windows: [bar, popup, popupDismissLayer]", source)
         popup_frame = source.split("id: popupBackground", 1)[1].split(
             "HoverHandler {", 1
         )[0]

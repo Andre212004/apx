@@ -67,8 +67,8 @@ ENVIRONMENT_SHELL_ASSETS = {
     "apx/wallpapers/rainforest-stream.png": "624a391248bee708ce4195735f9e69937083d0e2f7ba4b9f025d92f231916535",
     "hypr/hypridle.conf": "dc34b120018d969d9b873265179ac8013e175252fdb87d0e2fe3846795d2a0e9",
     "hypr/hyprlock.conf": "5dfd13d9c23c602a24dfc69c416550425069cf47876cb5ccc4555a29681dc9a0",
-    "hypr/hyprland.lua": "5990556173a4958a6e2d7a8d3a321ea92442174098c21ee0076678c0ae29a5ca",
-    "hyprland/hyprland.conf": "7c571ef6e748635d65545f68c01a7253d94db21c355bdaeca8e9284a509877ae",
+    "hypr/hyprland.lua": "be195a30f0e9e4b3657fce3c2a2a375ac07e6d9d07258cfa180cf55b7867dcf8",
+    "hyprland/hyprland.conf": "eac1bcb38d499c524221550bcb0018a34011cd319b2e9f11351095cfada460f8",
     "mako/config": "53cda37280ea02455e62879186619aae296b08e8f10bd8cc1c09fd25239cf122",
     "local/bin/apx-detached-launch": "40970a9ed235a6799913211dc135c66222ee55e15d5d38e5cfe5d2feafd785ef",
     "local/bin/apx-face-auth-state-v1": "82eec2b7ca859006b14d9118bb5e1aa12d1a0d5f480cf1a3f9aeb27543b3b642",
@@ -79,7 +79,7 @@ ENVIRONMENT_SHELL_ASSETS = {
     "local/bin/apx-notification-focus-v1": "835cc0302f10f01c2417077884fca7f9b9a6b95b2328ac8d32dccc4e93ca7cc0",
     "local/bin/apx-shell-v1": "19a04a0700f8f9ed512f5b6433a4ea9c0b114222810894095654b36bfc55423e",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243",
+    "quickshell/apx/shell.qml": "e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 MAX_WALLPAPER_BYTES = 4 * 1024 * 1024
