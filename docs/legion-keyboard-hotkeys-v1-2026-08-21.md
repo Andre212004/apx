@@ -38,29 +38,28 @@ Ativado/Desativado** feedback even if a Host-service socket is replaced. A typed
 read-only Host `radio.status` view is also available to other consumers. Neither
 path gives an Environment radio mutation authority.
 
-The bindings accept both the standard `XF86` key symbols and the F13--F16
-fallback symbols emitted by some firmware paths on this exact Legion
-generation. Fn+F8 is deliberately not reimplemented in the Environment: the
-Host kernel already owns the separate Lenovo radio-control input and its rfkill
-handler, which avoids granting an Environment direct radio authority.
+The physical follow-up established that the ITE interface is itself a complete
+keyboard: it also emits ordinary F1--F12 presses. Raw F-key codes therefore
+cannot prove that Fn was held and must never trigger laptop actions. The bridge
+now ignores every raw F1--F12 code. It handles only the ITE semantic brightness
+events `KEY_BRIGHTNESSDOWN/UP` and Print Screen from the exact
+`AT Translated Set 2 keyboard`; a runtime lock permits exactly one bridge
+instance.
 
-The physical target's observed route is more specific: a live evdev capture
-showed Fn+F4--F12 on the exact internal ITE keyboard as raw codes
-`62--68,87,88`. Plain F4--F12 arrive through the separate exact AT keyboard.
-The bridge exclusively grabs the ITE interface and also handles its raw
-F1--F3 codes `59--61` for volume. This prevents Fn codes leaking into focused
-applications while leaving ordinary AT F1--F12 untouched. Print Screen is
-handled as AT `KEY_SYSRQ/99`. The raw F8 copy asks
-for delayed read-only rfkill feedback after the Host kernel performs the actual
-toggle; the raw F10 copy reports the firmware-owned touchpad state change.
+The firmware Fn lock is off (`fn_lock=0`). Hyprland consequently handles only
+the semantic symbols produced by real Fn combinations: XF86 audio/microphone,
+display and application symbols plus the observed F13--F16 fallbacks. Plain
+F1--F12 remain application keys. Fn+F8 stays on Lenovo's Host-owned kernel
+rfkill path and is not reimplemented as an Environment radio mutation. No
+input device is grabbed exclusively and no uinput device is created.
 
 The first physical trial found F1--F4 and F8 working but no F5/F6 response. A
 direct mediated proof changed the AMD backlight from raw 65535 to 62258 and
 back to 65535, isolating the problem to key routing rather than the Host
-brightness service. The firmware can send either F5/F6 or brightness codes
-224/225 through either exact internal AT or ITE descriptor. The bridge now
-accepts those four codes from either of those two already identity-checked
-descriptors; it still refuses external and ambiguous keyboards.
+brightness service. The corrected bridge accepts only semantic codes 224/225
+from the exact ITE descriptor. It still refuses external, missing and ambiguous
+keyboards. The earlier `AT Raw Set 2 keyboard` name remains corrected to the
+physically observed `AT Translated Set 2 keyboard`.
 
 Lenovo reference:
 <https://download.lenovo.com/pccbbs/pubs/legion_5_15imh6/html_en/EN/SHARED_feature_intro_hotkeys_legion_5.html>

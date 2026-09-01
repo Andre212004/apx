@@ -33,6 +33,7 @@ from apx_captive_portal import (  # noqa: E402
 
 SOCKET = Path("/run/apx/host-services-v3.sock")
 RFKILL_ROOT = Path("/sys/class/rfkill")
+RFKILL = "/usr/bin/rfkill"
 WIFI_INTERFACE = "wlan0"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 MAX_CLIENTS = 16
@@ -254,6 +255,52 @@ def bluetooth_state() -> dict[str, object]:
             "devices": sorted(devices, key=lambda item: (not item["paired"], item["name"], item["address"]))}
 
 
+def bluetooth_soft_blocked() -> bool:
+    values = []
+    for directory in sorted(RFKILL_ROOT.glob("rfkill*")):
+        try:
+            if (directory / "type").read_text(encoding="ascii").strip() == "bluetooth":
+                values.append((directory / "soft").read_text(encoding="ascii").strip() == "1")
+        except OSError:
+            continue
+    return not values or any(values)
+
+
+def set_bluetooth_power(powered: bool) -> dict[str, object]:
+    """Apply one complete BlueZ/rfkill transition and verify the real result."""
+    if powered:
+        # BlueZ reports `off-blocked` and refuses `power on` while its hci
+        # rfkill entry is soft-blocked. Clear only the Bluetooth class first;
+        # Wi-Fi and the laptop's separate airplane-mode control are untouched.
+        unblocked = run((RFKILL, "unblock", "bluetooth"))
+        if unblocked.returncode:
+            raise HostServicesV3Error("Não foi possível desbloquear o rádio Bluetooth")
+        # rfkill returns before BlueZ necessarily leaves its `off-blocked`
+        # transition. Wait for both kernel and daemon views before asking for
+        # power; an immediate command is reproducibly acknowledged but ignored.
+        deadline = time.monotonic() + 5
+        ready = False
+        while time.monotonic() < deadline:
+            show = run(("/usr/bin/bluetoothctl", "show"))
+            ready = not bluetooth_soft_blocked() and "PowerState: off-blocked" not in show.stdout
+            if ready:
+                break
+            time.sleep(0.1)
+        if not ready:
+            raise HostServicesV3Error("O rádio Bluetooth não concluiu o desbloqueio")
+    result = run(("/usr/bin/bluetoothctl", "power", "on" if powered else "off"))
+    if result.returncode:
+        raise HostServicesV3Error("Não foi possível alterar o estado do Bluetooth")
+    deadline = time.monotonic() + 5
+    state = bluetooth_state()
+    while state["powered"] is not powered and time.monotonic() < deadline:
+        time.sleep(0.1)
+        state = bluetooth_state()
+    if state["powered"] is not powered:
+        raise HostServicesV3Error("O controlador Bluetooth não confirmou o novo estado")
+    return state
+
+
 def _pair_cleanup(session: dict[str, object], *, terminate: bool = False) -> None:
     process = session["process"]
     if terminate and process.poll() is None:
@@ -388,14 +435,30 @@ def secret_connect(ssid: str, secret: str) -> None:
                 try: chunk = os.read(master, 4096)
                 except OSError: break
                 output.extend(chunk)
+                if len(output) > 16384:
+                    del output[:-16384]
                 if not sent and (b"passphrase" in output.lower() or b"psk" in output.lower()):
                     os.write(master, secret.encode() + b"\n"); sent = True
         if process.poll() is None: process.kill()
         process.wait(timeout=2)
     finally:
         os.close(master)
+    if not sent:
+        raise HostServicesV3Error("O serviço Wi-Fi não pediu a palavra-passe")
     if process.returncode != 0:
-        raise HostServicesV3Error("Wi-Fi authentication or connection failed")
+        raise HostServicesV3Error("A palavra-passe foi recusada ou a ligação Wi-Fi falhou")
+
+
+def wait_for_network(ssid: str, timeout: float = 10) -> dict[str, object]:
+    """Return only after iwd confirms the requested network as connected."""
+    deadline = time.monotonic() + timeout
+    state = network_state()
+    while (not state["connected"] or state["network"] != ssid) and time.monotonic() < deadline:
+        time.sleep(0.2)
+        state = network_state()
+    if not state["connected"] or state["network"] != ssid:
+        raise HostServicesV3Error("A ligação Wi-Fi não foi confirmada pelo Host")
+    return state
 
 
 def apply(operation: str, payload: dict[str, object]) -> object:
@@ -412,7 +475,8 @@ def apply(operation: str, payload: dict[str, object]) -> object:
         if before_bluetooth["backend"] != "bluez" or not before_bluetooth["controller_present"]:
             raise UnsupportedError("Host Bluetooth controller is unavailable")
         if operation == "bluetooth.power":
-            result = run(("/usr/bin/bluetoothctl", "power", "on" if payload["powered"] else "off"))
+            state = set_bluetooth_power(bool(payload["powered"]))
+            result = None
         elif operation == "bluetooth.scan":
             if not before_bluetooth["powered"]: raise ConflictError("Bluetooth controller is powered off")
             result = run(("/usr/bin/bluetoothctl", "--timeout", "8", "scan", "on"), 12)
@@ -426,9 +490,9 @@ def apply(operation: str, payload: dict[str, object]) -> object:
                     "bluetooth.device.remove": "remove"}.get(operation)
             if verb is None: raise UnsupportedError("Bluetooth operation is unsupported")
             result = run(("/usr/bin/bluetoothctl", verb, address), 25)
-        if result.returncode: raise HostServicesV3Error("Host Bluetooth transition failed")
+        if result is not None and result.returncode: raise HostServicesV3Error("Host Bluetooth transition failed")
         emit("bluetooth.scan_completed" if operation == "bluetooth.scan" else "bluetooth.changed")
-        return bluetooth_state()
+        return state if operation == "bluetooth.power" else bluetooth_state()
     if operation == "network.status": return network_state()
     if operation == "radio.status": return radio_state()
     if operation == "network.connectivity-check": return perform_connectivity_check()
@@ -458,7 +522,7 @@ def apply(operation: str, payload: dict[str, object]) -> object:
     if result is not None and result.returncode: raise HostServicesV3Error("Host network transition failed")
     if operation == "network.scan": emit("network.scan_completed")
     if operation == "network.connect":
-        time.sleep(1)
+        wait_for_network(str(payload["ssid"]))
         perform_connectivity_check()
     return network_state()
 

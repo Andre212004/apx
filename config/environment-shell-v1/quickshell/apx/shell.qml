@@ -13,9 +13,22 @@ ShellRoot {
     property color cyan: "#55e6ff"
     property color cyanDim: "#246879"
     property color panel: "#e90a1014"
+    property color popupPanel: "#ff0a1014"
     property color card: "#f2162027"
     property color textMain: "#e8f7fa"
     property color textDim: "#8aa3aa"
+    // Control-centre actions use the same near-background surfaces as the
+    // other menus. Cyan is reserved for state and emphasis, not large fills.
+    readonly property color controlButtonSurface: "#101920"
+    readonly property color controlButtonHover: "#17242b"
+    readonly property color controlButtonActive: "#142c34"
+    readonly property color controlButtonOutline: "#26343a"
+    readonly property var wallpaperSources: [
+        "file:///home/apx/.config/apx/wallpapers/atlantic-coast.png",
+        "file:///home/apx/.config/apx/wallpapers/alpine-lake.png",
+        "file:///home/apx/.config/apx/wallpapers/rainforest-stream.png"
+    ]
+    property int wallpaperIndex: Math.floor(Date.now() / 900000) % wallpaperSources.length
     property var environmentIdentity: ({ name: "", display_name: "", role: "" })
     property string environmentSwitchError: ""
     property bool environmentSwitchPending: false
@@ -99,6 +112,9 @@ ShellRoot {
     property string popupKind: ""
     property Item popupTarget: null
     property real popupReveal: 1
+    property bool popupKeyboardRequested: false
+    property string animatedBarOpenKind: ""
+    property string animatedBarCloseKind: ""
     readonly property int popupLeftMargin: {
         if (!popupTarget || !bar) return 8
         var targetRect = popupTarget.mapToItem(bar.contentItem, 0, 0)
@@ -830,6 +846,9 @@ ShellRoot {
     }
 
     function closePopup() {
+        popupKeyboardRequested = false
+        animatedBarOpenKind = ""
+        animatedBarCloseKind = ""
         popupOpenAnimation.stop()
         popup.visible = false
         popupReveal = 1
@@ -853,14 +872,22 @@ ShellRoot {
         popupOpenAnimation.restart()
     }
 
-    function togglePopup(kind, target) {
+    function togglePopup(kind, target, keyboardRequested) {
         if (popupKind === kind && popup.visible) {
+            popupKeyboardRequested = false
+            animatedBarOpenKind = ""
+            animatedBarCloseKind = kind
+            barAnimationReset.restart()
             popup.visible = false
             popupKind = ""
             if (kind === "environments") environmentKeyboardFocus = false
             if (kind === "calendar") calendarFocusAction = ({ kind: "", key: "" })
             return
         }
+        animatedBarCloseKind = ""
+        animatedBarOpenKind = kind
+        popupKeyboardRequested = keyboardRequested === true
+        barAnimationReset.restart()
         popupOpenAnimation.stop()
         if (kind === "controls") {
             controlsWifiOpen = false
@@ -2362,9 +2389,14 @@ ShellRoot {
                 hostConsoleProcess.running = true
         }
 
+        function openFiles(): void {
+            if (!root.isHub && !environmentFilesProcess.running)
+                environmentFilesProcess.running = true
+        }
+
         function openEnvironments(): void {
             root.environmentKeyboardFocus = false
-            root.togglePopup("environments", environmentButton)
+            root.togglePopup("environments", environmentButton, true)
         }
 
         function refreshModel(): void {
@@ -2385,23 +2417,24 @@ ShellRoot {
         }
 
         function toggleControls(): void {
-            root.togglePopup("controls", controlCenterButton)
+            root.togglePopup("controls", controlCenterButton, true)
         }
 
         function toggleCalendar(): void {
-            root.togglePopup("calendar", calendarButton)
+            root.togglePopup("calendar", calendarButton, true)
         }
 
         function toggleModel(): void {
             if (root.isHub)
-                root.togglePopup("model", modelStoreButton)
+                root.togglePopup("model", modelStoreButton, true)
         }
 
         function toggleBattery(): void {
-            root.togglePopup("battery", batteryButton)
+            root.togglePopup("battery", batteryButton, true)
         }
 
         function openControls(): void {
+            root.popupKeyboardRequested = true
             root.popupKind = "controls"
             root.popupTarget = controlCenterButton
             root.showPopup()
@@ -2442,6 +2475,7 @@ ShellRoot {
         }
 
         function openCalendar(): void {
+            root.popupKeyboardRequested = true
             root.popupKind = "calendar"
             root.popupTarget = calendarButton
             root.showPopup()
@@ -2663,13 +2697,16 @@ ShellRoot {
         property string label: ""
         property string alternateLabel: ""
         property bool alternateActive: false
+        property bool animateActivation: false
+        property bool animateDeactivation: false
+        readonly property bool visuallyActive: hover.hovered || alternateActive
         signal activated()
         implicitWidth: Math.max(buttonText.implicitWidth, alternateButtonText.implicitWidth) + 22
         implicitHeight: 32
-        scale: mouse.pressed ? 0.96 : 1
+        scale: tap.pressed ? 0.96 : 1
         radius: 7
-        color: mouse.containsMouse ? root.cyanDim : "transparent"
-        border.width: mouse.containsMouse ? 1 : 0
+        color: visuallyActive ? root.cyanDim : "transparent"
+        border.width: visuallyActive ? 1 : 0
         border.color: root.cyan
         Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
         Text {
@@ -2677,33 +2714,45 @@ ShellRoot {
             anchors.centerIn: parent
             text: button.label
             opacity: button.alternateActive ? 0 : 1
-            scale: button.alternateActive ? 0.72 : 1
-            color: mouse.containsMouse ? root.cyan : root.textMain
+            scale: button.alternateActive ? 0.94 : 1
+            color: button.visuallyActive ? root.cyan : root.textMain
             font.family: "Adwaita Mono"
             font.pixelSize: 13
             font.bold: true
-            Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-            Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+            Behavior on opacity { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
+            Behavior on scale { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
         }
         Text {
             id: alternateButtonText
             anchors.centerIn: parent
             text: button.alternateLabel
             opacity: button.alternateActive ? 1 : 0
-            scale: button.alternateActive ? 1 : 0.72
-            color: mouse.containsMouse ? root.cyan : root.textMain
+            scale: button.alternateActive ? 1 : 0.94
+            color: button.visuallyActive ? root.cyan : root.textMain
             font.family: "Adwaita Mono"
             font.pixelSize: 13
             font.bold: true
-            Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-            Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+            Behavior on opacity { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
+            Behavior on scale { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
         }
-        MouseArea {
-            id: mouse
-            anchors.fill: parent
-            hoverEnabled: true
+        HoverHandler {
+            id: hover
             cursorShape: Qt.PointingHandCursor
-            onClicked: button.activated()
+        }
+        TapHandler {
+            id: tap
+            acceptedButtons: Qt.LeftButton
+            onTapped: button.activated()
+        }
+    }
+
+    Timer {
+        id: barAnimationReset
+        interval: 150
+        repeat: false
+        onTriggered: {
+            root.animatedBarOpenKind = ""
+            root.animatedBarCloseKind = ""
         }
     }
 
@@ -2880,34 +2929,6 @@ ShellRoot {
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.RightButton; cursorShape: Qt.WhatsThisCursor; onClicked: featureCard.infoRequested() }
     }
 
-    component WifiSecurityIcon: Item {
-        id: securityIcon
-        property bool open: false
-        width: 14
-        height: 14
-
-        Rectangle {
-            visible: !securityIcon.open
-            x: 2; y: 6; width: 10; height: 7; radius: 1
-            color: root.textDim
-        }
-        Rectangle {
-            visible: !securityIcon.open
-            x: 4; y: 1; width: 6; height: 8; radius: 3
-            color: "transparent"
-            border.width: 2
-            border.color: root.textDim
-        }
-        Rectangle {
-            visible: securityIcon.open
-            anchors.centerIn: parent
-            width: 9; height: 9; radius: 5
-            color: "transparent"
-            border.width: 2
-            border.color: root.textDim
-        }
-    }
-
     component ControlIcon: Item {
         property url source
         property color tint: root.cyan
@@ -2926,9 +2947,45 @@ ShellRoot {
         }
     }
 
+    // One background-layer surface per monitor. Rotation is Environment-local,
+    // requires no extra daemon/package, and never reserves space or accepts
+    // pointer/keyboard input.
+    Timer {
+        interval: 15 * 60 * 1000
+        running: true
+        repeat: true
+        onTriggered: root.wallpaperIndex = (root.wallpaperIndex + 1) % root.wallpaperSources.length
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            anchors { top: true; bottom: true; left: true; right: true }
+            exclusionMode: ExclusionMode.Ignore
+            exclusiveZone: 0
+            focusable: false
+            color: "#071014"
+            mask: Region {}
+            WlrLayershell.layer: WlrLayer.Background
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+            Image {
+                anchors.fill: parent
+                source: root.wallpaperSources[root.wallpaperIndex]
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: true
+            }
+        }
+    }
+
     PanelWindow {
         id: bar
         anchors { top: true; left: true; right: true }
+        margins { left: 5; right: 5 }
         implicitHeight: 46
         exclusiveZone: 46
         color: "transparent"
@@ -2950,12 +3007,17 @@ ShellRoot {
 
             Row {
                 anchors.left: parent.left
+                anchors.leftMargin: 5
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 4
                 BarButton {
                     id: calendarButton
                     label: "[ " + root.clockText + " ]"
-                    onActivated: root.togglePopup("calendar", this)
+                    alternateLabel: calendarButton.label
+                    alternateActive: popup.visible && root.popupKind === "calendar"
+                    animateActivation: root.animatedBarOpenKind === "calendar"
+                    animateDeactivation: root.animatedBarCloseKind === "calendar"
+                    onActivated: root.togglePopup("calendar", this, true)
                 }
             }
 
@@ -2963,21 +3025,30 @@ ShellRoot {
                 id: environmentButton
                 anchors.centerIn: parent
                 label: root.isHub ? "[ HUB · ENVIRONMENTS ]" : "[ " + root.environmentLabel + " · VOLTAR AO HUB ]"
+                alternateLabel: environmentButton.label
+                alternateActive: popup.visible && root.popupKind === "environments"
+                animateActivation: root.animatedBarOpenKind === "environments"
+                animateDeactivation: root.animatedBarCloseKind === "environments"
                 onActivated: {
                     root.environmentKeyboardFocus = false
-                    root.togglePopup("environments", this)
+                    root.togglePopup("environments", this, true)
                 }
             }
 
             Row {
                 anchors.right: parent.right
+                anchors.rightMargin: 5
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
                 BarButton {
                     id: modelStoreButton
                     visible: root.isHub
                     label: root.modelStoreState.state === "active" ? "[ IA ON ]" : (root.modelStoreState.state === "safe-to-remove" ? "[ SSD OK ]" : "[ IA OFF ]")
-                    onActivated: root.togglePopup("model", this)
+                    alternateLabel: modelStoreButton.label
+                    alternateActive: popup.visible && root.popupKind === "model"
+                    animateActivation: root.animatedBarOpenKind === "model"
+                    animateDeactivation: root.animatedBarCloseKind === "model"
+                    onActivated: root.togglePopup("model", this, true)
                 }
                 BarButton {
                     visible: root.microphoneActive
@@ -2986,14 +3057,20 @@ ShellRoot {
                 BarButton {
                     id: batteryButton
                     label: "[ BAT " + root.batteryText + " ]"
-                    onActivated: root.togglePopup("battery", this)
+                    alternateLabel: batteryButton.label
+                    alternateActive: popup.visible && root.popupKind === "battery"
+                    animateActivation: root.animatedBarOpenKind === "battery"
+                    animateDeactivation: root.animatedBarCloseKind === "battery"
+                    onActivated: root.togglePopup("battery", this, true)
                 }
                 BarButton {
                     id: controlCenterButton
                     label: "[|]"
                     alternateLabel: "[A]"
                     alternateActive: popup.visible && root.popupKind === "controls"
-                    onActivated: root.togglePopup("controls", this)
+                    animateActivation: root.animatedBarOpenKind === "controls"
+                    animateDeactivation: root.animatedBarCloseKind === "controls"
+                    onActivated: root.togglePopup("controls", this, true)
                 }
             }
         }
@@ -3107,14 +3184,37 @@ ShellRoot {
         easing.type: Easing.OutCubic
     }
 
+    // Keep application windows clickable only after the menu is dismissed.
+    // This input-only surface catches the first outside click while remaining
+    // below the Overlay popup and below the reserved bar area.
+    PanelWindow {
+        id: popupDismissLayer
+        visible: popup.visible
+        anchors { left: true; right: true; bottom: true }
+        implicitHeight: screen ? Math.max(0, screen.height - bar.implicitHeight) : 0
+        exclusionMode: ExclusionMode.Ignore
+        exclusiveZone: 0
+        focusable: false
+        color: "transparent"
+        WlrLayershell.layer: WlrLayer.Top
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.closePopup()
+        }
+    }
+
     PanelWindow {
         id: popup
         anchors { top: true; left: true }
         margins { top: 6; left: root.popupLeftMargin }
         exclusiveZone: 0
-        aboveWindows: true
         focusable: visible
-        WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: visible && root.popupKeyboardRequested
+                                     ? WlrKeyboardFocus.Exclusive
+                                     : WlrKeyboardFocus.None
         implicitWidth: root.popupKind === "calendar" ? 480
                                                      : (root.popupKind === "environments" ? (root.environmentCreateOpen ? 620 : 430)
                                                         : (root.popupKind === "controls" ? 340 * root.controlCenterScale : 300))
@@ -3156,9 +3256,13 @@ ShellRoot {
             opacity: root.popupReveal
             transformOrigin: Item.TopLeft
             radius: 10
-            color: root.card
+            color: root.popupPanel
             border.width: 1
-            border.color: root.cyanDim
+            border.color: "#26343a"
+
+            HoverHandler {
+                id: popupHover
+            }
 
             TapHandler {
                 acceptedButtons: Qt.LeftButton
@@ -4170,90 +4274,29 @@ ShellRoot {
                     Row {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
                         width: parent.width
-                        height: visible ? 82 : 0
+                        height: visible ? 46 : 0
                         spacing: 6
 
                         Rectangle {
                             width: (parent.width - 6) / 2; height: parent.height; radius: 11
-                            color: wifiSummaryMouse.containsMouse ? "#20323c" : "#182731"
-                            border.width: 1; border.color: root.wifiDisplayActive() ? "#31505d" : "#263b45"
-
-                            Rectangle {
-                                id: wifiPowerButton
-                                z: 3
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.top: parent.top; anchors.topMargin: 10
-                                width: 28; height: 28; radius: 8
-                                color: wifiPowerMouse.containsMouse ? root.cyanDim : (root.wifiDisplayActive() ? "#173f49" : "#202d34")
-                                ControlIcon {
-                                    anchors.centerIn: parent; width: 16; height: 16
-                                    source: root.wifiDisplayActive()
-                                            ? "file:///usr/share/icons/Adwaita/symbolic/status/network-wireless-signal-excellent-symbolic.svg"
-                                            : "file:///usr/share/icons/Adwaita/symbolic/status/network-wireless-offline-symbolic.svg"
-                                    tint: root.wifiDisplayActive() ? root.cyan : root.textDim
-                                    SequentialAnimation on opacity {
-                                        running: root.wifiTogglePhase === "connecting"; loops: Animation.Infinite
-                                        NumberAnimation { to: 0.35; duration: 380 }
-                                        NumberAnimation { to: 1; duration: 380 }
-                                    }
-                                }
-                                BounceMouseArea { id: wifiPowerMouse; anchors.fill: parent; enabled: !wifiToggleProcess.running && !root.wifiTogglePhase.length; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleWifiConnection() }
-                            }
-                            Rectangle {
-                                anchors.right: parent.right; anchors.rightMargin: 11; anchors.top: parent.top; anchors.topMargin: 12
-                                width: 6; height: 6; radius: 3
-                                color: root.wifiDisplayActive() ? "#55dfa1" : "#53656c"
-                            }
+                            color: wifiSummaryMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
                             Text {
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.bottom: wifiSummaryState.top; anchors.bottomMargin: 3
-                                text: "Wi-Fi"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
-                            }
-                            Text {
-                                id: wifiSummaryState
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.right: parent.right; anchors.rightMargin: 10
-                                anchors.bottom: parent.bottom; anchors.bottomMargin: 9
-                                text: root.wifiTogglePhase === "connecting" ? "A ligar…" : (root.hostState.network_name || "Sem ligação"); elide: Text.ElideRight
-                                color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize
+                                anchors.centerIn: parent
+                                text: "WI-FI"; color: root.textMain
+                                font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
                             }
                             BounceMouseArea { id: wifiSummaryMouse; anchors.fill: parent; z: 1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("wifi") }
                         }
 
                         Rectangle {
                             width: (parent.width - 6) / 2; height: parent.height; radius: 11
-                            color: bluetoothSummaryMouse.containsMouse ? "#20323c" : "#182731"
-                            border.width: 1; border.color: root.bluetoothDisplayPowered() ? "#31505d" : "#263b45"
-
-                            Rectangle {
-                                id: bluetoothPowerButton
-                                z: 3
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.top: parent.top; anchors.topMargin: 10
-                                width: 28; height: 28; radius: 8
-                                color: bluetoothPowerSummaryMouse.containsMouse ? root.cyanDim : (root.bluetoothDisplayPowered() ? "#173f49" : "#202d34")
-                                ControlIcon {
-                                    anchors.centerIn: parent; width: 16; height: 16
-                                    source: "file:///usr/share/icons/Adwaita/symbolic/devices/bluetooth-symbolic.svg"
-                                    tint: root.bluetoothDisplayPowered() ? root.cyan : root.textDim
-                                    SequentialAnimation on opacity {
-                                        running: root.bluetoothPowerPhase === "turning-on"; loops: Animation.Infinite
-                                        NumberAnimation { to: 0.35; duration: 380 }
-                                        NumberAnimation { to: 1; duration: 380 }
-                                    }
-                                }
-                                BounceMouseArea { id: bluetoothPowerSummaryMouse; anchors.fill: parent; enabled: !bluetoothPowerProcess.running && !root.bluetoothPowerPhase.length; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleBluetoothPower() }
-                            }
-                            Rectangle {
-                                anchors.right: parent.right; anchors.rightMargin: 11; anchors.top: parent.top; anchors.topMargin: 12
-                                width: 6; height: 6; radius: 3
-                                color: root.bluetoothDisplayPowered() ? "#55dfa1" : "#53656c"
-                            }
+                            color: bluetoothSummaryMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
                             Text {
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.bottom: bluetoothSummaryState.top; anchors.bottomMargin: 3
-                                text: "Bluetooth"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
-                            }
-                            Text {
-                                id: bluetoothSummaryState
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.bottom: parent.bottom; anchors.bottomMargin: 9
-                                text: root.bluetoothPowerPhase === "turning-on" ? "A ligar…" : (root.bluetoothDisplayPowered() ? "Ligado" : "Desligado")
-                                color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize
+                                anchors.centerIn: parent
+                                text: "BLUETOOTH"; color: root.textMain
+                                font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true
                             }
                             BounceMouseArea { id: bluetoothSummaryMouse; anchors.fill: parent; z: 1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("bluetooth") }
                         }
@@ -4267,7 +4310,7 @@ ShellRoot {
                         Rectangle {
                             anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
                             width: 62; height: 28; radius: 8
-                            color: wifiHeaderMouse.containsMouse ? root.cyanDim : "#101920"
+                            color: wifiHeaderMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
                             Text { anchors.centerIn: parent; text: "‹ Voltar"; color: wifiHeaderMouse.containsMouse ? "#ffffff" : root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                             BounceMouseArea { id: wifiHeaderMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("wifi") }
                         }
@@ -4369,15 +4412,11 @@ ShellRoot {
                                     width: parent.width - 145; elide: Text.ElideRight
                                     text: modelData; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize
                                 }
-                                Row {
+                                Text {
                                     anchors.left: parent.left; anchors.leftMargin: 12; anchors.bottom: parent.bottom; anchors.bottomMargin: 5
-                                    spacing: 6
-                                    WifiSecurityIcon { open: root.wifiIsOpen(modelData); anchors.verticalCenter: parent.verticalCenter }
-                                    Text {
-                                        text: root.wifiSignalBars(root.wifiDetails(modelData).signal) + "  " + root.wifiDetails(modelData).signal + "%  ·  " + root.wifiSecurityLabel(modelData)
-                                        color: root.textDim
-                                        font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true
-                                    }
+                                    text: root.wifiDetails(modelData).signal + "%  ·  " + root.wifiSecurityLabel(modelData)
+                                    color: root.textDim
+                                    font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true
                                 }
                                 BounceMouseArea {
                                     id: nearbyWifiMouse
@@ -4451,7 +4490,7 @@ ShellRoot {
                                 Rectangle {
                                     anchors.right: parent.right; anchors.rightMargin: 9; anchors.verticalCenter: parent.verticalCenter
                                     width: 84; height: 28; radius: 8
-                                    color: bluetoothPowerMouse.containsMouse ? (root.bluetoothDisplayPowered() ? "#743541" : root.cyanDim) : "#18242b"
+                                    color: bluetoothPowerMouse.containsMouse ? (root.bluetoothDisplayPowered() ? "#743541" : root.controlButtonHover) : root.controlButtonSurface
                                     border.width: root.bluetoothDisplayPowered() ? 0 : 1; border.color: root.cyanDim
                                     Text { anchors.centerIn: parent; text: root.bluetoothPowerPhase === "turning-on" ? "A ligar…" : (root.bluetoothDisplayPowered() ? "Desligar" : "Ligar"); color: root.bluetoothDisplayPowered() ? "#ffb0bd" : root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                                     BounceMouseArea { id: bluetoothPowerMouse; anchors.fill: parent; enabled: !root.bluetoothPowerPhase.length; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleBluetoothPower() }
@@ -4461,8 +4500,8 @@ ShellRoot {
                             Rectangle {
                                 visible: root.bluetoothDisplayPowered()
                                 width: parent.width; height: visible ? 30 : 0; radius: 8
-                                color: bluetoothScanMouse.containsMouse ? root.cyanDim : "#101920"
-                                border.width: 1; border.color: root.cyanDim
+                                color: bluetoothScanMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                                border.width: 1; border.color: root.controlButtonOutline
                                 Text { anchors.centerIn: parent; text: bluetoothScanProcess.running ? "A PROCURAR…" : "PROCURAR DISPOSITIVOS"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                                 BounceMouseArea { id: bluetoothScanMouse; anchors.fill: parent; enabled: !bluetoothScanProcess.running; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: bluetoothScanProcess.running = true }
                             }
@@ -4548,7 +4587,7 @@ ShellRoot {
                                         anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; spacing: 4
                                         Rectangle {
                                             width: root.bluetoothDevicePendingAction === "bluetooth-connect" && root.bluetoothDevicePendingAddress === modelData.address ? 58 : 38
-                                            height: 24; radius: 6; color: knownConnectMouse.containsMouse ? root.cyanDim : "#101920"
+                                            height: 24; radius: 6; color: knownConnectMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
                                             Text {
                                                 anchors.centerIn: parent
                                                 text: root.bluetoothDevicePendingAction === "bluetooth-connect" && root.bluetoothDevicePendingAddress === modelData.address ? "A LIGAR…" : "LIGAR"
@@ -4576,7 +4615,7 @@ ShellRoot {
                                     required property var modelData
                                     width: parent ? parent.width : 300; height: 36; radius: 10; color: "#182731"; border.width: 1; border.color: "#31505d"
                                     Text { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; width: parent.width - 104; elide: Text.ElideRight; text: modelData.name || modelData.address; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize }
-                                    Rectangle { anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; width: 78; height: 24; radius: 6; color: availablePairMouse.containsMouse ? root.cyanDim : "#101920"; Text { anchors.centerIn: parent; text: "EMPARELHAR"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true } BounceMouseArea { id: availablePairMouse; anchors.fill: parent; enabled: !root.bluetoothPairSessionId.length; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.beginBluetoothPair(modelData) } }
+                                    Rectangle { anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter; width: 78; height: 24; radius: 6; color: availablePairMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface; Text { anchors.centerIn: parent; text: "EMPARELHAR"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true } BounceMouseArea { id: availablePairMouse; anchors.fill: parent; enabled: !root.bluetoothPairSessionId.length; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.beginBluetoothPair(modelData) } }
                                 }
                             }
                             Text { visible: root.bluetoothAvailableDevices().length === 0; width: parent.width; wrapMode: Text.Wrap; text: root.hostState.bluetooth_powered ? (bluetoothScanProcess.running ? "-- a procurar dispositivos --" : "-- nenhum dispositivo disponível --") : "-- liga o Bluetooth para procurar dispositivos --"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize }
@@ -4587,18 +4626,10 @@ ShellRoot {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
                         width: parent.width; height: visible ? 58 : 0; spacing: 6
                         Rectangle {
-                            width: parent.width - 64; height: parent.height; radius: 11
-                            color: volumeSummaryMouse.containsMouse ? "#20323c" : "#182731"; border.width: 1; border.color: "#31505d"
-                            Rectangle {
-                                id: volumeMuteSummaryButton
-                                z: 3
-                                anchors.left: parent.left; anchors.leftMargin: 11; anchors.top: parent.top; anchors.topMargin: 8
-                                width: 26; height: 26; radius: 8; color: volumeMuteSummaryMouse.containsMouse ? root.cyanDim : (root.volumeMuted ? "#202d34" : "#173f49")
-                                ControlIcon { anchors.centerIn: parent; width: 16; height: 16; source: root.volumeMuted ? "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-muted-symbolic.svg" : "file:///usr/share/icons/Adwaita/symbolic/status/audio-volume-high-symbolic.svg"; tint: root.volumeMuted ? root.textDim : root.cyan }
-                                BounceMouseArea { id: volumeMuteSummaryMouse; anchors.fill: parent; enabled: !localActionProcess.running; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleVolumeMute() }
-                            }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 47; anchors.top: parent.top; anchors.topMargin: 12; text: root.volumeMuted ? "Volume silenciado" : "Volume"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
-                            Text { anchors.right: parent.right; anchors.rightMargin: 12; anchors.top: parent.top; anchors.topMargin: 12; text: root.volumeText; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
+                            width: parent.width - 90; height: parent.height; radius: 11
+                            color: volumeSummaryMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.left: parent.left; anchors.leftMargin: 12; anchors.top: parent.top; anchors.topMargin: 12; text: "VOLUME"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             Slider {
                                 id: volumeSummarySlider
                                 anchors.left: parent.left; anchors.leftMargin: 12; anchors.right: parent.right; anchors.rightMargin: 12
@@ -4621,17 +4652,10 @@ ShellRoot {
                             BounceMouseArea { id: volumeSummaryMouse; anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; z: 1; height: 36; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("audio") }
                         }
                         Rectangle {
-                            width: 58; height: parent.height; radius: 11
-                            color: microphoneSummaryMouse.containsMouse ? "#20323c" : "#182731"; border.width: 1; border.color: root.microphoneActive ? root.cyanDim : "#31505d"
-                            Rectangle {
-                                id: microphoneMuteSummaryButton
-                                z: 3
-                                anchors.horizontalCenter: parent.horizontalCenter; anchors.top: parent.top; anchors.topMargin: 7
-                                width: 25; height: 25; radius: 7; color: microphoneMuteSummaryMouse.containsMouse ? root.cyanDim : (root.microphoneMuted ? "#202d34" : "#173f49")
-                                ControlIcon { anchors.centerIn: parent; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/devices/audio-input-microphone-symbolic.svg"; tint: root.microphoneMuted ? root.textDim : root.cyan }
-                                BounceMouseArea { id: microphoneMuteSummaryMouse; anchors.fill: parent; enabled: !localActionProcess.running; hoverEnabled: true; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleMicrophoneMute() }
-                            }
-                            Text { anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 8; text: "MIC " + root.microphoneText; color: root.microphoneMuted ? root.textDim : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
+                            width: 84; height: parent.height; radius: 11
+                            color: microphoneSummaryMouse.containsMouse ? root.controlButtonHover : (!root.microphoneActive || root.microphoneMuted ? root.controlButtonSurface : root.controlButtonActive)
+                            border.width: 1; border.color: !root.microphoneActive || root.microphoneMuted ? root.controlButtonOutline : root.cyanDim
+                            Text { anchors.centerIn: parent; text: "MICROFONE"; color: !root.microphoneActive || root.microphoneMuted ? root.textDim : root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
                             BounceMouseArea { id: microphoneSummaryMouse; anchors.fill: parent; z: 1; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("microphone") }
                         }
                     }
@@ -4639,8 +4663,9 @@ ShellRoot {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
                         width: parent.width; height: visible ? 58 : 0; spacing: 6
                         Rectangle {
-                            width: parent.width - 64; height: parent.height; radius: 11
-                            color: "#182731"; border.width: 1; border.color: "#31505d"
+                            width: parent.width - 90; height: parent.height; radius: 11
+                            color: "#182731"
+                            border.width: 1; border.color: "#31505d"
                             Text {
                                 anchors.left: parent.left; anchors.leftMargin: 12; anchors.top: parent.top; anchors.topMargin: 12
                                 text: "Brilho do ecrã"; color: root.textMain; font.family: "Adwaita Mono"
@@ -4648,7 +4673,7 @@ ShellRoot {
                             }
                             Text {
                                 anchors.right: parent.right; anchors.rightMargin: 12; anchors.top: parent.top; anchors.topMargin: 12
-                                text: root.displayBrightness + "%"; color: root.cyan; font.family: "Adwaita Mono"
+                                text: root.displayBrightness + "%"; color: root.textMain; font.family: "Adwaita Mono"
                                 font.pixelSize: root.menuSmallSize; font.bold: true
                             }
                             Slider {
@@ -4675,28 +4700,13 @@ ShellRoot {
                             }
                         }
                         Rectangle {
-                            width: 58; height: parent.height; radius: 11
-                            color: keyboardBrightnessSummaryMouse.containsMouse ? "#20323c" : "#182731"
-                            border.width: 1; border.color: root.keyboardBrightness > 0 ? root.cyanDim : "#31505d"
-                            Rectangle {
-                                id: keyboardBrightnessSummaryButton
-                                anchors.horizontalCenter: parent.horizontalCenter; anchors.top: parent.top; anchors.topMargin: 7
-                                width: 25; height: 25; radius: 7
-                                color: root.keyboardBrightness === 0 ? "#202d34"
-                                       : (root.keyboardBrightness < root.keyboardBrightnessMax ? "#173f49" : root.cyanDim)
-                                border.width: root.keyboardBrightness >= root.keyboardBrightnessMax ? 1 : 0
-                                border.color: root.cyan
-                                ControlIcon {
-                                    anchors.centerIn: parent; width: 16; height: 16
-                                    source: "file:///usr/share/icons/Adwaita/symbolic/status/keyboard-brightness-symbolic.svg"
-                                    tint: root.keyboardBrightness === 0 ? root.textDim
-                                          : (root.keyboardBrightness < root.keyboardBrightnessMax ? root.cyan : "#ffffff")
-                                }
-                            }
+                            width: 84; height: parent.height; radius: 11
+                            color: keyboardBrightnessSummaryMouse.containsMouse ? root.controlButtonHover : (root.keyboardBrightness === 0 ? root.controlButtonSurface : root.controlButtonActive)
+                            border.width: 1; border.color: root.keyboardBrightness === 0 ? root.controlButtonOutline : root.cyanDim
                             Text {
-                                anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 8
-                                text: root.keyboardBrightness === 0 ? "LUZ OFF" : (root.keyboardBrightness < root.keyboardBrightnessMax ? "LUZ MÉD" : "LUZ MAX")
-                                color: root.keyboardBrightness === 0 ? root.textDim : root.textMain
+                                anchors.centerIn: parent
+                                width: parent.width - 8; horizontalAlignment: Text.AlignHCenter
+                                text: "TECLADO"; color: root.textMain
                                 font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true
                             }
                             BounceMouseArea {
@@ -4720,7 +4730,7 @@ ShellRoot {
                         Rectangle {
                             anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
                             width: 62; height: 28; radius: 8
-                            color: audioHeaderMouse.containsMouse ? root.cyanDim : "#101920"
+                            color: audioHeaderMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
                             Text { anchors.centerIn: parent; text: "‹ Voltar"; color: audioHeaderMouse.containsMouse ? "#ffffff" : root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                             BounceMouseArea { id: audioHeaderMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("audio") }
                         }
@@ -4808,14 +4818,14 @@ ShellRoot {
                                 onActivated: root.localAction(["/usr/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"])
                             }
                             MenuButton {
-                                width: (parent.width - 6) / 2; height: parent.height; label: "AJUSTE +5%"; accent: true
+                                width: (parent.width - 6) / 2; height: parent.height; label: "AJUSTE +5%"
                                 onActivated: root.localAction(["/usr/bin/wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", "5%+"])
                             }
                         }
                         Rectangle {
                             width: parent.width; height: 30; radius: 7
-                            color: volumeMuteMouse.containsMouse ? root.cyanDim : (root.volumeMuted ? "#1c3941" : "#101920")
-                            border.width: root.volumeMuted ? 1 : 0; border.color: root.cyan
+                            color: volumeMuteMouse.containsMouse ? root.controlButtonHover : (root.volumeMuted ? root.controlButtonActive : root.controlButtonSurface)
+                            border.width: root.volumeMuted ? 1 : 0; border.color: root.cyanDim
                             Text { anchors.centerIn: parent; text: root.volumeMuted ? "REATIVAR SOM" : "SILENCIAR"; color: root.volumeMuted ? root.cyan : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: root.volumeMuted }
                             BounceMouseArea { id: volumeMuteMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleVolumeMute() }
                         }
@@ -4828,7 +4838,7 @@ ShellRoot {
                         Rectangle {
                             anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
                             width: 62; height: 28; radius: 8
-                            color: microphoneHeaderMouse.containsMouse ? root.cyanDim : "#101920"
+                            color: microphoneHeaderMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
                             Text { anchors.centerIn: parent; text: "‹ Voltar"; color: microphoneHeaderMouse.containsMouse ? "#ffffff" : root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuSmallSize; font.bold: true }
                             BounceMouseArea { id: microphoneHeaderMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.openControlSection("microphone") }
                         }
@@ -4867,12 +4877,12 @@ ShellRoot {
                         Row {
                             width: parent.width; height: 30; spacing: 4
                             MenuButton { width: (parent.width - 6) / 2; height: parent.height; label: "AJUSTE −5%"; onActivated: root.localAction(["/usr/bin/wpctl", "set-volume", "@DEFAULT_AUDIO_SOURCE@", "5%-"]) }
-                            MenuButton { width: (parent.width - 6) / 2; height: parent.height; label: "AJUSTE +5%"; accent: true; onActivated: root.localAction(["/usr/bin/wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SOURCE@", "5%+"]) }
+                            MenuButton { width: (parent.width - 6) / 2; height: parent.height; label: "AJUSTE +5%"; onActivated: root.localAction(["/usr/bin/wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SOURCE@", "5%+"]) }
                         }
                         Rectangle {
                             width: parent.width; height: 30; radius: 7
-                            color: microphoneMuteMouse.containsMouse ? root.cyanDim : (root.microphoneMuted ? "#1c3941" : "#101920")
-                            border.width: root.microphoneMuted ? 1 : 0; border.color: root.cyan
+                            color: microphoneMuteMouse.containsMouse ? root.controlButtonHover : (root.microphoneMuted ? root.controlButtonActive : root.controlButtonSurface)
+                            border.width: root.microphoneMuted ? 1 : 0; border.color: root.cyanDim
                             Text { anchors.centerIn: parent; text: root.microphoneMuted ? "REATIVAR MICROFONE" : "SILENCIAR MICROFONE"; color: root.microphoneMuted ? root.cyan : root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: root.microphoneMuted }
                             BounceMouseArea { id: microphoneMuteMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleMicrophoneMute() }
                         }
@@ -4885,14 +4895,9 @@ ShellRoot {
                         spacing: 6
                         Rectangle {
                             width: parent.width; height: parent.height; radius: 10
-                            color: terminalMouse.containsMouse ? "#203b46" : "#182731"
-                            border.width: 1; border.color: "#31505d"
-                            Rectangle {
-                                anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                                width: 25; height: 25; radius: 7; color: "#173f49"
-                                ControlIcon { anchors.centerIn: parent; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/legacy/utilities-terminal-symbolic.svg" }
-                            }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 43; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "Terminal do Host · sessão única" : "Gestor de ficheiros"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
+                            color: terminalMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "Terminal do Host" : "Gestor de ficheiros"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             Text { anchors.right: parent.right; anchors.rightMargin: 11; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "SUPER+H" : "›"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
                             BounceMouseArea {
                                 id: terminalMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -4912,20 +4917,19 @@ ShellRoot {
                         spacing: 6
                         Rectangle {
                             width: parent.width; height: parent.height; radius: 10
-                            color: environmentsControlMouse.containsMouse ? "#203b46" : "#182731"
-                            border.width: 1; border.color: "#31505d"
-                            Rectangle {
-                                anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                                width: 25; height: 25; radius: 7; color: "#173f49"
-                                Text { anchors.centerIn: parent; text: "APX"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize; font.bold: true }
-                            }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 43; anchors.verticalCenter: parent.verticalCenter; text: "Sair para o Host"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
+                            color: environmentsControlMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.left: parent.left; anchors.leftMargin: 12; anchors.verticalCenter: parent.verticalCenter; text: "Sair para o Host"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             Text { anchors.right: parent.right; anchors.rightMargin: 11; anchors.verticalCenter: parent.verticalCenter; text: "SUPER+M"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
                             BounceMouseArea {
                                 id: environmentsControlMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: { popup.visible = false; if (!hostExitProcess.running) hostExitProcess.running = true }
                             }
                         }
+                    }
+                    Item {
+                        visible: root.controlsAllClosed() && !root.powerConfirmOpen
+                        width: parent.width; height: visible ? 9 : 0
                     }
                     Text {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
@@ -4936,35 +4940,25 @@ ShellRoot {
                     Grid {
                         visible: root.controlsAllClosed() && !root.powerConfirmOpen
                         width: parent.width
-                        height: visible ? 69 : 0
+                        height: visible ? 85 : 0
                         columns: 2
                         rowSpacing: 5
                         columnSpacing: 5
                         Rectangle {
-                            width: (parent.width - 5) / 2; height: 32; radius: 8
-                            color: updateMouse.containsMouse ? "#21404a" : "#182731"
-                            ControlIcon { anchors.left: parent.left; anchors.leftMargin: 9; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/status/software-update-available-symbolic.svg" }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 29; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "Update" : "Apps"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
-                            BounceMouseArea { id: updateMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
-                                popup.visible = false
-                                if (root.isHub) {
-                                    if (!updateUiProcess.running) updateUiProcess.running = true
-                                } else if (!environmentAppsProcess.running) environmentAppsProcess.running = true
-                            } }
-                        }
-                        Rectangle {
-                            width: (parent.width - 5) / 2; height: 32; radius: 8; color: lockMouse.containsMouse ? "#20323c" : "#182731"
-                            ControlIcon { anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/status/system-lock-screen-symbolic.svg"; tint: root.cyan }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 27; anchors.verticalCenter: parent.verticalCenter; text: "Bloquear"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
+                            width: (parent.width - 5) / 2; height: 40; radius: 10
+                            color: lockMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.centerIn: parent; text: "Bloquear"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             BounceMouseArea { id: lockMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
                                 popup.visible = false
                                 if (!lockProcess.running) lockProcess.running = true
                             } }
                         }
                         Rectangle {
-                            width: (parent.width - 5) / 2; height: 32; radius: 8; color: rebootMouse.containsMouse ? "#20323c" : "#182731"
-                            ControlIcon { anchors.left: parent.left; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/actions/system-reboot-symbolic.svg"; tint: root.cyan }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 23; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "Reiniciar" : "Ficheiros"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
+                            width: (parent.width - 5) / 2; height: 40; radius: 10
+                            color: rebootMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.centerIn: parent; text: root.isHub ? "Reiniciar" : "Ficheiros"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             BounceMouseArea {
                                 id: rebootMouse
                                 anchors.fill: parent
@@ -4979,9 +4973,22 @@ ShellRoot {
                             }
                         }
                         Rectangle {
-                            width: (parent.width - 5) / 2; height: 32; radius: 8; color: poweroffMouse.containsMouse ? "#422a31" : "#182731"
-                            ControlIcon { anchors.left: parent.left; anchors.leftMargin: 6; anchors.verticalCenter: parent.verticalCenter; width: 16; height: 16; source: "file:///usr/share/icons/Adwaita/symbolic/actions/system-shutdown-symbolic.svg"; tint: "#ff9dab" }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 23; anchors.verticalCenter: parent.verticalCenter; text: root.isHub ? "Desligar" : "Voltar"; color: "#ff9dab"; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
+                            width: (parent.width - 5) / 2; height: 40; radius: 10
+                            color: updateMouse.containsMouse ? root.controlButtonHover : root.controlButtonSurface
+                            border.width: 1; border.color: root.controlButtonOutline
+                            Text { anchors.centerIn: parent; text: root.isHub ? "Update" : "Apps"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
+                            BounceMouseArea { id: updateMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
+                                popup.visible = false
+                                if (root.isHub) {
+                                    if (!updateUiProcess.running) updateUiProcess.running = true
+                                } else if (!environmentAppsProcess.running) environmentAppsProcess.running = true
+                            } }
+                        }
+                        Rectangle {
+                            width: (parent.width - 5) / 2; height: 40; radius: 10
+                            color: poweroffMouse.containsMouse ? "#422a31" : root.controlButtonSurface
+                            border.width: 1; border.color: "#71414b"
+                            Text { anchors.centerIn: parent; text: root.isHub ? "Desligar" : "Voltar"; color: "#ff9dab"; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             BounceMouseArea {
                                 id: poweroffMouse
                                 anchors.fill: parent

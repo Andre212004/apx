@@ -27,7 +27,7 @@ class LegionHardwareProfileSourceTests(unittest.TestCase):
             "[ NVIDIA ] dedicada", "REINICIAR AGORA", "MAIS TARDE",
             "gpu-prepare", "gpu-confirm", "Brilho do ecrã",
             "display-set", "displayBrightnessDebounce",
-            "cycleKeyboardBrightness", "keyboardBrightnessSummaryButton", "keyboard-cycle",
+            "cycleKeyboardBrightness", 'text: "TECLADO"', "keyboard-cycle",
             "apx-legion-brightness-keys-v1.py",
             "function volumeMute(): void", "function microphoneMute(): void",
             "microphoneProcess", "@DEFAULT_AUDIO_SOURCE@",
@@ -35,30 +35,32 @@ class LegionHardwareProfileSourceTests(unittest.TestCase):
             self.assertIn(required, source)
         self.assertNotIn("[ AMD ] apenas integrada", source)
         self.assertNotIn("AMD apenas é uma política APX", source)
-        self.assertNotIn("LUZ DO TECLADO", source)
+        self.assertNotIn("LUZ OFF", source)
+        self.assertNotIn("LUZ MÉD", source)
+        self.assertNotIn("LUZ MAX", source)
+        self.assertNotIn("keyboardBrightnessSummaryButton", source)
         self.assertNotIn("enabled: !displayBrightnessProcess.running", source)
 
     def test_brightness_key_bridge_is_exact_and_does_not_use_uinput(self):
         source = (ROOT / "scripts/physical-pilot/apx-legion-brightness-keys-v1.py").read_text()
         for required in (
             "ITE Tech. Inc. ITE Device(8910) Keyboard",
-            "AT Raw Set 2 keyboard", "KEY_F1 = 59", "KEY_F2 = 60", "KEY_F3 = 61",
-            "KEY_F4 = 62", "KEY_F5 = 63", "KEY_F6 = 64",
-            "KEY_F7 = 65", "KEY_F8 = 66", "KEY_F9 = 67", "KEY_F10 = 68",
-            "KEY_F11 = 87", "KEY_F12 = 88", "KEY_PRINT = 99",
-            "KEY_MUTE = 113", "KEY_VOLUMEDOWN = 114", "KEY_VOLUMEUP = 115",
-            "KEY_MICMUTE = 248",
+            "AT Translated Set 2 keyboard",
+            "apx-legion-brightness-keys-v1.lock", "fcntl.LOCK_EX | fcntl.LOCK_NB",
+            "KEY_PRINT = 99",
             "KEY_BRIGHTNESSDOWN = 224", "KEY_BRIGHTNESSUP = 225",
+            'name == ITE_NAME and code == KEY_BRIGHTNESSDOWN',
+            'name == ITE_NAME and code == KEY_BRIGHTNESSUP',
             'call_shell("brightnessDown")', 'call_shell("brightnessUp")',
-            'name == ITE_NAME and code in (KEY_F4, KEY_MICMUTE)', 'launch_action("display-cycle")',
-            'call_shell("volumeMute")',
-            'call_shell("volumeDown")', 'call_shell("volumeUp")',
-            'launch_action("airplane-status")', 'launch_action("overview")',
-            'launch_action("calculator")', 'name == AT_NAME and code == KEY_PRINT',
+            'name == AT_NAME and code == KEY_PRINT',
         ):
             self.assertIn(required, source)
+        for raw_key in ("KEY_F1", "KEY_F2", "KEY_F3", "KEY_F4", "KEY_F5", "KEY_F6",
+                        "KEY_F7", "KEY_F8", "KEY_F9", "KEY_F10", "KEY_F11", "KEY_F12"):
+            self.assertNotIn(raw_key, source)
         self.assertNotIn("/dev/uinput", source)
         self.assertNotIn("EVIOCGRAB", source)
+        self.assertNotIn("elif code == KEY_BRIGHTNESS", source)
 
     def test_hotkey_osd_covers_brightness_audio_radio_and_laptop_actions(self):
         source = (ROOT / "config/environment-shell-v1/quickshell/apx/shell.qml").read_text()

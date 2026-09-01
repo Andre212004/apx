@@ -1,5 +1,28 @@
 # APX Current Handoff
 
+QuickShell popup interaction correction — 2026-09-01: the owner reported that
+menus remained visually transparent, mouse-opened Calendar/Environments left
+keyboard input in the terminal, and an outside click did not dismiss the menu.
+The shared shell now uses an explicitly opaque `#ff0a1014` popup surface,
+neutral dark Control Centre buttons, exclusive keyboard focus for every bar or
+IPC opening, and a transparent non-keyboard Top-layer surface below the Overlay
+menu to consume the first outside click and close it. The menu and bar remain
+directly interactive above/outside that dismissal surface.
+
+At the owner's explicit exception to the dirty-checkout rule, only the current
+`shell.qml` was installed in the active Hub. Source and live Hub both match
+SHA-256 `60be732a841bf98f5804dadb83d09c0fbff782b893e295d407ebb46819a0b626`;
+the immediate predecessor is recoverable from
+`/var/lib/apx/backups/20260901T001726Z-quickshell-popup-interaction-v1/`.
+The targeted 42-test group passed, the live compositor exposed the expected
+430-pixel Overlay menu plus the full application-area Top dismissal surface,
+exactly one QuickShell returned, Hub remains the only running Environment and
+no unit is failed. The complete repository suite passes 1124 tests with 11
+expected skips. No registered Development Environment exists. Per the
+owner's boundary, no other dirty-checkout change was installed and the active
+seed/runtime remained untouched. The remaining physical acceptance is one
+owner click/keyboard check; repository-wide publication is the next milestone.
+
 System VM v2 physical reset — 2026-08-24: the owner rejected the
 accumulated VM opening path and requested a simple, near-native rebuild. The
 from-first-principles v2 runtime, profiles, provisioning path, minimal
@@ -2961,3 +2984,196 @@ back either legacy state. p3 is unmounted, native `--validate-only` passes,
 BootNext is absent, and Linux remains first. On the next explicit Windows boot,
 wait for the desktop, confirm the helper log says `keyboard hook ready`, then
 press SUPER+E once to test the normal return to the Hub.
+
+## Current handoff — 2026-08-31 face-auth readability correction
+
+The owner reported that both Hub unlock and `sudo` always required the
+password. Howdy, dlib, the enrolled `APX-owner` model, both PAM entries and the
+leased `/dev/video0` were still present. The journal showed every unprivileged
+attempt failing as `unknown error 1`; an exact reproduction as `apx` exposed a
+`PermissionError` reading the root-only mode-0600 model. That permission was
+never compatible with `hyprlock`, whose PAM stack runs in the unprivileged
+locker process.
+
+The live Hub config and model are now `root:apx` mode 0640, so `apx` can read
+but not alter either file, and the recognition window is eight rather than
+four seconds. The original password fallback remains unchanged in both PAM
+services. A direct comparison as `apx` now reaches a normal timeout rather
+than error 1. Before the owner opened the e-shutter, OpenCV read 218 frames but
+detected no face. After it was opened, all 30 sampled frames contained a face,
+but the old model's best score was 6.210 against the retained safe 3.5 limit.
+The limit was not weakened. The owner used the requested separate-terminal
+Howdy flow and enrolled four current views. Their measured scores were
+2.631–3.116; the official comparison returned zero. A cold real `sudo`
+identified `apx` without a password, and a real Hyprlock cycle logged
+`Identified face as apx`, unlocked and exited zero. Host and Hub have no failed
+unit. The immediate pre-fix backup is
+`/var/lib/apx/backups/20260831-face-auth-readability-v2`; the exact accepted
+PAM/config/model state is
+`/var/lib/apx/backups/20260831-face-auth-working-v2`.
+
+## Current handoff — 2026-08-31 connectivity and Fn repair
+
+The active Hub proved that the Fn bridge exits immediately: it expected
+`AT Raw Set 2 keyboard`, while the exact leased i8042 node is
+`AT Translated Set 2 keyboard`. Bluetooth is present but BlueZ reports
+`off-blocked`; direct `bluetoothctl power on` fails while `hci0` remains
+soft-blocked. The Wi-Fi credential pipe/socket probe reaches the typed Host
+contract without exposing its dummy secret.
+
+The repository candidate corrects the physical keyboard name, performs
+Bluetooth rfkill-unblock before BlueZ power-on with five-second state
+verification, and accepts Wi-Fi connection only after iwd re-observes the
+requested SSID. Missing-prompt and rejected-password errors are bounded and
+owner-readable. The v3 unit adds only `CAP_NET_ADMIN`, required for rfkill.
+The full suite passes 1118 tests with 11 expected skips. A running v3 socket is
+inode-bound into the Hub, so service activation must be coordinated with a Hub
+relaunch; do not silently close the owner's applications. See
+`docs/host-connectivity-and-fn-repair-v1-2026-08-31.md`.
+
+Staging is now physically complete at
+`/var/lib/apx/backups/20260831T134617Z-host-connectivity-input-v1`. QuickShell
+restarted without ending Hyprland and the corrected Fn bridge remains live.
+The Hub menu client successfully powered Bluetooth off/on and scanned 15
+unpaired devices; `Casa` remained connected with full Internet and there is no
+failed unit. The first staging attempt was rolled back after exposing an
+rfkill/BlueZ readiness race; both implementation and deployer now wait for
+`off-blocked` to clear. The live daemon is intentionally still the pre-stage
+process. The new general radio and requested-SSID confirmation paths activate
+at the next normal boot or a coordinated Hub relaunch. Remaining owner checks
+are physical Fn key presses and one protected Wi-Fi password known to the
+owner; no credential should be sent to Codex.
+
+## Current handoff — 2026-08-31 Fn-only correction
+
+The owner confirmed that some actions still fired without Fn, specifically
+plain F5/F6. The remaining causes were a broad bridge branch that admitted
+brightness codes from the normal AT keyboard and direct Hyprland `XF86`/
+F13--F16 fallbacks. The exact ITE interface is now the only authority for the
+complete Lenovo Fn row. AT F1--F12/media/brightness events are ignored, apart
+from Print Screen, and the parallel compositor bindings are absent. Media
+transport next/play/pause/previous bindings remain because they are not this
+Fn row.
+
+A live reload also revealed an orphaned older bridge. The script now holds a
+singleton runtime lock, and the deployer stops an exact old command before
+QuickShell restarts. Current evidence: one bridge process, zero forbidden
+alternate binds, matching repository/installed Hyprland, bridge and runtime
+hashes, zero failed units, and 1118 passing tests with 11 expected skips. The
+latest root-only recovery set is
+`/var/lib/apx/backups/20260831T140531Z-host-connectivity-input-v1`. Ask the
+owner to verify that plain F1/F2/F3 and F5/F6 remain application keys while the
+corresponding Fn combinations perform audio and brightness actions. No commit
+or push has been made.
+
+## Current handoff — 2026-08-31 Fn, fullscreen and shell integration
+
+The earlier ITE-only raw-F design is superseded. Physical capture established
+that ITE is a complete keyboard, so raw F1--F12 cannot prove Fn. The installed
+singleton bridge ignores all raw F codes and handles only semantic ITE
+brightness plus exact AT Print Screen. Hyprland retains semantic XF86/F13--F16
+Fn bindings, and firmware `fn_lock=0`. Do not remove those semantic bindings;
+owner confirmation of plain F versus Fn remains pending.
+
+The active Hub and all registered graphical Environment homes match the seed
+for the current QuickShell configuration and three generated landscape PNGs.
+The background rotates every 15 minutes. `SUPER+F` is fullscreen everywhere;
+`SUPER+P` calls `openFiles`, which refuses in the Hub and launches Thunar only
+in workloads. The Hub Thunar package is removed, while Hytale, Steam, Minecraft
+and Faculdade retain `/usr/bin/thunar`.
+
+The Central de Controlo keyboard tile contains only the text `TECLADO`; it has
+no icon, ON/OFF label or level. The Hub terminal is labelled `Terminal do Host`
+without `sessão única`. The normal screen lock interrupted the final menu
+screenshot and was left intact. Recovery is the root-only backup
+`/var/lib/apx/backups/20260831T144833Z-fn-wallpaper-fullscreen-v1`. No commit or
+push has been made. The complete suite passes 1121 tests with 11 expected
+skips; Host and Hub currently report zero failed service units.
+
+## Current handoff — 2026-08-31 lock retry and control colour states
+
+The owner requested a deliberate face retry after Howdy times out. The reviewed
+and installed Hyprlock profile now accepts empty Enter. This closes the current
+empty password conversation and starts PAM again, where `pam_howdy.so` runs
+before the unchanged password stack. A typed valid password still unlocks; a
+successful new face cycle also unlocks after an absent or wrong password. The
+live Hyprlock process predates the file and was not killed because doing so
+would briefly remove the active lock. Unlock it once normally; subsequent locks
+use the new behavior.
+
+The live QuickShell has also removed the remaining Wi-Fi, Bluetooth, volume and
+microphone ON/OFF badges. A later owner refinement removes card-level state
+colour from Wi-Fi, Bluetooth, volume and display; only microphone and keyboard
+retain it. Neutral session actions are on the top row and coloured actions are
+on the bottom row. The first retry attempt was observed on the old long-lived
+lock process, so it still discarded empty Enter. That process has now exited;
+the next lock loads `ignore_empty_input=false` and exposes an explicit
+`ENTER: REPETIR CARA` after failure. The first fresh physical retries then
+proved that Hyprlock's checking state covers the password-conversation
+transition before Howdy starts the next camera cycle. It is therefore labelled
+only `A VALIDAR…`. A separate 300-ms status helper shows `A VERIFICAR A CARA…`
+only while the exact Howdy comparison process owns `/dev/video0`; this direct
+probe was reproduced successfully against the live camera. Wi-Fi and Bluetooth
+use a compact 46-pixel summary row. The session caption is separated from the
+previous controls and all four action buttons now share the other cards'
+geometry, border and typography while retaining the requested neutral-top and
+coloured-bottom ordering. Seed and all five graphical homes match; recovery is
+root-only at
+`/var/lib/apx/backups/20260831T225802Z-camera-state-session-cards-v1`. No PAM
+or face-model bytes changed. No commit or push has been made.
+
+## Current handoff — 2026-09-01 first-frame face state and bar shortcuts
+
+The preceding `/dev/video0` ownership probe is superseded. Howdy package
+`3.0.0beta.r592.d3ab993-3` now creates a per-process runtime marker immediately
+after its first successful `read_frame()`. The 300-ms Hyprlock helper validates
+the marker's PID, `/proc` start ticks and Howdy command line, so `A VERIFICAR A
+CARA…` cannot appear merely because OpenCV opened the device. A live direct
+comparison remained on the retry instruction for 1.702 seconds, changed to the
+camera message with the first frame, returned after the eight-second search and
+left zero markers. The Howdy package explicitly retains `config.ini`; its exact
+bytes, the enrolled model, ownership, permissions and recognition thresholds
+are unchanged.
+
+Hyprlock now routes a successful face around the password include but through
+the same `pam_faillock.so authsucc` cleanup reached by a valid password. The
+three stale records created during earlier retry diagnosis were reset; the
+current record count is zero. The fallback login/password stack is retained.
+
+The QuickShell bar has symmetric 5-pixel horizontal margins. Calendar also
+sits 5 pixels inward from the left, and the IA/Battery/Control Centre group
+sits 5 pixels inward from the right. Calendar (`SUPER+D`), Environments
+(`SUPER+E`), IA/model (`SUPER+I`), Battery
+(`SUPER+B`) and Control Centre (`SUPER+A`) now all bind their bar-button active
+state to popup visibility, so mouse and keyboard openings share the same scale
+and opacity animations. Calendar, Environments, IA/model and Battery retain
+their complete labels throughout; only Control Centre changes `[|]` to `[A]`.
+The final scale delta is 6% with cubic easing and no overshoot. Only selection
+animates during an ordinary open/switch: outside dismissal and
+the previously selected button reset immediately. Repeating the already-active
+button or shortcut closes that menu with the reverse animation.
+The opening kind is armed before popup visibility changes, so both activation
+and deliberate same-button deactivation execute their transitions.
+Bar-button hover is tracked by a passive `HoverHandler`, and the selected
+button remains visually active while its popup is open. This prevents the
+separate popup surface from clearing hover feedback under a stationary cursor.
+Button clicks are handled by a sibling `TapHandler`, ensuring the first click
+on an already-active button closes its menu instead of merely recovering
+pointer ownership.
+The root cause was the mouse-opened layer popup requesting keyboard focus.
+Mouse openings now stay non-focusable until the pointer enters the menu, while
+IPC keyboard openings request focus immediately. Bar clicks therefore retain
+their hand cursor and reach the active toggle without focus-recovery clicks.
+The surrounding `HyprlandFocusGrab` uses the same condition instead of becoming
+active for every visible popup.
+All top-level menus now match the bar's outer surface exactly: `root.panel`
+background and one-pixel `#26343a` border; internal semantic cards are unchanged.
+Hyprland's active and inactive application borders are both the same one-pixel
+opaque `#26343a` used by the QuickShell bar; the cyan/green active gradient is
+removed from the canonical Lua and fallback configurations. Seed and all five
+graphical homes match; one QuickShell
+instance loaded cleanly. The full suite passes 1124 tests with 11 expected
+skips; Host and Hub have zero failed units. Immediate
+root-only recovery is
+`/var/lib/apx/backups/20260831T231335Z-first-frame-bar-shortcuts-v1`. No commit
+or push has been made.

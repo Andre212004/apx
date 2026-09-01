@@ -41,6 +41,140 @@ class ControlCenterScaleTests(unittest.TestCase):
         switch_path = toggle.split('if (popupKind === kind && popup.visible)', 1)[1]
         self.assertEqual(switch_path.count("popup.visible = false"), 1)
 
+    def test_every_keyboard_popup_animates_its_bar_button(self) -> None:
+        source = SHELL.read_text()
+        bar_button = source.split("component BarButton:", 1)[1].split(
+            "component BounceMouseArea:", 1
+        )[0]
+        self.assertEqual(bar_button.count("scale: button.alternateActive ? 0.94 : 1"), 1)
+        self.assertEqual(bar_button.count("scale: button.alternateActive ? 1 : 0.94"), 1)
+        self.assertEqual(bar_button.count("duration: 110"), 2)
+        self.assertEqual(bar_button.count("duration: 130"), 2)
+        self.assertNotIn("Easing.OutBack", bar_button)
+        self.assertIn("property bool animateActivation: false", bar_button)
+        self.assertIn("property bool animateDeactivation: false", bar_button)
+        self.assertIn(
+            "readonly property bool visuallyActive: hover.hovered || alternateActive",
+            bar_button,
+        )
+        self.assertIn("HoverHandler {", bar_button)
+        self.assertIn("id: hover", bar_button)
+        self.assertIn("TapHandler {", bar_button)
+        self.assertIn("id: tap", bar_button)
+        self.assertIn("acceptedButtons: Qt.LeftButton", bar_button)
+        self.assertIn("onTapped: button.activated()", bar_button)
+        self.assertIn("scale: tap.pressed ? 0.96 : 1", bar_button)
+        self.assertNotIn("MouseArea {", bar_button)
+        self.assertIn('color: visuallyActive ? root.cyanDim : "transparent"', bar_button)
+        self.assertIn("border.width: visuallyActive ? 1 : 0", bar_button)
+        self.assertIn("border.color: root.cyan", bar_button)
+        self.assertNotIn("mouse.containsMouse", bar_button)
+        self.assertEqual(
+            bar_button.count("enabled: button.animateActivation || button.animateDeactivation"),
+            4,
+        )
+
+        for button_id, kind in (
+            ("calendarButton", "calendar"),
+            ("environmentButton", "environments"),
+            ("modelStoreButton", "model"),
+            ("batteryButton", "battery"),
+        ):
+            block = source.split(f"id: {button_id}", 1)[1].split("onActivated:", 1)[0]
+            self.assertIn(f"alternateLabel: {button_id}.label", block)
+            self.assertIn(
+                f'alternateActive: popup.visible && root.popupKind === "{kind}"',
+                block,
+            )
+            self.assertIn(
+                f'animateActivation: root.animatedBarOpenKind === "{kind}"',
+                block,
+            )
+            self.assertIn(
+                f'animateDeactivation: root.animatedBarCloseKind === "{kind}"',
+                block,
+            )
+
+        # The Control Centre deliberately keeps its established | -> A cue.
+        controls = source.split("id: controlCenterButton", 1)[1].split("onActivated:", 1)[0]
+        self.assertIn('label: "[|]"', controls)
+        self.assertIn('alternateLabel: "[A]"', controls)
+        self.assertIn(
+            'alternateActive: popup.visible && root.popupKind === "controls"',
+            controls,
+        )
+        self.assertIn(
+            'animateActivation: root.animatedBarOpenKind === "controls"',
+            controls,
+        )
+        self.assertIn(
+            'animateDeactivation: root.animatedBarCloseKind === "controls"',
+            controls,
+        )
+
+        for unwanted in ('alternateLabel: "[D]"', 'alternateLabel: "[E]"',
+                         'alternateLabel: "[I]"', 'alternateLabel: "[B]"'):
+            self.assertNotIn(unwanted, source)
+
+        close = source.split("function closePopup()", 1)[1].split(
+            "function showPopup()", 1
+        )[0]
+        same_button = source.split("function togglePopup", 1)[1].split(
+            "popupOpenAnimation.stop()", 1
+        )[0]
+        self.assertIn('animatedBarCloseKind = ""', close)
+        self.assertIn("animatedBarCloseKind = kind", same_button)
+        self.assertIn('animatedBarOpenKind = ""', same_button)
+        self.assertIn("barAnimationReset.restart()", same_button)
+        opening = source.split("function togglePopup", 1)[1].split(
+            "function focusEnvironmentMenuAfterOpen", 1
+        )[0]
+        self.assertIn("animatedBarOpenKind = kind", opening)
+        self.assertIn("popupKeyboardRequested = keyboardRequested === true", opening)
+
+        popup = source.split("id: popup\n", 1)[1]
+        self.assertIn("id: popupHover", popup)
+        self.assertIn("focusable: visible", popup)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", popup)
+        self.assertNotIn("popupKeyboardClaiming", source)
+        self.assertNotIn("popupKeyboardClaimTimer", source)
+        self.assertIn("visible && root.popupKeyboardRequested", popup)
+        self.assertIn("? WlrKeyboardFocus.Exclusive", popup)
+        self.assertNotIn("WlrKeyboardFocus.OnDemand", popup)
+        self.assertIn("active: popup.visible", popup)
+
+        dismiss = source.split("id: popupDismissLayer", 1)[1].split(
+            "id: popup\n", 1
+        )[0]
+        self.assertIn("visible: popup.visible", dismiss)
+        self.assertIn("WlrLayershell.layer: WlrLayer.Top", dismiss)
+        self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", dismiss)
+        self.assertIn("onClicked: root.closePopup()", dismiss)
+        popup_frame = source.split("id: popupBackground", 1)[1].split(
+            "HoverHandler {", 1
+        )[0]
+        self.assertIn("color: root.popupPanel", popup_frame)
+        self.assertIn('property color popupPanel: "#ff0a1014"', source)
+        self.assertIn('border.color: "#26343a"', popup_frame)
+        self.assertNotIn("color: root.card", popup_frame)
+        self.assertNotIn("border.color: root.cyanDim", popup_frame)
+
+        # Mouse and IPC openings both request exclusive layer-shell keyboard focus. This
+        # lets a user click a bar button and immediately continue with arrows,
+        # Tab and Enter without first moving the pointer into the popup.
+        bar = source.split("id: bar", 1)[1].split("id: hotkeyOsdWindow", 1)[0]
+        for kind in ("calendar", "environments", "model", "battery", "controls"):
+            self.assertIn(f'root.togglePopup("{kind}", this, true)', bar)
+        ipc = source.split('target: "host"', 1)[1]
+        for kind, button in (
+            ("calendar", "calendarButton"),
+            ("environments", "environmentButton"),
+            ("model", "modelStoreButton"),
+            ("battery", "batteryButton"),
+            ("controls", "controlCenterButton"),
+        ):
+            self.assertIn(f'root.togglePopup("{kind}", {button}, true)', ipc)
+
     def test_audio_slider_updates_volume_while_dragging(self) -> None:
         source = SHELL.read_text()
 
@@ -153,7 +287,11 @@ class ControlCenterScaleTests(unittest.TestCase):
         source = SHELL.read_text()
         overview = source.split('visible: root.controlsAllClosed() && !root.powerConfirmOpen', 5)[-1]
         self.assertIn("columns: 2", overview)
-        self.assertIn("height: visible ? 69 : 0", overview)
+        self.assertIn("height: visible ? 85 : 0", overview)
+        # The compact 46px radio row recovered more space than the taller
+        # 40px action cards and their 9px section gap consume.
+        self.assertIn("height: visible ? 46 : 0", source)
+        self.assertIn("width: parent.width; height: visible ? 9 : 0", overview)
         for label in ('root.isHub ? "Update" : "Apps"', 'text: "Bloquear"',
                       'root.isHub ? "Reiniciar" : "Ficheiros"',
                       'root.isHub ? "Desligar" : "Voltar"'):

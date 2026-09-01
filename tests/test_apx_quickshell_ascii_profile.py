@@ -53,6 +53,11 @@ class QuickshellAsciiProfileTests(unittest.TestCase):
         idle = (ROOT / "config/quickshell-ascii-v1/hypridle.conf").read_text()
         for value in ("85, 230, 255", "10, 16, 20", "Adwaita Mono", "PALAVRA-PASSE APX"):
             self.assertIn(value, lock)
+        self.assertIn("ignore_empty_input = false", lock)
+        self.assertIn("A VALIDAR…", lock)
+        self.assertNotIn("A VERIFICAR A CARA…", lock)
+        self.assertIn("ENTER: REPETIR CARA · OU PALAVRA-PASSE", lock)
+        self.assertIn("cmd[update:300] /home/apx/.local/bin/apx-face-auth-state-v1", lock)
         self.assertIn("timeout = 300", idle)
         self.assertIn("timeout = 600", idle)
         self.assertNotIn("suspend", idle)

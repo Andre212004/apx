@@ -29,7 +29,6 @@ hl.monitor({
 
 -- Set programs that you use
 local terminal    = "/usr/bin/kitty --directory /home/apx"
-local fileManager = "/usr/bin/thunar"
 local menu        = "/usr/bin/rofi -show drun"
 
 
@@ -86,11 +85,11 @@ hl.config({
         gaps_in  = 5,
         gaps_out = 20,
 
-        border_size = 2,
+        border_size = 1,
 
         col = {
-            active_border   = { colors = {"rgba(33ccffee)", "rgba(00ff99ee)"}, angle = 45 },
-            inactive_border = "rgba(595959aa)",
+            active_border   = "rgba(26343aff)",
+            inactive_border = "rgba(26343aff)",
         },
 
         -- Set to true to enable resizing windows by clicking and dragging on borders and gaps
@@ -258,7 +257,7 @@ hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))
 local closeWindowBind = hl.bind(mainMod .. " + C", hl.dsp.window.close())
 -- closeWindowBind:set_enabled(false)
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("quickshell -c apx ipc call host openEnvironments"))
-hl.bind(mainMod .. " + F", hl.dsp.exec_cmd(fileManager))
+hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd("quickshell -c apx ipc call host toggleControls"))
 hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("quickshell -c apx ipc call host toggleCalendar"))
 hl.bind(mainMod .. " + I", hl.dsp.exec_cmd("quickshell -c apx ipc call host toggleModel"))
@@ -272,7 +271,9 @@ hl.bind(mainMod .. " + H", hl.dsp.exec_cmd("quickshell -c apx ipc call host open
 hl.bind(mainMod .. " + M", hl.dsp.exit())
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mainMod .. " + R", hl.dsp.exec_cmd(menu))
-hl.bind(mainMod .. " + P", hl.dsp.window.pseudo())
+-- The role-aware shell refuses this action in the Hub. Workload Environments
+-- retain their private Thunar package and use SUPER+P for it.
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd("quickshell -c apx ipc call host openFiles"))
 hl.bind(mainMod .. " + J", hl.dsp.layout("togglesplit"))    -- dwindle only
 
 -- Move focus with mainMod + arrow keys
@@ -301,22 +302,20 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Laptop multimedia keys for volume and LCD brightness
+-- Use only semantic multimedia symbols emitted by firmware while Fn is held.
+-- The bridge handles the two semantic brightness codes and Print Screen; it
+-- deliberately ignores every raw F1--F12 code. Fn+F8 stays on the separate
+-- Host-owned kernel rfkill path and is not leased into an Environment.
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("quickshell -c apx ipc call host volumeUp"),       { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("quickshell -c apx ipc call host volumeDown"),     { locked = true, repeating = true })
 hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("quickshell -c apx ipc call host volumeMute"),     { locked = true })
 hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("quickshell -c apx ipc call host microphoneMute"), { locked = true })
--- Lenovo brightness keys are handled by the exact ITE evdev bridge owned by
--- Quickshell because this Hyprland build does not deliver their bindings.
+
 local laptopAction = "/home/apx/.local/bin/apx-laptop-action-v1"
--- Print Screen is read from the exact AT keyboard by the Lenovo bridge. This
--- avoids the raw-key delivery gap observed on this Hyprland build.
 hl.bind("XF86Display", hl.dsp.exec_cmd(laptopAction .. " display-cycle"), { locked = true })
 hl.bind("XF86Launch1", hl.dsp.exec_cmd(laptopAction .. " apps"), { locked = true })
 hl.bind("XF86TaskPane", hl.dsp.exec_cmd(laptopAction .. " overview"), { locked = true })
 hl.bind("XF86Calculator", hl.dsp.exec_cmd(laptopAction .. " calculator"), { locked = true })
-
--- The Legion firmware can expose F9--F12 as F13--F16 instead of XF86 names.
 hl.bind("F13", hl.dsp.exec_cmd(laptopAction .. " apps"), { locked = true })
 hl.bind("F15", hl.dsp.exec_cmd(laptopAction .. " overview"), { locked = true })
 hl.bind("F16", hl.dsp.exec_cmd(laptopAction .. " calculator"), { locked = true })
@@ -333,7 +332,6 @@ local function toggleTouchpad()
 end
 hl.bind("XF86TouchpadToggle", toggleTouchpad, { locked = true })
 hl.bind("F14", toggleTouchpad, { locked = true })
-
 -- Requires playerctl
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })

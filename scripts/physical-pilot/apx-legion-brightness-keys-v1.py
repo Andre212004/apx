@@ -13,29 +13,17 @@ import subprocess
 
 
 ITE_NAME = "ITE Tech. Inc. ITE Device(8910) Keyboard"
-AT_NAME = "AT Raw Set 2 keyboard"
+# This is the stable evdev name exposed by the physical i8042 keyboard.  The
+# earlier "AT Raw" value came from an intermediate diagnostic path and makes
+# the exact-device bridge fail closed during a normal Hub launch.
+AT_NAME = "AT Translated Set 2 keyboard"
 EV_KEY = 1
-KEY_F1 = 59
-KEY_F2 = 60
-KEY_F3 = 61
-KEY_F5 = 63
-KEY_F6 = 64
-KEY_F4 = 62
-KEY_F7 = 65
-KEY_F8 = 66
-KEY_F9 = 67
-KEY_F10 = 68
-KEY_F11 = 87
-KEY_F12 = 88
 KEY_PRINT = 99
-KEY_MUTE = 113
-KEY_VOLUMEDOWN = 114
-KEY_VOLUMEUP = 115
 KEY_BRIGHTNESSDOWN = 224
 KEY_BRIGHTNESSUP = 225
-KEY_MICMUTE = 248
 EVENT = struct.Struct("llHHI")
 LAPTOP_ACTION = "/home/apx/.local/bin/apx-laptop-action-v1"
+LOCK = "/run/apx/session-1000/apx-legion-brightness-keys-v1.lock"
 
 
 def _ioc_read(kind: int, number: int, size: int) -> int:
@@ -101,6 +89,12 @@ def launch_action(action: str) -> None:
 
 
 def main() -> int:
+    lock = os.open(LOCK, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(lock)
+        return 0
     keyboards = open_exact_keyboards()
     # Observe the exact ITE interface without grabbing it exclusively. The
     # physical follow-up after enabling an exclusive grab reported a non-responsive
@@ -119,36 +113,13 @@ def main() -> int:
                 if event_type != EV_KEY or value != 1:
                     continue
                 name = keyboards[descriptor]
-                # The physical Fn row is mirrored as raw F4--F12 only by the
-                # exact internal ITE interface. Plain F keys arrive through the
-                # AT interface, so this does not consume application F4--F12.
-                if name == ITE_NAME and code in (KEY_F1, KEY_MUTE):
-                    call_shell("volumeMute")
-                elif name == ITE_NAME and code in (KEY_F2, KEY_VOLUMEDOWN):
-                    call_shell("volumeDown")
-                elif name == ITE_NAME and code in (KEY_F3, KEY_VOLUMEUP):
-                    call_shell("volumeUp")
-                elif name == ITE_NAME and code in (KEY_F4, KEY_MICMUTE):
-                    call_shell("microphoneMute")
-                elif name == ITE_NAME and code == KEY_F5:
+                # ITE is the complete keyboard, not an Fn-only interface. Its
+                # raw F1--F12 codes are therefore ordinary application keys.
+                # Act only on semantic firmware events that cannot be emitted
+                # by a plain F key while fn_lock is off.
+                if name == ITE_NAME and code == KEY_BRIGHTNESSDOWN:
                     call_shell("brightnessDown")
-                elif name == ITE_NAME and code == KEY_F6:
-                    call_shell("brightnessUp")
-                elif name == ITE_NAME and code == KEY_F7:
-                    launch_action("display-cycle")
-                elif name == ITE_NAME and code == KEY_F8:
-                    launch_action("airplane-status")
-                elif name == ITE_NAME and code == KEY_F9:
-                    launch_action("apps")
-                elif name == ITE_NAME and code == KEY_F10:
-                    call_shell("hotkeyTouchpadToggled")
-                elif name == ITE_NAME and code == KEY_F11:
-                    launch_action("overview")
-                elif name == ITE_NAME and code == KEY_F12:
-                    launch_action("calculator")
-                elif code == KEY_BRIGHTNESSDOWN:
-                    call_shell("brightnessDown")
-                elif code == KEY_BRIGHTNESSUP:
+                elif name == ITE_NAME and code == KEY_BRIGHTNESSUP:
                     call_shell("brightnessUp")
                 elif name == AT_NAME and code == KEY_PRINT:
                     launch_action("screenshot")
