@@ -67,7 +67,8 @@ boundary rather than the only outside-click mechanism.
 All top-level QuickShell menus use a fully opaque `#ff0a1014` surface and a
 one-pixel `#26343a` border. Internal cards retain semantic state colours, while
 Control Centre button surfaces use the same neutral dark palette as the other
-menus instead of saturated blue.
+menus instead of saturated blue. The QuickShell bar is intentionally separate:
+its `#800a1014` surface retains 50% alpha rather than inheriting menu opacity.
 
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral

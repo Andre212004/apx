@@ -155,6 +155,7 @@ class ControlCenterScaleTests(unittest.TestCase):
         )[0]
         self.assertIn("color: root.popupPanel", popup_frame)
         self.assertIn('property color popupPanel: "#ff0a1014"', source)
+        self.assertIn('property color panel: "#800a1014"', source)
         self.assertIn('border.color: "#26343a"', popup_frame)
         self.assertNotIn("color: root.card", popup_frame)
         self.assertNotIn("border.color: root.cyanDim", popup_frame)

@@ -19,6 +19,8 @@ keyboard navigation away from the terminal, and clicking outside QuickShell
 did not close the menu. The repository candidate gives every popup an explicit
 fully opaque `#ff0a1014` background and moves Control Centre action surfaces
 from saturated blue to the same neutral dark palette as the other menus.
+The bar remains visually distinct and glass-like at `#800a1014` (50% alpha);
+the opacity request does not apply to the QuickShell bar itself.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -31,8 +33,8 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`60be732a841bf98f5804dadb83d09c0fbff782b893e295d407ebb46819a0b626`;
-rollback is `/var/lib/apx/backups/20260901T001726Z-quickshell-popup-interaction-v1/`.
+`813f6cba041c3165aa12ec8aa8b19e9fb64907ed48aaef6ce3ebd85c22dbc665`;
+rollback is `/var/lib/apx/backups/20260901T002540Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group, exact live layer topology, one-process QuickShell
 restart and Host health checks passed; the complete repository suite passes
 1124 tests with 11 expected skips. No registered Development Environment

@@ -12,7 +12,9 @@ ShellRoot {
 
     property color cyan: "#55e6ff"
     property color cyanDim: "#246879"
-    property color panel: "#e90a1014"
+    // The bar stays glass-like; popupPanel is intentionally independent and
+    // fully opaque for menu readability.
+    property color panel: "#800a1014"
     property color popupPanel: "#ff0a1014"
     property color card: "#f2162027"
     property color textMain: "#e8f7fa"
