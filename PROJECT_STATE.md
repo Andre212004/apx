@@ -42,6 +42,9 @@ layer-shell boundary without an input shield. The original 46-pixel bar itself
 now uses the Overlay layer alongside the popup. Its real buttons remain directly
 clickable, and the compositor reports the same bar-surface address before and
 after a popup opens, so pointer ownership no longer transfers away from them.
+Within each button, one `MouseArea` now owns hover, cursor and press for the
+whole interaction. This removes the former HoverHandler/TapHandler release
+race which restored the arrow under a stationary pointer.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -54,8 +57,8 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d`;
-rollback is `/var/lib/apx/backups/20260901T010236Z-quickshell-popup-interaction-v1/`.
+`159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243`;
+rollback is `/var/lib/apx/backups/20260901T010626Z-quickshell-popup-interaction-v1/`.
 The targeted 43-test group, exact live topology including the stable 1270×46
 Overlay bar, one-process QuickShell restart and Host health checks
 passed; the complete repository suite passes

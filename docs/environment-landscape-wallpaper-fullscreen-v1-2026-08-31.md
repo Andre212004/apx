@@ -90,6 +90,11 @@ and the live compositor keeps the same `1270×46` surface address before and
 after opening a menu. The popup and outside-click dismissal surface remain
 separate.
 
+Every bar button uses one `MouseArea` as the sole owner of hover, cursor, press
+animation and activation. Removing the competing HoverHandler and TapHandler
+prevents a release from restoring the arrow while the pointer is still over
+the same button.
+
 Terminal notifications are bounded as well. A local Hyprland focus watcher
 dismisses only `kitty` and `Alacritty` notifications when their terminal gains
 focus, and matching Mako criteria enforce an 8-second fallback when a

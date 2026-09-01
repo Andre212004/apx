@@ -15,15 +15,18 @@ inside the month grid. Environments opens with the active HUB card focused.
 The original bar itself now lives permanently on the Overlay layer alongside
 the popup. No auxiliary surface covers its buttons, and its compositor address
 remains identical before and after a popup opens; pointer ownership therefore
-stays with the real button through the second click. The
+stays with the real button through the second click. Each button now uses one
+`MouseArea` for hover, hand cursor, press animation and activation; the former
+competing Hover/Tap handlers can no longer reset the cursor to an arrow on
+release. The
 display-brightness card uses the same neutral button surface and outline as the
 other controls.
 
 At the owner's explicit exception to the dirty-checkout rule, only the current
 `shell.qml` was installed in the active Hub. Source and live Hub both match
-SHA-256 `a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d`;
+SHA-256 `159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243`;
 the immediate predecessor is recoverable from
-`/var/lib/apx/backups/20260901T010236Z-quickshell-popup-interaction-v1/`.
+`/var/lib/apx/backups/20260901T010626Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group passed, the live compositor exposed the expected
 430-pixel Overlay menu, the stable 1270×46 Overlay bar and the full
 application-area Top dismissal surface, exactly one QuickShell returned, Hub

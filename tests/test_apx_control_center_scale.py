@@ -54,19 +54,20 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("property bool animateActivation: false", bar_button)
         self.assertIn("property bool animateDeactivation: false", bar_button)
         self.assertIn(
-            "readonly property bool visuallyActive: hover.hovered || alternateActive",
+            "readonly property bool visuallyActive: pointer.containsMouse || alternateActive",
             bar_button,
         )
-        self.assertIn("HoverHandler {", bar_button)
-        self.assertIn("id: hover", bar_button)
-        self.assertIn("TapHandler {", bar_button)
-        self.assertIn("id: tap", bar_button)
+        self.assertIn("MouseArea {", bar_button)
+        self.assertIn("id: pointer", bar_button)
+        self.assertIn("anchors.fill: parent", bar_button)
         self.assertIn("acceptedButtons: Qt.LeftButton", bar_button)
+        self.assertIn("hoverEnabled: true", bar_button)
         self.assertIn("cursorShape: Qt.PointingHandCursor", bar_button)
-        self.assertIn("onPressedChanged: if (pressed) button.activated()", bar_button)
+        self.assertIn("onPressed: button.activated()", bar_button)
         self.assertNotIn("onTapped: button.activated()", bar_button)
-        self.assertIn("scale: tap.pressed ? 0.96 : 1", bar_button)
-        self.assertNotIn("MouseArea {", bar_button)
+        self.assertNotIn("HoverHandler {", bar_button)
+        self.assertNotIn("TapHandler {", bar_button)
+        self.assertIn("scale: pointer.pressed ? 0.96 : 1", bar_button)
         self.assertIn('color: visuallyActive ? root.cyanDim : "transparent"', bar_button)
         self.assertIn("border.width: visuallyActive ? 1 : 0", bar_button)
         self.assertIn("border.color: root.cyan", bar_button)
