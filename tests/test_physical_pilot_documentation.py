@@ -11,6 +11,9 @@ import apx_hyprland_release_promotion as h0_promotion
 
 
 STATE = (ROOT / "PROJECT_STATE.md").read_text()
+HISTORICAL_STATE = (
+    ROOT / "docs" / "history" / "PROJECT_STATE-through-2026-09-01.md"
+).read_text()
 HANDOFF = (ROOT / "docs" / "physical-headless-development-handoff-v1.md").read_text()
 AUDIT = (ROOT / "docs" / "physical-pilot-state-and-cleanup-audit-v1.md").read_text()
 EXTERNAL_STORAGE = (ROOT / "docs" / "external-development-model-storage-v1.md").read_text()
@@ -18,6 +21,9 @@ HOST_LOCAL_MODEL = (
     ROOT / "docs" / "host-local-coder-external-ssd-v1-2026-08-05.md"
 ).read_text()
 CURRENT_HANDOFF = (ROOT / "CURRENT_HANDOFF.md").read_text()
+HISTORICAL_CURRENT_HANDOFF = (
+    ROOT / "docs" / "history" / "CURRENT_HANDOFF-through-2026-09-01.md"
+).read_text()
 UPDATE_CONTRACT = (ROOT / "docs" / "physical-pilot-update-contract-v1.md").read_text()
 H0_CONTRACT = (ROOT / "docs" / "hyprland-h0-clean-host-v1.md").read_text()
 ROOT_HOST_MODE = (ROOT / "docs" / "temporary-root-host-development-mode-v1.md").read_text()
@@ -46,18 +52,21 @@ H0_PROMOTION_RESULT = (
 
 class PhysicalPilotDocumentationTests(unittest.TestCase):
     def test_reconciled_development_drift_and_pending_phases_are_consistent(self) -> None:
-        for source in (STATE, HANDOFF, AUDIT):
+        for source in (HISTORICAL_STATE, HANDOFF, AUDIT):
             self.assertIn("Phases 1 through 8", source)
             self.assertIn("Phase 9", source)
-        self.assertNotIn("Neither script has been executed on the physical target", STATE)
-        self.assertIn("complete stop and destroy", STATE)
-        self.assertIn("empty home", STATE)
-        self.assertIn("delays Phase 10 removal", STATE)
-        self.assertIn("does not block repository development", STATE)
-        self.assertIn("Owner-Confirmed Lifecycle Test", CURRENT_HANDOFF)
-        self.assertIn("No registered APX snapshot", CURRENT_HANDOFF)
-        self.assertIn("intentional lifecycle test", STATE)
-        self.assertIn("codex-test-*", CURRENT_HANDOFF)
+        self.assertNotIn(
+            "Neither script has been executed on the physical target",
+            HISTORICAL_STATE,
+        )
+        self.assertIn("complete stop and destroy", HISTORICAL_STATE)
+        self.assertIn("empty home", HISTORICAL_STATE)
+        self.assertIn("delays Phase 10 removal", HISTORICAL_STATE)
+        self.assertIn("does not block repository development", HISTORICAL_STATE)
+        self.assertIn("Owner-Confirmed Lifecycle Test", HISTORICAL_CURRENT_HANDOFF)
+        self.assertIn("No registered APX snapshot", HISTORICAL_CURRENT_HANDOFF)
+        self.assertIn("intentional lifecycle test", HISTORICAL_STATE)
+        self.assertIn("codex-test-*", HISTORICAL_CURRENT_HANDOFF)
 
     def test_handoff_blocks_replay_and_cleanup_before_audit(self) -> None:
         compact = " ".join(HANDOFF.split())
@@ -97,7 +106,7 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
 
     def test_external_storage_records_the_owner_authorized_host_deviation(self) -> None:
         self.assertIn("historical Development-local proposal", EXTERNAL_STORAGE)
-        self.assertIn("Host-local coder on target-bound external SSD", STATE)
+        self.assertIn("Host-local coder on target-bound external SSD", HISTORICAL_STATE)
         self.assertIn("owner-authorized physical implementation", HOST_LOCAL_MODEL)
         self.assertIn("TPM2 automatic unlock bound to SHA-256 PCR 7", HOST_LOCAL_MODEL)
         self.assertIn("uses a second-click confirmation", HOST_LOCAL_MODEL)
@@ -105,13 +114,14 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
 
     def test_current_handoff_and_update_contract_preserve_all_safety_blocks(self) -> None:
         for required in (
-            "Owner-Reported Physical State",
-            "Next Owner Action",
-            "Current Repository Milestones",
-            "Hard Stops",
-            "Do not implement an external-SSD mount adapter",
+            "Owner-reported physical state",
+            "Next owner action",
+            "Repository checkpoint",
+            "Active safety blocks",
+            "Do not begin local-model/external-SSD work",
         ):
             self.assertIn(required, CURRENT_HANDOFF)
+        self.assertIn("Hard stops", STATE)
         compact_update = " ".join(UPDATE_CONTRACT.split())
         for required in (
             "ready-for-separate-import-approval",
@@ -238,7 +248,10 @@ class PhysicalPilotDocumentationTests(unittest.TestCase):
         self.assertTrue(preview.environment_creation_not_authorized)
         self.assertTrue(preview.graphical_activation_not_authorized)
         compact = " ".join(H0_PROMOTION_CONTRACT.split())
-        self.assertIn("At preview time no promotion had run", " ".join(CURRENT_HANDOFF.split()))
+        self.assertIn(
+            "At preview time no promotion had run",
+            " ".join(HISTORICAL_CURRENT_HANDOFF.split()),
+        )
         self.assertIn("not standing permission to execute promotion", compact)
 
     def test_h0_release_result_is_immutable_and_preserves_neighbours(self) -> None:

@@ -2808,61 +2808,6 @@ ShellRoot {
         onTriggered: if (!hostStatusProcess.running) hostStatusProcess.running = true
     }
 
-    component BarButton: Rectangle {
-        id: button
-        property string label: ""
-        property string alternateLabel: ""
-        property bool alternateActive: false
-        property bool animateActivation: false
-        property bool animateDeactivation: false
-        readonly property bool visuallyActive: pointer.containsMouse || alternateActive
-        signal activated()
-        implicitWidth: Math.max(buttonText.implicitWidth, alternateButtonText.implicitWidth) + 22
-        implicitHeight: 32
-        scale: pointer.pressed ? 0.96 : 1
-        radius: 7
-        color: visuallyActive ? root.cyanDim : "transparent"
-        border.width: visuallyActive ? 1 : 0
-        border.color: root.cyan
-        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-        Text {
-            id: buttonText
-            anchors.centerIn: parent
-            text: button.label
-            opacity: button.alternateActive ? 0 : 1
-            scale: button.alternateActive ? 0.94 : 1
-            color: button.visuallyActive ? root.cyan : root.textMain
-            font.family: "Adwaita Mono"
-            font.pixelSize: 13
-            font.bold: true
-            Behavior on opacity { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
-            Behavior on scale { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
-        }
-        Text {
-            id: alternateButtonText
-            anchors.centerIn: parent
-            text: button.alternateLabel
-            opacity: button.alternateActive ? 1 : 0
-            scale: button.alternateActive ? 1 : 0.94
-            color: button.visuallyActive ? root.cyan : root.textMain
-            font.family: "Adwaita Mono"
-            font.pixelSize: 13
-            font.bold: true
-            Behavior on opacity { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
-            Behavior on scale { enabled: button.animateActivation || button.animateDeactivation; NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
-        }
-        MouseArea {
-            id: pointer
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            // Complete the click on the permanently mapped bar surface before
-            // changing menu focus or input regions.
-            onClicked: button.activated()
-        }
-    }
-
     Timer {
         id: barAnimationReset
         interval: 150
@@ -2871,32 +2816,6 @@ ShellRoot {
             root.animatedBarOpenKind = ""
             root.animatedBarCloseKind = ""
         }
-    }
-
-    component BounceMouseArea: MouseArea {
-        id: bounceMouse
-
-        NumberAnimation {
-            id: bounceDown
-            target: bounceMouse.parent
-            property: "scale"
-            to: 0.96
-            duration: 40
-            easing.type: Easing.OutCubic
-        }
-
-        NumberAnimation {
-            id: bounceUp
-            target: bounceMouse.parent
-            property: "scale"
-            to: 1
-            duration: 70
-            easing.type: Easing.OutCubic
-        }
-
-        onPressed: bounceDown.restart()
-        onReleased: bounceUp.restart()
-        onCanceled: bounceUp.restart()
     }
 
     component MenuButton: Rectangle {
@@ -3046,24 +2965,6 @@ ShellRoot {
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.RightButton; cursorShape: Qt.WhatsThisCursor; onClicked: featureCard.infoRequested() }
     }
 
-    component ControlIcon: Item {
-        property url source
-        property color tint: root.cyan
-
-        ToolButton {
-            anchors.fill: parent
-            padding: 0
-            focusPolicy: Qt.NoFocus
-            hoverEnabled: false
-            display: AbstractButton.IconOnly
-            icon.source: parent.source
-            icon.color: parent.tint
-            icon.width: Math.max(18, width)
-            icon.height: Math.max(18, height)
-            background: Item {}
-        }
-    }
-
     // One background-layer surface per monitor. Rotation is Environment-local,
     // requires no extra daemon/package, and never reserves space or accepts
     // pointer/keyboard input.
@@ -3131,6 +3032,9 @@ ShellRoot {
                 spacing: 4
                 BarButton {
                     id: calendarButton
+                    activeSurface: root.cyanDim
+                    accentColor: root.cyan
+                    textColor: root.textMain
                     label: "[ " + root.clockText + " ]"
                     alternateLabel: calendarButton.label
                     alternateActive: popup.open && root.popupKind === "calendar"
@@ -3142,6 +3046,9 @@ ShellRoot {
 
             BarButton {
                 id: environmentButton
+                activeSurface: root.cyanDim
+                accentColor: root.cyan
+                textColor: root.textMain
                 anchors.centerIn: parent
                 label: root.isHub ? "[ HUB · ENVIRONMENTS ]" : "[ " + root.environmentLabel + " · VOLTAR AO HUB ]"
                 alternateLabel: environmentButton.label
@@ -3161,6 +3068,9 @@ ShellRoot {
                 spacing: 2
                 BarButton {
                     id: modelStoreButton
+                    activeSurface: root.cyanDim
+                    accentColor: root.cyan
+                    textColor: root.textMain
                     visible: root.isHub
                     label: root.modelStoreState.state === "active" ? "[ IA ON ]" : (root.modelStoreState.state === "safe-to-remove" ? "[ SSD OK ]" : "[ IA OFF ]")
                     alternateLabel: modelStoreButton.label
@@ -3170,11 +3080,17 @@ ShellRoot {
                     onActivated: root.togglePopup("model", this, true)
                 }
                 BarButton {
+                    activeSurface: root.cyanDim
+                    accentColor: root.cyan
+                    textColor: root.textMain
                     visible: root.microphoneActive
                     label: "[ MIC ATIVO ]"
                 }
                 BarButton {
                     id: batteryButton
+                    activeSurface: root.cyanDim
+                    accentColor: root.cyan
+                    textColor: root.textMain
                     label: "[ BAT " + root.batteryText + " ]"
                     alternateLabel: batteryButton.label
                     alternateActive: popup.open && root.popupKind === "battery"
@@ -3184,6 +3100,9 @@ ShellRoot {
                 }
                 BarButton {
                     id: controlCenterButton
+                    activeSurface: root.cyanDim
+                    accentColor: root.cyan
+                    textColor: root.textMain
                     label: "[|]"
                     alternateLabel: "[A]"
                     alternateActive: popup.open && root.popupKind === "controls"

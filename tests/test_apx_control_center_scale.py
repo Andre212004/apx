@@ -4,6 +4,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = ROOT / "config/environment-shell-v1/quickshell/apx/shell.qml"
+BAR_BUTTON = SHELL.with_name("BarButton.qml")
+BOUNCE_MOUSE_AREA = SHELL.with_name("BounceMouseArea.qml")
+CONTROL_ICON = SHELL.with_name("ControlIcon.qml")
 
 
 class ControlCenterScaleTests(unittest.TestCase):
@@ -43,9 +46,8 @@ class ControlCenterScaleTests(unittest.TestCase):
 
     def test_every_keyboard_popup_animates_its_bar_button(self) -> None:
         source = SHELL.read_text()
-        bar_button = source.split("component BarButton:", 1)[1].split(
-            "component BounceMouseArea:", 1
-        )[0]
+        bar_button = BAR_BUTTON.read_text()
+        self.assertNotIn("component BarButton:", source)
         self.assertEqual(bar_button.count("scale: button.alternateActive ? 0.94 : 1"), 1)
         self.assertEqual(bar_button.count("scale: button.alternateActive ? 1 : 0.94"), 1)
         self.assertEqual(bar_button.count("duration: 110"), 2)
@@ -69,9 +71,9 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertNotIn("HoverHandler {", bar_button)
         self.assertNotIn("TapHandler {", bar_button)
         self.assertIn("scale: pointer.pressed ? 0.96 : 1", bar_button)
-        self.assertIn('color: visuallyActive ? root.cyanDim : "transparent"', bar_button)
+        self.assertIn('color: visuallyActive ? activeSurface : "transparent"', bar_button)
         self.assertIn("border.width: visuallyActive ? 1 : 0", bar_button)
-        self.assertIn("border.color: root.cyan", bar_button)
+        self.assertIn("border.color: accentColor", bar_button)
         self.assertNotIn("mouse.containsMouse", bar_button)
         self.assertEqual(
             bar_button.count("enabled: button.animateActivation || button.animateDeactivation"),
@@ -119,6 +121,12 @@ class ControlCenterScaleTests(unittest.TestCase):
         for unwanted in ('alternateLabel: "[D]"', 'alternateLabel: "[E]"',
                          'alternateLabel: "[I]"', 'alternateLabel: "[B]"'):
             self.assertNotIn(unwanted, source)
+
+        # Every instance supplies the shell palette explicitly; the extracted
+        # primitive has no dependency on the root singleton's object id.
+        self.assertEqual(source.count("activeSurface: root.cyanDim"), 6)
+        self.assertEqual(source.count("accentColor: root.cyan"), 6)
+        self.assertEqual(source.count("textColor: root.textMain"), 6)
 
         close = source.split("function closePopup()", 1)[1].split(
             "function showPopup()", 1
@@ -319,12 +327,22 @@ class ControlCenterScaleTests(unittest.TestCase):
 
     def test_control_icons_use_qt_icon_rendering_without_post_effect(self) -> None:
         source = SHELL.read_text()
-        component = source.split("component ControlIcon: Item", 1)[1].split("PanelWindow", 1)[0]
+        component = CONTROL_ICON.read_text()
+        self.assertNotIn("component ControlIcon:", source)
         self.assertIn("ToolButton", component)
         self.assertIn("icon.source: parent.source", component)
         self.assertIn("icon.color: parent.tint", component)
         self.assertNotIn("MultiEffect", component)
         self.assertNotIn("import QtQuick.Effects", source)
+
+    def test_bounce_mouse_area_is_a_stateless_reusable_primitive(self) -> None:
+        source = SHELL.read_text()
+        component = BOUNCE_MOUSE_AREA.read_text()
+        self.assertNotIn("component BounceMouseArea:", source)
+        self.assertIn("target: bounceMouse.parent", component)
+        self.assertIn("onPressed: bounceDown.restart()", component)
+        self.assertIn("onReleased: bounceUp.restart()", component)
+        self.assertIn("onCanceled: bounceUp.restart()", component)
 
     def test_workload_overview_has_room_for_all_actions(self) -> None:
         source = SHELL.read_text()

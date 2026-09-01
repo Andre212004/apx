@@ -78,8 +78,11 @@ ENVIRONMENT_SHELL_ASSETS = {
     "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
     "local/bin/apx-notification-focus-v1": "835cc0302f10f01c2417077884fca7f9b9a6b95b2328ac8d32dccc4e93ca7cc0",
     "local/bin/apx-shell-v1": "19a04a0700f8f9ed512f5b6433a4ea9c0b114222810894095654b36bfc55423e",
+    "quickshell/apx/BarButton.qml": "ec5786f5f6ff067c171173888d6736eca79da600f793820fda4b76c450ee27aa",
+    "quickshell/apx/BounceMouseArea.qml": "2c6dd88157867ea057a5bd273a7ca3c35efce262b0d5a0d05a280b7802adc166",
+    "quickshell/apx/ControlIcon.qml": "a567b753b4dc09fca1ef5bcedc55c2dd2138ee69cb1cfac67819a3f2dbe24317",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "2c6b39f50f2228d88320759ee770203c7913549fe32ec35f65616767b79b7f20",
+    "quickshell/apx/shell.qml": "77bab37b1dd1c853f1fa26998c50fa81f6883150178b9a7be76e10ad119e4bbc",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 MAX_WALLPAPER_BYTES = 4 * 1024 * 1024

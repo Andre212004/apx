@@ -1,191 +1,86 @@
-# Session Management
+# APX Session Management
 
-This document records the intended APX session experience and the decisions
-still required. No functional APX session-management implementation exists.
-
-The complete v1 proposal for human identity, unlock, switching, unsaved-work
-handling, locking, and recovery is maintained in
-`human-identity-and-session-handoff-v1.md`. This overview remains the concise
-statement of direction and current reality.
-
-## Current System
-
-SDDM currently manages graphical sessions. `greetd` has not been adopted or
-implemented. Current manually created users have ordinary homes under the
-existing `@home` subvolume. The normal system still exposes Linux account and
-display-manager behavior; the intended APX abstraction is not implemented.
-
-## Human-Facing Identity
-
-The intended owner experience has one human identity and named Environments.
-APX may retain one internal Linux account per Environment for ownership and
-session separation, but normal boot and switching must not show an ordinary
-Linux user chooser or ask the owner to select internal accounts.
-
-Automatic entry into the Hub does not imply an unauthenticated computer. The
-secure login, unlock, credential lifetime, and recovery mechanism remain to be
-designed. A future multi-person model may group Environments beneath separate
-human identities, but must not be inferred from the current internal account
-mapping.
-
-## Intended Flow
-
-Only one normal graphical workload Environment should be active at a time:
+APX exposes one owner-facing flow while using separate internal Environment
+identities:
 
 ```text
-Boot -> secure Hub entry -> selected Environment -> Hub
+Boot -> Hub -> selected Environment -> Hub
 ```
 
-The proposed handoff uses a minimal host-owned transition and recovery surface.
-The Hub does not remain graphically active behind a workload Environment. This
-surface is trusted lifecycle machinery, not another Environment or general
-desktop.
+This is the current concise contract. The former design/history is preserved at
+`history/session-management-foundation-through-2026-09-01.md`; the complete
+human-identity proposal remains in `human-identity-and-session-handoff-v1.md`.
 
-For the preferred clean-install sequence, the initial Hub and Development
-sessions are non-graphical. A physical host-owned text console provides
-bootstrap/recovery before the Hub exists; afterward the bounded `apx` CLI in the
-headless Hub drives lifecycle operations. This CLI-first stage is not permission
-to expose internal accounts or a general host administration shell in the final
-product.
+## Current physical pilot
 
-### Hub
+The experimental pilot boots into a supervised Hyprland/QuickShell Hub. It no
+longer uses the historical concurrent SDDM/KDE Hub and Development sessions.
+The Host owns transition/recovery machinery, while UI requests cross bounded
+clients and executors. Only one normal graphical Environment is intended to be
+active; the current handoff records which Environment was actually observed.
 
-The Hub is the default minimal Environment and management surface. Its normal
-graphical template uses the same Hyprland base as workload Environments and
-adds the APX Waybar control and native management application. It can list,
-create from templates, configure, launch, stop, snapshot, archive, restore, and
-delete Environments. It may provide system summaries, visual customization, and
-tightly scoped widgets. Its starter remains deliberately small. Environment-
-local `sudo pacman` is not allowlisted, but general workloads are recommended
-in separate Environments so the Hub stays easy to recreate.
+The tty recovery path remains independent of QuickShell and Hyprland. A broken
+desktop must not remove the ability to observe or recover APX state.
 
-The Hub selects declarative templates, software sets, and policies through a
-future bounded APX protocol. It must not expose an arbitrary privileged package
-installer or shell into other Environments.
+## Authority
 
-### Hub to Environment
+- Only the authenticated active Hub may request management operations such as
+  switch, create, snapshot, archive, restore, force-stop or destroy.
+- A workload may request graceful stop/return only for its own observed active
+  generation.
+- The Host executor independently validates the caller, active session,
+  registration, generation, requested operation and current machine state.
+- Hiding a UI action is not an authorization boundary.
 
-Launching an Environment must establish its internal identity, local
-application/runtime view, storage, devices, services, desktop session, and
-isolation policy. The Hub's graphical session should not remain as an
-independent general desktop. The precise handoff mechanism is under evaluation.
+## Handoff sequence
 
-### Environment to Hub
+For Hub-to-Environment and Environment-to-Hub transitions, APX must:
 
-Every graphical workload may display an APX button, but it is not a management
-surface. It provides a controlled return to the Hub plus read-only details and
-system status. Only the authenticated, active, authoritative Hub may request
-switching or lifecycle mutations. The executor enforces this using trusted
-session context; hiding workload buttons is only an additional UI safeguard.
+1. bind the request to the authoritative active generation;
+2. reject uncertain operations or conflicting graphical ownership;
+3. stop/release session services and explicitly granted devices in order;
+4. start the target under the supervised Host boundary;
+5. verify runtime and graphical readiness, not merely process existence;
+6. publish the new active-session evidence;
+7. recover to the Hub or the independent recovery surface when a terminal gate
+   cannot be established.
 
-A workload may request graceful stop only for its own observed active
-generation. It cannot target a sibling, create, snapshot, archive, restore,
-recover, force-stop, or delete an Environment.
+A blank display, a logout response or a changed process ID alone never proves a
+successful handoff. The broker/executor journal owns the terminal result.
 
-Returning must account for unsaved work, graphical clients, user services,
-containers or namespaces, mounted storage, devices, and local assistants. APX
-must distinguish clean stop, refusal because work is active, failure, forced
-termination, and recoverable incomplete handoff.
+## Desktop behavior
 
-## Desktop and Compositor Independence
+Hyprland and QuickShell implement the current default presentation. Workload
+menus expose return-to-Hub and read-only status; Hub menus expose management
+actions allowed by the executor catalogue. Keyboard focus, outside dismissal
+and pointer behavior are compositor-facing acceptance requirements and need
+physical observation in addition to unit tests.
 
-The default normal graphical template uses Hyprland. An Environment may later
-use KDE Plasma, GNOME, or another supported
-desktop/compositor. Applications and dependencies are Environment-local in the
-intended product. The boundary between minimal host graphical facilities and
-per-Environment desktop packages remains an architecture question.
+APX lifecycle remains desktop-independent. Future KDE, GNOME or other adapters
+must implement the same release/readiness contract without becoming trusted
+authority themselves.
 
-The Hub and workload sessions may share a versioned APX baseline, but no
-workload session inherits the live Hub's management capabilities or mutable
-state. Host-provided hardware and network facilities must be distinguished from
-credentials or secrets copied into an Environment.
+## Process and service lifecycle
 
-APX lifecycle must rely on stable system/session primitives and an explicit
-adapter contract where necessary. It must not encode Plasma, GNOME, Hyprland,
-KDE autostart, or another desktop API as the universal lifecycle mechanism.
+Environment processes and normal services exist only while their Environment is
+active unless a future reviewed policy explicitly permits otherwise. Stop must
+account for user processes, subordinate runtimes, namespaces, mounts, devices,
+audio and local assistants. APX distinguishes clean stop, refusal due to active
+work, failure, forced termination and recoverable incomplete handoff.
 
-## Process and Service Lifecycle
+## Authentication still open
 
-Normal Environment services are intended to exist only while the Environment
-is active. `Linger=no` remains the current default direction. Services that
-start subordinate runtimes must stop them explicitly and APX must verify that
-no Environment-owned processes or mounts survive shutdown unless a future
-reviewed policy permits them.
+The pilot proves session orchestration, not the final human authentication
+design. Secure automatic Hub entry, lock/unlock credential lifetime, recovery
+credentials and future multi-person grouping remain open architecture work.
+Internal Linux identities must stay hidden from the normal experience without
+being treated as sufficient authentication or containment.
 
-Linux ownership is useful but does not provide VM-equivalent containment.
-Namespace, cgroup, capability, seccomp, IPC, network, GPU, device, and high-
-security-profile behavior require a threat model and experiments.
+## Related evidence
 
-## Local Assistant Lifecycle
-
-An Odysseus instance may be enabled for a selected Environment and is active
-only while that Environment is active. Initially it accesses only its own
-Environment. Any Hub control over access is a policy-management action, not
-implicit cross-Environment visibility. Communication or shared memory between
-assistants is deferred.
-
-Codex may later be provisioned in selected development Environments for coding
-and debugging. Its tools and data access must remain separate from Odysseus
-personal-assistant memory and permissions.
-
-## Display Manager Direction
-
-The display-manager and handoff mechanism remain under evaluation. SDDM is the
-last confirmed current manager. `greetd` is only a candidate. The chosen design
-must hide internal accounts, support secure Hub entry, recover from failed
-launches, and remain desktop-independent.
-
-The primary clean-install path initially has no display manager. Its first
-graphical gate is H0, which activates one Hyprland Environment from a verified
-no-graphical-owner baseline and must return to the headless recovery/Hub path.
-SDDM/KDE G2 remains the separate in-place migration path.
-
-The separate G2 exclusive-session design in
-`hyprland-g2-exclusive-session-design-v1.md` records the physical handoff safety
-boundary and the current blockers for any executable preview. It does not
-authorize a broker, device grant, or host/session change yet.
-
-For that experiment only, `hyprland-g2-broker-recovery-boundary-v1.md` selects
-a host-owned text recovery VT, a separate Hyprland experiment VT, temporary
-SDDM quiescence, and revocable exact device leases as the candidate boundary.
-This narrows G2 without selecting the final APX broker or authorizing execution.
-
-`hyprland-g2-kde-release-proof-v1.md` separately defines the required release
-proof across login session, processes, services, graphical IPC, GPU, input, VT,
-mounts, and namespaces. A blank display or successful logout response never
-counts by itself.
-
-The 2026-07-13 read-only observation found that current SDDM behavior retains
-both an active Development KDE session and an inactive but live Hub KDE session
-on the same seat. This is current-system evidence, not intended APX behavior;
-both session generations must end before an exclusive G2 handoff.
-
-The closed G2 observer schema discovers all graphical sessions from the seat,
-classifies user-manager records separately, and permits only `released`,
-`blocked`, or `unknown`. A reboot invalidates every prior runtime identity and
-requires a fresh baseline.
-
-G2 observation is further split into an unprivileged collector, one exact
-session-local KDE adapter, a narrow privileged read-only source, and the
-separate effect executor. No observer component receives a general root shell,
-device open, or arbitrary UI path.
-
-The Hub's privileged requests are separately bounded by the proposed
-`privileged-executor-protocol-v1.md`. That proposal does not solve login or
-session handoff: it depends on this document eventually defining how APX proves
-that the human-facing Hub session is genuinely unlocked.
-
-## Open Questions
-
-- Which host authentication and recovery-credential method implements the
-  proposed single owner identity?
-- How are internal Environment accounts hidden without weakening security?
-- Which display-manager and broker implementation best provides the proposed
-  fixed transition flow?
-- How does each supported desktop report unsaved-work refusal and secure lock?
-- Which Hub settings survive reconstruction without preserving unsafe live Hub
-  state?
-- Which graphical/runtime components live on the host versus in an Environment?
-- How do normal and high-security profiles affect devices and session features?
-- How are future human identities and their Environment groups represented?
-- What bounded permission lets the Hub request lifecycle operations?
+- `general-graphical-handoff-and-host-controls-2026-08-03.md`
+- `environment-handoff-runtime-readiness-fix-2026-08-18.md`
+- `direct-hub-boot-v1-architecture-and-pending-result-2026-08-03.md`
+- `graphical-hub-input-handoff-2026-07-19.md`
+- `official-hub-health-watchdog-and-shell-stability-2026-08-02.md`
+- `privileged-executor-protocol-v1.md`

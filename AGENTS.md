@@ -49,10 +49,12 @@ Do not use `sudo`.
 
 ## Current Phase
 
-APX has passed the functional headless C0–C6 ladder in a disposable VM. The
-production system remains in architecture, trust, hardening, and physical-
-readiness work. A separately documented owner-controlled physical pilot is
-prepared but has not been executed.
+APX has passed the functional headless C0–C6 ladder in a disposable VM and has
+an extensively exercised owner-controlled physical pilot. The physical system
+now boots to the graphical Hyprland/QuickShell Hub and has validated bounded
+Environment lifecycle, recovery and UI paths. It remains experimental, not
+production. Current physical evidence and open acceptance boundaries are in
+`CURRENT_HANDOFF.md`; the chronological record is under `docs/history`.
 
 Implementation may advance only within documented boundaries. VM laboratory
 code and exact target-bound physical-pilot adapters are experimental and must
@@ -102,14 +104,17 @@ Clearly separate:
 - ideas under evaluation
 - open questions
 
-Do not describe planned architecture as implemented reality. In particular:
+Do not describe planned architecture, repository candidates or old physical
+observations as current implemented reality. In particular:
 
-- dedicated Btrfs home subvolumes are intended architecture, not current state
-- current manually created users still have ordinary homes under the existing `@home` subvolume
-- `greetd` is a preferred candidate under evaluation, not adopted or implemented
-- SDDM currently manages graphical sessions
-- namespace process isolation and per-Environment package installation passed
-  in the disposable VM, but are not installed on the physical system
+- distinguish the accepted live Hub artifact from later repository-only seeds;
+- distinguish normal/system Environments and the VM v2 experiment;
+- distinguish automated tests from owner-observed compositor, recovery and GPU
+  behavior;
+- treat dated SDDM/KDE, headless-pilot and early quota observations as history,
+  not current state;
+- keep current summaries concise and preserve detailed chronology in dated
+  evidence documents or `docs/history`.
 
 ## Hub Rules
 
@@ -131,16 +136,21 @@ must never reach the Host or another Environment.
 No implementation decision may require a unique lifecycle exception for the Hub. The Hub must be destroyable and recreatable like every other Environment.
 
 Hyprland is the default graphical template, not a universal lifecycle
-dependency. New normal graphical Environments receive an independent copy of a
-minimal Hyprland/Waybar configuration and may customize it without changing
-the Hub, template, or siblings. APX lifecycle and tty1 recovery must continue
-to work when Hyprland or all user ricing is broken.
+dependency. New normal graphical Environments receive an independent,
+digest-pinned Environment shell seed (Hyprland, QuickShell, Mako and helpers)
+and may customize their copy without changing the Hub, template or siblings.
+APX lifecycle and tty1 recovery must continue to work when Hyprland or all user
+customization is broken.
 
 ## Development Environment
 
-The current environment is the APX Development Environment named `apx-development`.
-
-Development tools such as Git, GitHub CLI, Codex, ChatGPT, Brave, IDEs, compilers, build tools, and test tools belong here, not in the Hub.
+The current repository checkout is in the explicitly invoked temporary
+root-Host development mode on the identity-matched disposable pilot. This is a
+bounded exception documented in
+`docs/temporary-root-host-development-mode-v1.md`, not the intended product
+placement. Development tools such as Git, GitHub CLI, Codex, browsers, IDEs,
+compilers and test tools normally belong in a Development Environment, never
+in the Hub.
 
 Codex is a temporary development tool and is not part of APX.
 
