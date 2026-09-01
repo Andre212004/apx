@@ -10,9 +10,13 @@ from apx_environment import validate_logical_name
 HUB_VIEW_SCHEMA_VERSION = 1
 SYSTEM_STATES = ("ready", "busy", "incomplete", "unavailable")
 ENVIRONMENT_STATES = ("inactive", "active", "incomplete", "unconfirmed", "cleaning")
-ROLES = ("hub", "standard", "development")
+ROLES = ("hub", "hub-graphical", "standard", "graphical-base", "development")
 APPROVAL_CLASSES = ("none", "unlocked-session", "explicit-confirmation", "strong-confirmation")
 READ_ONLY_ACTIONS = ("details", "retry-check", "cleanup-status", "system-details")
+
+
+def _is_hub_role(role: str) -> bool:
+    return role in {"hub", "hub-graphical"}
 
 
 @dataclass(frozen=True)
@@ -186,7 +190,7 @@ def _environment_actions(
             details,
         )
 
-    if summary.role == "hub":
+    if _is_hub_role(summary.role):
         return (
             _action("open", "Hub atual", False, "Já estás a utilizar o Hub.", None, "none"),
             _action("snapshot", "Criar ponto de recuperação", False, "O Hub teria de estar fechado e verificado primeiro.", None, "none"),
@@ -202,6 +206,14 @@ def _environment_actions(
             "Fecha o Hub de forma controlada e abre este Environment." if system_ready else "O sistema ainda não está pronto para trocar de Environment.",
             "activate" if system_ready else None,
             "unlocked-session" if system_ready else "none",
+        ),
+        _action(
+            "capabilities",
+            "Gerir dispositivos",
+            system_ready,
+            "Escolhe acesso opcional a câmara, microfone, comandos ou armazenamento removível." if system_ready else "Aguarda até o sistema estar pronto.",
+            "configure-capabilities" if system_ready else None,
+            "explicit-confirmation" if system_ready else "none",
         ),
         _action(
             "snapshot",
@@ -223,7 +235,7 @@ def _environment_actions(
             "destroy",
             "Apagar",
             system_ready,
-            "No aviso seguinte escolhes preservar as cópias ou apagar completamente o Environment, snapshots e arquivos." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
+            "Apaga definitivamente o Environment, todos os dados, snapshots e arquivos; não fica uma cópia recuperável." if system_ready else "Não é possível apagar enquanto o sistema não estiver totalmente verificado.",
             "destroy" if system_ready else None,
             "strong-confirmation" if system_ready else "none",
         ),
@@ -271,6 +283,29 @@ def _validate_template(template: TemplateSummary) -> None:
         not value or len(value) > 80 for value in template.main_software
     ):
         raise ValueError("invalid template software summary")
+
+
+def default_graphical_template_summaries() -> tuple[TemplateSummary, ...]:
+    """Map the admitted graphical catalogue into safe Hub display summaries."""
+    from apx_graphical_template import template_catalogue
+
+    software = {
+        "hyprland-base-v2": ("Hyprland", "Kitty", "Thunar", "Flatpak"),
+        "hub-hyprland-v2": ("Hyprland", "Quickshell", "Thunar", "APX Hub"),
+    }
+    return tuple(
+        TemplateSummary(
+            template.template_id,
+            template.display_name,
+            template.description,
+            "Essencial privado",
+            software[template.template_id],
+            "Armazenamento flexível com reserva global protegida para o Host",
+            True,
+            "compatible",
+        )
+        for template in template_catalogue()
+    )
 
 
 def _template_card(
@@ -325,7 +360,7 @@ def build_hub_view(
         raise ValueError("duplicate template in Hub input")
 
     active = [summary for summary in environments if summary.state == "active"]
-    active_hubs = [summary for summary in active if summary.role == "hub"]
+    active_hubs = [summary for summary in active if _is_hub_role(summary.role)]
     hub_is_active = len(active) == 1 and len(active_hubs) == 1
     warnings: list[str] = []
     effective_state = system_state
@@ -351,7 +386,7 @@ def build_hub_view(
     system_ready = effective_state == "ready" and hub_is_active
     environment_cards = tuple(
         _environment_card(summary, system_state=effective_state, hub_is_active=hub_is_active)
-        for summary in sorted(environments, key=lambda item: (item.role != "hub", item.display_name.casefold()))
+        for summary in sorted(environments, key=lambda item: (not _is_hub_role(item.role), item.display_name.casefold()))
     )
     template_cards = tuple(
         _template_card(template, system_ready=system_ready)

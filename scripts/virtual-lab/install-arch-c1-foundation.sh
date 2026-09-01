@@ -77,6 +77,7 @@ printf 'apx-virtual\n' > /mnt/etc/hostname
 ln -sf /usr/share/zoneinfo/America/Sao_Paulo /mnt/etc/localtime
 arch-chroot /mnt hwclock --systohc
 sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /mnt/etc/locale.gen
+sed -i 's/^#pt_PT.UTF-8 UTF-8/pt_PT.UTF-8 UTF-8/' /mnt/etc/locale.gen
 arch-chroot /mnt locale-gen
 printf 'LANG=en_US.UTF-8\n' > /mnt/etc/locale.conf
 printf 'KEYMAP=us\n' > /mnt/etc/vconsole.conf

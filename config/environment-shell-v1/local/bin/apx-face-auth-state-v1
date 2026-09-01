@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Report facial-auth activity only after Howdy received a real camera frame.
+# Device ownership starts earlier than physical capture on this camera, while
+# Hyprlock's generic PAM flag also covers the preceding password conversation.
+
+runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+for marker in "$runtime_dir"/apx-howdy-camera-*.active; do
+    [ -f "$marker" ] || continue
+    identity=${marker##*/apx-howdy-camera-}
+    identity=${identity%.active}
+    pid=${identity%%-*}
+    start_ticks=${identity#*-}
+    case "$pid:$start_ticks" in
+        *[!0-9:]*) continue ;;
+    esac
+    observed_ticks=$(/usr/bin/awk '{print $22}' "/proc/$pid/stat" 2>/dev/null) || continue
+    [ "$observed_ticks" = "$start_ticks" ] || continue
+    cmdline=$(tr '\000' ' ' < "/proc/$pid/cmdline" 2>/dev/null) || continue
+    case "$cmdline" in
+        *"/usr/lib/howdy/compare.py"*)
+            printf '%s\n' 'A VERIFICAR A CARA…'
+            exit 0
+            ;;
+    esac
+done
+
+printf '%s\n' 'APÓS FALHA  ·  ENTER REPETE A CARA'

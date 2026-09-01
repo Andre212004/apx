@@ -1,0 +1,28 @@
+[Unit]
+Description=APX Host desktop context-menu services v2
+After=iwd.service bluetooth.service systemd-timesyncd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-host-services-v2.py --serve
+Restart=on-failure
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+ReadWritePaths=/run/apx
+
+[Install]
+WantedBy=multi-user.target

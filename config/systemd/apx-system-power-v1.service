@@ -1,0 +1,28 @@
+[Unit]
+Description=APX authenticated Host system-power authority v1
+After=systemd-logind.service systemd-modules-load.service local-fs.target
+
+[Service]
+Type=simple
+ExecCondition=/usr/bin/test -r /sys/kernel/apx_legion_gpu_profile_v1/hybrid_mode
+ExecStart=/usr/lib/apx/apx-system-power-v1.py --serve
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+ReadWritePaths=/run/apx /var/lib/apx/system-power-v1
+ReadWritePaths=/var/lib/apx/environments/hub/home/.apx-host-bridge
+ReadWritePaths=/sys/kernel/apx_legion_gpu_profile_v1 /sys/firmware/acpi/platform_profile
+ReadWritePaths=/sys/class/backlight /sys/class/leds/platform::kbd_backlight/brightness
+ProtectKernelModules=yes
+
+[Install]
+WantedBy=multi-user.target

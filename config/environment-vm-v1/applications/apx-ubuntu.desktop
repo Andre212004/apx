@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Ubuntu
+Exec=/home/apx/.local/bin/apx-ubuntu-vm
+Terminal=false
+X-GNOME-Autostart-enabled=true

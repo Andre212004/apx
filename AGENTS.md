@@ -115,13 +115,26 @@ Do not describe planned architecture as implemented reality. In particular:
 
 The Hub is the default APX Environment and the APX management entry point.
 
-The Hub must remain clean. It may contain APX management UI, system summaries,
-visual customization, and tightly scoped management widgets. Do not place
-general-purpose browsers or editors, development work, source repositories,
-IDEs, build tools, development browser profiles, implementation artifacts, or
-experimental development scripts in the Hub.
+Only the authenticated, authoritative active Hub may switch, create, snapshot,
+archive, restore, recover, force-stop, or delete Environments. A workload may
+stop only its own active generation to return to the Hub; its other APX controls
+must be read-only. The executor must enforce this independently of the UI.
+
+The Hub template must remain minimal by default. It contains APX management UI,
+system summaries, visual customization, and management widgets on the common
+Hyprland base. The owner may use Environment-local `sudo pacman` in the Hub;
+this is not technically restricted to an allowlist. Recommend workload and
+development software in separate Environments, but enforce isolation rather
+than silently blocking a locally requested Hub package. Hub package operations
+must never reach the Host or another Environment.
 
 No implementation decision may require a unique lifecycle exception for the Hub. The Hub must be destroyable and recreatable like every other Environment.
+
+Hyprland is the default graphical template, not a universal lifecycle
+dependency. New normal graphical Environments receive an independent copy of a
+minimal Hyprland/Waybar configuration and may customize it without changing
+the Hub, template, or siblings. APX lifecycle and tty1 recovery must continue
+to work when Hyprland or all user ricing is broken.
 
 ## Development Environment
 

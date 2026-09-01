@@ -1,0 +1,14 @@
+# Terminal notifications must remain useful without becoming permanent UI.
+# A separate focus watcher dismisses them as soon as their terminal is visited;
+# this timeout also handles notifications emitted while it is already focused.
+[app-name=kitty]
+default-timeout=8000
+ignore-timeout=1
+
+[app-name=Alacritty]
+default-timeout=8000
+ignore-timeout=1
+
+[app-name=alacritty]
+default-timeout=8000
+ignore-timeout=1

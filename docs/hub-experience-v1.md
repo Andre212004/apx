@@ -130,8 +130,8 @@ user is not encouraged to delete ambiguous state to remove the warning.
 
 After deletion is approved, the card remains visible as `A limpar` with
 read-only progress until complete cleanup evidence passes. The confirmation
-offers `Environment only` (preserve listed snapshots and archives) and `Delete
-everything` (include all listed copies with strong data-loss confirmation).
+offers only complete deletion, including every APX-owned copy, with strong
+data-loss confirmation; snapshots and archives cannot be preserved by delete.
 The name cannot be reused while the card remains. A stuck cleanup exposes
 diagnostics and separately approved recovery, never an automatic force option.
 

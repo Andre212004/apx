@@ -1,0 +1,2 @@
+# Start only for the owner's exact Samsung APX model SSD partition.
+ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_SERIAL_SHORT}=="S5SVNF0R241427A", ENV{ID_MODEL}=="Samsung_SSD_870_QVO_1TB", ENV{ID_PART_ENTRY_UUID}=="c8806268-9695-4d52-9136-6f278b95c2e4", TAG+="systemd", ENV{SYSTEMD_WANTS}+="apx-model-store-recover-v1.service"

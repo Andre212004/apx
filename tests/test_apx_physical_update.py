@@ -57,6 +57,7 @@ def installed() -> update.InstalledPilotEvidence:
         True,
         True,
         True,
+        True,
         100 * 1024**3,
     )
 
@@ -82,7 +83,8 @@ class PhysicalUpdateTests(unittest.TestCase):
         fields = (
             "audit_reconciled", "recovery_console_verified",
             "github_source_recovery_verified", "no_uncertain_apx_operation",
-            "hub_clean", "development_repository_healthy",
+            "hub_clean", "development_state_reconciled",
+            "root_host_mode_inventory_current",
         )
         for field in fields:
             with self.subTest(field=field):

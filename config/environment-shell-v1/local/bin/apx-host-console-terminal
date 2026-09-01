@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+set -u
+
+/run/apx/host-console-client-v1.py console
+status=$?
+
+if (( status != 0 )); then
+    printf "\nNão foi possível abrir a consola do Host.\n"
+    printf "O motivo indicado pelo serviço está acima. Esta janela será fechada.\n\n"
+    sleep 2
+fi
+
+exit "$status"

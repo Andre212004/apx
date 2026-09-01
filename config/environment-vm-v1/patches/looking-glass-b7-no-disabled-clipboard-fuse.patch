@@ -1,0 +1,25 @@
+--- a/client/src/clipboard.c
++++ b/client/src/clipboard.c
+@@ -1400,7 +1400,11 @@ bool clipboard_init(void)
+   clipboard.remoteType        = LG_CLIPBOARD_DATA_NONE;
+   clipboard.remoteRequestType = LG_CLIPBOARD_DATA_NONE;
+   clipboard.requests          = ll_new();
+-  if (!clipboardFiles_init())
++  /* APX disables clipboard in both directions. B7 otherwise initializes a
++   * FUSE filesystem unconditionally and crashes during partial cleanup when
++   * /dev/fuse is intentionally absent from the minimal VM Environment. */
++  if ((g_params.clipboardToVM || g_params.clipboardToLocal) &&
++      !clipboardFiles_init())
+   {
+     DEBUG_ERROR("Failed to initialize clipboard file transfer");
+     return false;
+@@ -1413,7 +1417,8 @@ void clipboard_free(void)
+   clipboard_setLocalAvailable(false);
+   clipboard_setTransport(NULL, NULL);
+   clipboard_setFallback(NULL, NULL);
+-  clipboardFiles_free();
++  if (g_params.clipboardToVM || g_params.clipboardToLocal)
++    clipboardFiles_free();
+   LG_LOCK(clipboard.callbackLock);
+   cancelRequestsNL(NULL, 0, true, LG_CLIPBOARD_CANCEL_UNAVAILABLE);
+   LG_UNLOCK(clipboard.callbackLock);

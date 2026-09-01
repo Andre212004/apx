@@ -137,6 +137,29 @@ The existing `prototypes/hub-demo` is a visual prototype, not the installed
 GUI. It can guide appearance and interaction after H0 proves the physical
 session boundary.
 
+## Graphical release finalization boundary
+
+Rebuilding the dated 332-package graphical root on the clean physical Host
+showed that an offline package transaction is not itself a publishable release.
+The temporary pacman trust home contains a locally generated private key and
+trust database; the root also contains a generated machine ID, transaction log,
+and wall-clock installation dates. Those bytes are build runtime state, not
+role content, and must never be copied into an APX release.
+
+`src/apx_hyprland_release_finalize.py` therefore operates only on the fixed
+temporary build root after validating its closed build report. It removes the
+temporary pacman trust home and recreates an empty mode-0700 trust directory,
+empties the machine identity and pacman log, normalizes only the `%INSTALLDATE%`
+values in the exact local package database, rejects special files and any
+remaining private-key/random-seed identity, and emits a content-and-metadata
+digest for the complete normalized tree. It never reads or changes the Host
+pacman trust, Host machine identity, APX state, GPU, input, services, or
+Environments.
+
+A finalized temporary tree is still not an admitted APX release. Promotion to
+`/var/lib/apx/releases`, creation of a disposable graphical Environment, H0
+device mediation, or compositor launch remain separate future effects.
+
 ## Remaining Implementation Gates
 
 Before physical H0, the repository still needs:
@@ -146,7 +169,8 @@ Before physical H0, the repository still needs:
 3. selected physical graphical backend and minimum privileges;
 4. a host-owned VT/recovery controller;
 5. an exact AMD device lease and built-in input mediator;
-6. a reproducible graphical role compatible with the installed pilot runtime;
+6. promotion/admission of the finalized reproducible graphical role into a
+   release compatible with the installed pilot runtime;
 7. watchdog, teardown, and zero-residue physical observers;
 8. failure fixtures for every ordered effect;
 9. a target-bound H0 dossier and explicit owner approval.

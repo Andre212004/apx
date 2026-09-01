@@ -22,6 +22,7 @@ MAX_APPROVAL_LIFETIME_SECONDS = 300
 OPERATION_KINDS = (
     "activate",
     "archive",
+    "configure-capabilities",
     "create",
     "destroy",
     "force-stop",
@@ -32,6 +33,13 @@ OPERATION_KINDS = (
     "stop",
 )
 
+HUB_ROLES = ("hub", "hub-graphical")
+REQUESTER_ROLES = (
+    "development", "graphical-base", "graphical-h0", "hub", "hub-graphical",
+    "minimal", "standard",
+)
+HUB_ONLY_OPERATIONS = tuple(kind for kind in OPERATION_KINDS if kind != "stop")
+
 APPROVAL_CLASSES = (
     "unlocked-session",
     "explicit-confirmation",
@@ -41,6 +49,7 @@ APPROVAL_CLASSES = (
 APPROVAL_BY_OPERATION = {
     "activate": "unlocked-session",
     "archive": "explicit-confirmation",
+    "configure-capabilities": "explicit-confirmation",
     "create": "explicit-confirmation",
     "destroy": "strong-confirmation",
     "force-stop": "strong-confirmation",
@@ -63,6 +72,12 @@ EFFECTS_BY_OPERATION = {
         "create-bounded-archive-staging",
         "verify-complete-archive",
         "publish-immutable-archive",
+    ),
+    "configure-capabilities": (
+        "verify-stopped-generation-and-current-capability-policy",
+        "write-generation-bound-capability-policy",
+        "verify-policy-before-next-activation",
+        "atomically-publish-capability-policy",
     ),
     "create": (
         "verify-absence-and-approved-release",
@@ -115,6 +130,10 @@ EFFECTS_BY_OPERATION = {
 CONSEQUENCES_BY_OPERATION = {
     "activate": ("opens-selected-environment", "uses-declared-resources"),
     "archive": ("uses-additional-storage", "creates-retained-copy"),
+    "configure-capabilities": (
+        "changes-devices-available-on-next-activation",
+        "may-grant-camera-microphone-controller-or-removable-storage",
+    ),
     "create": ("uses-additional-storage", "creates-new-independent-environment"),
     "destroy": (
         "deletes-environment-root-and-home",
@@ -131,6 +150,8 @@ CONSEQUENCES_BY_OPERATION = {
 
 _HEX_32 = re.compile(r"[0-9a-f]{32}")
 _HEX_64 = re.compile(r"[0-9a-f]{64}")
+_UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+Generation = int | str
 
 
 class ExecutorContractError(ValueError):
@@ -143,7 +164,7 @@ class OperationPlan:
     protocol_version: str
     operation_kind: str
     logical_name: str
-    expected_generation: int
+    expected_generation: Generation
     policy_version: str
     effects: tuple[str, ...]
     consequences: tuple[str, ...]
@@ -159,7 +180,7 @@ class ExecutorRequest:
     operation_id: str
     operation_kind: str
     logical_name: str
-    expected_generation: int
+    expected_generation: Generation
     plan_digest: str
     approval_id: str
     nonce: str
@@ -172,7 +193,7 @@ class ApprovalEvidence:
     operation_id: str
     operation_kind: str
     logical_name: str
-    expected_generation: int
+    expected_generation: Generation
     plan_digest: str
     consequence_digest: str
     approval_class: str
@@ -182,6 +203,19 @@ class ApprovalEvidence:
     not_before: int
     expires_at: int
     authenticity_verified: bool
+
+
+@dataclass(frozen=True)
+class RequesterContext:
+    """Trusted session facts supplied by the executor, never by the UI request."""
+
+    session_id: str
+    logical_name: str
+    role: str
+    generation: Generation
+    authenticated: bool
+    active: bool
+    authoritative: bool
 
 
 @dataclass(frozen=True)
@@ -210,10 +244,17 @@ def _canonical_digest(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _valid_generation(value: object, *, allow_absent: bool) -> bool:
+    """Accept legacy lab serials and exact physical UUIDv4 generations."""
+    if type(value) is int:
+        return value == 0 if allow_absent and value == 0 else value > 0
+    return isinstance(value, str) and _UUID.fullmatch(value) is not None
+
+
 def build_operation_plan(
     operation_kind: str,
     logical_name: str,
-    expected_generation: int,
+    expected_generation: Generation,
     *,
     policy_version: str = "environment-boundary-v1",
 ) -> OperationPlan:
@@ -222,8 +263,8 @@ def build_operation_plan(
     name_issue = validate_logical_name(logical_name)
     if name_issue is not None:
         raise ExecutorContractError(f"invalid Environment name: {name_issue}")
-    if type(expected_generation) is not int or expected_generation < 0:
-        raise ExecutorContractError("expected generation must be a non-negative integer")
+    if not _valid_generation(expected_generation, allow_absent=True):
+        raise ExecutorContractError("expected generation must be zero or a canonical physical UUID")
     if operation_kind in {"create", "restore"} and expected_generation != 0:
         raise ExecutorContractError("creation and restore require absent generation zero")
     if operation_kind not in {"create", "restore"} and expected_generation == 0:
@@ -294,9 +335,11 @@ def parse_executor_request_json(text: str) -> ExecutorRequest:
     for field in string_fields:
         if type(payload[field]) is not str:
             raise ExecutorContractError(f"executor request field {field} has wrong type")
-    for field in ("schema_version", "expected_generation", "expires_at"):
+    for field in ("schema_version", "expires_at"):
         if type(payload[field]) is not int:
             raise ExecutorContractError(f"executor request field {field} has wrong type")
+    if not _valid_generation(payload["expected_generation"], allow_absent=True):
+        raise ExecutorContractError("executor request generation has wrong type or format")
     request = ExecutorRequest(**payload)
     _validate_request_structure(request)
     return request
@@ -311,8 +354,8 @@ def _validate_request_structure(request: ExecutorRequest) -> None:
         raise ExecutorContractError("unsupported executor operation")
     if validate_logical_name(request.logical_name) is not None:
         raise ExecutorContractError("invalid Environment name")
-    if request.expected_generation < 0:
-        raise ExecutorContractError("expected generation cannot be negative")
+    if not _valid_generation(request.expected_generation, allow_absent=True):
+        raise ExecutorContractError("expected generation is not zero or a canonical physical UUID")
     if not request.operation_id.startswith("op-") or not _HEX_32.fullmatch(request.operation_id[3:]):
         raise ExecutorContractError("operation ID is not canonical")
     if not request.approval_id.startswith("approval-") or not _HEX_32.fullmatch(request.approval_id[9:]):
@@ -330,11 +373,12 @@ def assess_executor_request(
     plan: OperationPlan,
     approval: ApprovalEvidence,
     *,
-    current_generation: int,
+    current_generation: Generation,
     current_time: int,
     current_session_id: str,
     nonce_state: str,
     authoritative_state: str,
+    requester_context: RequesterContext,
 ) -> RequestAssessment:
     """Assess exact binding only; perform no authentication, observation, or effect."""
 
@@ -364,12 +408,49 @@ def assess_executor_request(
         issues.append("request generation does not match plan")
     if request.plan_digest != plan.plan_digest:
         issues.append("request digest does not match plan")
-    if type(current_generation) is not int or current_generation < 0:
+    if not _valid_generation(current_generation, allow_absent=True):
         issues.append("current generation evidence is malformed")
     elif current_generation != request.expected_generation:
         issues.append("current Environment generation is stale or different")
     if authoritative_state != "confirmed-compatible":
         issues.append("current authoritative state is not confirmed compatible")
+
+    context_session_valid = (
+        type(requester_context.session_id) is str
+        and requester_context.session_id.startswith("session-")
+        and _HEX_32.fullmatch(requester_context.session_id[8:]) is not None
+    )
+    if not context_session_valid:
+        issues.append("requester session ID is not canonical")
+    if requester_context.session_id != current_session_id:
+        issues.append("requester is not the current session")
+    if validate_logical_name(requester_context.logical_name) is not None:
+        issues.append("requester Environment name is invalid")
+    if requester_context.role not in REQUESTER_ROLES:
+        issues.append("requester Environment role is unsupported")
+    elif (
+        (requester_context.logical_name == "hub")
+        != (requester_context.role in HUB_ROLES)
+    ):
+        issues.append("requester Hub identity and role are inconsistent")
+    if not _valid_generation(requester_context.generation, allow_absent=False):
+        issues.append("requester generation evidence is malformed")
+    if requester_context.authenticated is not True:
+        issues.append("requester session is not authenticated")
+    if requester_context.active is not True:
+        issues.append("requester Environment is not active")
+    if requester_context.authoritative is not True:
+        issues.append("requester context is not authoritative")
+
+    requester_is_hub = requester_context.role in HUB_ROLES
+    if request.operation_kind in HUB_ONLY_OPERATIONS and not requester_is_hub:
+        issues.append("operation is restricted to the active Hub")
+    if request.operation_kind == "stop" and not requester_is_hub:
+        if (
+            requester_context.logical_name != request.logical_name
+            or requester_context.generation != request.expected_generation
+        ):
+            issues.append("non-Hub requester may stop only its own active generation")
     if nonce_state != "unused":
         issues.append("nonce is unavailable or already used")
     current_time_valid = type(current_time) is int and current_time >= 0
@@ -404,6 +485,8 @@ def assess_executor_request(
         issues.append("approval session ID is not canonical")
     if approval.session_id != current_session_id:
         issues.append("approval does not belong to the current unlocked session")
+    if approval.session_id != requester_context.session_id:
+        issues.append("approval does not belong to the requester session")
     approval_times_valid = all(
         type(value) is int and value >= 0
         for value in (approval.issued_at, approval.not_before, approval.expires_at)

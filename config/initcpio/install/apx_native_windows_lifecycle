@@ -1,0 +1,34 @@
+#!/usr/bin/bash
+
+build() {
+    add_module vfat
+    map add_binary \
+        /usr/bin/blkdiscard \
+        /usr/bin/blkid \
+        /usr/bin/blockdev \
+        /usr/bin/btrfs \
+        /usr/bin/cat \
+        /usr/bin/cryptsetup \
+        /usr/bin/mkdir \
+        /usr/bin/mountpoint \
+        /usr/bin/sfdisk \
+        /usr/bin/sleep \
+        /usr/bin/sync \
+        /usr/bin/systemctl \
+        /usr/bin/umount
+    add_file \
+        /usr/share/apx/native-windows-lifecycle-v1/apx-native-windows-lifecycle-initrd-v1.sh \
+        /usr/bin/apx-native-windows-lifecycle-initrd-v1 0755
+    add_file \
+        /usr/share/apx/native-windows-lifecycle-v1/apx-native-windows-lifecycle-v1.service \
+        /usr/lib/systemd/system/apx-native-windows-lifecycle-v1.service 0644
+    add_symlink \
+        /usr/lib/systemd/system/initrd-root-fs.target.wants/apx-native-windows-lifecycle-v1.service \
+        ../apx-native-windows-lifecycle-v1.service
+}
+
+help() {
+    cat <<'EOF'
+Adds the signed, one-shot APX native-Windows create/delete storage executor.
+EOF
+}

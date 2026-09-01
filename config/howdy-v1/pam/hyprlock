@@ -1,0 +1,8 @@
+# PAM configuration file for hyprlock
+# A valid face records success, clears old failure records and completes auth.
+# A failed face jumps over that cleanup and enters the untouched login/password
+# stack, whose own system-auth path accounts for success and failure normally.
+
+auth            [success=ok default=1] pam_howdy.so
+auth            [success=done default=die] pam_faillock.so authsucc
+auth            include         login

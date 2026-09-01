@@ -1,0 +1,16 @@
+[Unit]
+Description=APX target-bound external model store
+BindsTo=dev-disk-by\x2did-ata\x2dSamsung_SSD_870_QVO_1TB_S5SVNF0R241427A\x2dpart1.device
+After=dev-disk-by\x2did-ata\x2dSamsung_SSD_870_QVO_1TB_S5SVNF0R241427A\x2dpart1.device
+Before=apx-ollama-v1.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/apx/apx-model-store-v1.py activate
+ExecStop=/usr/lib/apx/apx-model-store-v1.py deactivate
+TimeoutStartSec=90
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target

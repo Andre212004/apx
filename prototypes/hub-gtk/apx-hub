@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+export PYTHONPATH=/usr/lib/apx
+exec /usr/bin/python /usr/lib/apx/apx_hub_app.py "$@"

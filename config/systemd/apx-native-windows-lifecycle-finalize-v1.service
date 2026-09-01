@@ -1,0 +1,15 @@
+[Unit]
+Description=Finalize an authenticated APX native Windows lifecycle operation
+After=local-fs.target apx-environment-switch-v1.service
+RequiresMountsFor=/boot /var/lib/apx
+ConditionPathExists=/var/lib/apx/native-environments/windows-pending.json
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/apx/apx-native-windows-lifecycle-finalize-v1.py
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

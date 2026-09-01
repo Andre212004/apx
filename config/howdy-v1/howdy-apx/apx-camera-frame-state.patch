@@ -1,0 +1,54 @@
+diff --git a/howdy/src/compare.py b/howdy/src/compare.py
+index f3d30e4..86690aa 100755
+--- a/howdy/src/compare.py
++++ b/howdy/src/compare.py
+@@ -28,0 +29,47 @@
++camera_state_path = None
++
++
++def clear_camera_frame_state():
++	"""Remove the UI-only marker for this exact comparison process."""
++	global camera_state_path
++
++	if camera_state_path is None:
++		return
++
++	try:
++		os.unlink(camera_state_path)
++	except FileNotFoundError:
++		pass
++
++
++def publish_camera_frame_state():
++	"""Publish readiness only after the camera returned its first frame."""
++	global camera_state_path
++
++	if camera_state_path is not None:
++		return
++
++	runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
++	if runtime_dir is None or not os.path.isdir(runtime_dir):
++		return
++
++	with open("/proc/self/stat", "r", encoding="utf-8") as process_stat:
++		start_ticks = process_stat.read().split()[21]
++
++	camera_state_path = os.path.join(
++		runtime_dir,
++		"apx-howdy-camera-{}-{}.active".format(os.getpid(), start_ticks)
++	)
++	try:
++		descriptor = os.open(
++			camera_state_path,
++			os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC | os.O_NOFOLLOW,
++			0o600
++		)
++		os.close(descriptor)
++	except FileExistsError:
++		pass
++
++
++atexit.register(clear_camera_frame_state)
++
+@@ -244,0 +292 @@ while True: frame, gsframe = video_capture.read_frame()
++	publish_camera_frame_state()

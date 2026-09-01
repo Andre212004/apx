@@ -1,21 +1,19 @@
 # APX Cleanup Completion v1
 
-Status: pure cleanup plan, evidence assessment, and Hub progress state
-implemented; no destructive executor is implemented or authorized.
+Status: complete-purge policy, evidence assessment, Hub progress state and the
+bounded physical Environment executor are implemented.
 
 ## User Choice
 
-Deletion always presents two explicit scopes:
-
-- `environment-only` deletes the live root, home, runtime, account,
-  registration, network identity, and qgroups while preserving every listed
-  snapshot and archive;
-- `complete-purge` deletes all listed Environment resources, including its
-  snapshots and archives, after strong data-loss confirmation.
+Deletion has one scope: `complete-purge`. It deletes all APX-owned Environment
+resources, including live data, snapshots, archives, explicitly named legacy
+maintenance backups, capabilities, metadata and stored plans, after strong
+data-loss confirmation. There is no preserve-copies option.
 
 The plan enumerates every resource and immutable identity digest. A pathname,
-name, owner, or matching type is never deletion authority. External backups
-and anything not proven APX-owned remain outside both scopes.
+name, owner, or matching type is never deletion authority. Anything not proven
+APX-owned remains outside the scope. The append-only global audit journal keeps
+only the fact and outcome of deletion, not recoverable Environment content.
 
 ## Completion Definition
 
@@ -49,8 +47,8 @@ quota allocation, or registration.
 
 ## Implemented Contract
 
-`src/apx_cleanup.py` implements fixed scopes, canonical resource plans, plan
+`src/apx_cleanup.py` implements the fixed complete-purge scope, canonical resource plans, plan
 digests, exact observation-set validation, cleanup assessment, observed reclaim
 reporting, and plain-language output. `src/apx_hub.py` implements the visible
-`cleaning` state with read-only progress and detail actions. Neither module
-performs a host effect.
+`cleaning` state with read-only progress and detail actions. The installed
+`apx-lab-runtime.py` owns the bounded physical effect.

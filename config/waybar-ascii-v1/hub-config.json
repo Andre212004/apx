@@ -1,0 +1,53 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 36,
+  "spacing": 8,
+  "modules-left": ["clock"],
+  "modules-center": ["custom/apx-environments"],
+  "modules-right": ["pulseaudio", "custom/apx-network", "custom/apx-bluetooth", "custom/apx-time", "battery"],
+  "clock": {
+    "format": "[ {:%d/%m/%Y | %H:%M} ]",
+    "tooltip-format": "{:%A, %d de %B de %Y}"
+  },
+  "custom/apx-environments": {
+    "exec": "/run/apx/environment-switch-client-v1.py waybar-identity",
+    "return-type": "json",
+    "interval": 5,
+    "tooltip": true,
+    "on-click": "/run/apx/environment-switch-client-v1.py hub-menu"
+  },
+  "pulseaudio": {
+    "format": "[ VOL {volume}% ]",
+    "format-muted": "[ VOL MUTE ]",
+    "scroll-step": 5,
+    "on-click": "/run/apx/desktop-menu-v2.py audio",
+    "on-scroll-up": "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+    "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+  },
+  "custom/apx-network": {
+    "exec": "/run/apx/host-services-client-v1.py waybar-network",
+    "return-type": "json",
+    "interval": 10,
+    "on-click": "/run/apx/desktop-menu-v2.py wifi"
+  },
+  "custom/apx-bluetooth": {
+    "exec": "/run/apx/host-services-client-v1.py waybar-bluetooth",
+    "return-type": "json",
+    "interval": 10,
+    "on-click": "/run/apx/desktop-menu-v2.py bluetooth"
+  },
+  "custom/apx-time": {
+    "exec": "/run/apx/host-services-client-v1.py waybar-time",
+    "return-type": "json",
+    "interval": 30
+  },
+  "battery": {
+    "format": "[ BAT {capacity}% ]",
+    "format-charging": "[ BAT +{capacity}% ]",
+    "format-plugged": "[ BAT AC ]",
+    "format-full": "[ BAT 100% ]",
+    "states": {"warning": 30, "critical": 15},
+    "on-click": "/run/apx/desktop-menu-v2.py battery"
+  }
+}

@@ -1,0 +1,24 @@
+APX · ACELERAÇÃO DO WINDOWS
+
+1. Execute ATIVAR-ACELERACAO.cmd.
+2. Aceite a confirmação de administrador do Windows.
+3. O script instala Looking Glass IDD + Host e pergunta antes de reiniciar.
+4. No primeiro inicio, o APX seleciona 1920x1080 a 120 Hz e guarda o resultado
+   em C:\ProgramData\APX\looking-glass-display.txt.
+
+Durante esse unico reinicio a imagem pode ficar preta ate 90 segundos enquanto
+o Windows, o IDD e o Looking Glass Host voltam a iniciar. Nao desligue o
+portatil. SUPER+E ou SUPER+M regressam imediatamente ao HUB; SUPER+SHIFT+E
+abre o menu azul de regresso.
+
+Se o Windows ainda não reconhecer a RTX 3060, conclua primeiro o Windows
+Update/NVIDIA App e volte a executar ATIVAR-ACELERACAO.cmd.
+
+O APX muda automaticamente da recuperação SPICE para a memória KVMFR/RTX,
+mantendo SUPER+E/SUPER+M para regresso imediato e SUPER+SHIFT+E para o menu. Estes instaladores
+correspondem ao mesmo build B7-799 do cliente Linux instalado neste
+Environment.
+
+Se o relatório disser que 120 Hz não é suportado, execute novamente
+APX-CONFIGURAR-120HZ.ps1 como administrador depois de confirmar que o ecrã
+"Looking Glass" está ativo nas Definições avançadas de ecrã do Windows.

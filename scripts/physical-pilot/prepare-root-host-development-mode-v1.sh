@@ -10,7 +10,7 @@ readonly MODE_ROOT="/root/apx-host-development-mode-v1"
 readonly REPOSITORY_ROOT="${MODE_ROOT}/apx"
 readonly EVIDENCE_ROOT="${MODE_ROOT}/evidence"
 readonly INSTALLER="/tmp/apx-codex-install-v1.sh"
-readonly REPOSITORY_URL="https://github.com/Andre212004/apx.git"
+readonly REPOSITORY_URL="https://github.com/andrepereira2004/apx.git"
 readonly APPROVAL="ENABLE TEMPORARY ROOT CODEX ON APX-HOST"
 
 fail() {

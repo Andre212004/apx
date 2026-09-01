@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Windows 11
+Comment=Máquina virtual Windows 11 do Faculdade
+Exec=/home/apx/.local/bin/apx-windows11-vm
+Icon=computer
+Terminal=false
+Categories=System;Emulator;

@@ -1,0 +1,56 @@
+* {
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  font-family: "Adwaita Mono", monospace;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+window#waybar {
+  background: rgba(10, 16, 20, 0.92);
+  color: #e8f7fa;
+  border-bottom: 1px solid #26343a;
+}
+
+#clock,
+#pulseaudio,
+#custom-apx-network,
+#custom-apx-bluetooth,
+#custom-apx-time,
+#battery {
+  padding: 0 10px;
+}
+
+#workspaces button {
+  min-width: 0;
+  padding: 0 6px;
+  background: transparent;
+  color: #8aa3aa;
+}
+
+#workspaces button.active,
+#workspaces button:hover {
+  background: #246879;
+  color: #55e6ff;
+}
+
+#custom-apx-environments {
+  padding: 0 18px;
+  color: #55e6ff;
+  border-left: 1px solid #246879;
+  border-right: 1px solid #246879;
+}
+
+#custom-apx-environments:hover {
+  background: #246879;
+  color: #e8f7fa;
+}
+
+#pulseaudio.muted,
+#custom-apx-network.disconnected,
+#custom-apx-bluetooth.locked,
+#custom-apx-time.unsynchronized,
+#battery.critical {
+  color: #8aa3aa;
+}

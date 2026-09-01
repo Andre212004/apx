@@ -90,7 +90,8 @@ class InstalledPilotEvidence:
     github_source_recovery_verified: bool
     no_uncertain_apx_operation: bool
     hub_clean: bool
-    development_repository_healthy: bool
+    development_state_reconciled: bool
+    root_host_mode_inventory_current: bool
     host_free_bytes: int
 
 
@@ -239,7 +240,8 @@ def validate_installed_evidence(evidence: InstalledPilotEvidence) -> None:
             raise PhysicalUpdateError(f"{field} is invalid")
     boolean_fields = (
         "audit_reconciled", "recovery_console_verified", "github_source_recovery_verified",
-        "no_uncertain_apx_operation", "hub_clean", "development_repository_healthy",
+        "no_uncertain_apx_operation", "hub_clean", "development_state_reconciled",
+        "root_host_mode_inventory_current",
     )
     for field in boolean_fields:
         if type(getattr(evidence, field)) is not bool:
@@ -263,7 +265,8 @@ def build_update_preview(
         "github-source-recovery-not-verified": installed.github_source_recovery_verified,
         "uncertain-apx-operation-present": installed.no_uncertain_apx_operation,
         "hub-is-not-clean": installed.hub_clean,
-        "development-repository-is-not-healthy": installed.development_repository_healthy,
+        "development-state-is-not-reconciled": installed.development_state_reconciled,
+        "root-host-mode-inventory-is-not-current": installed.root_host_mode_inventory_current,
     }
     blockers.extend(label for label, passed in gates.items() if not passed)
     if installed.host_free_bytes < MINIMUM_HOST_RESERVE_BYTES:

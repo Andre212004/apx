@@ -1,0 +1,14 @@
+{
+  "classification": "h0-process-observed-and-headless-restored",
+  "experiment": "h0-3ef21d19a2518d4fcea9d51513cc1eee-v3",
+  "generation": "c4fc5c49-4106-4a56-b1f0-13bffa41a0c1",
+  "graphical_unit_inactive_after": true,
+  "graphical_unit_started": true,
+  "hyprland_process_observed": true,
+  "machine_absent_after": true,
+  "machine_observed": true,
+  "plan_digest": "83750219fbf0f0ac0569ba8965849c3f42b98235fa81ca6149f730b912f05eed",
+  "schema": 1,
+  "timer_started_before_graphics": true,
+  "tty1_restored": true
+}

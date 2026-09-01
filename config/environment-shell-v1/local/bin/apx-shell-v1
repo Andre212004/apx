@@ -1,0 +1,103 @@
+#!/usr/bin/bash
+set -u
+
+config=/home/apx/.config/quickshell/apx/shell.qml
+lock_config=/home/apx/.config/hypr/hyprlock.conf
+idle_config=/home/apx/.config/hypr/hypridle.conf
+state_dir=/home/apx/.local/state/apx-shell-v1
+log=$state_dir/quickshell.log
+login_marker=${XDG_RUNTIME_DIR:-/run/user/1000}/apx-initial-login-v1
+handoff_proof=/run/apx/authenticated-handoff-v1
+launcher_lock=${XDG_RUNTIME_DIR:-/run/user/1000}/apx-shell-launcher-v1.lock
+
+# The Lua autostart and the supervised IPC fallback may race on a physical
+# launch. Only one owner shell may run the login flow and the QuickShell retry
+# loop; a losing launcher exits successfully without touching the compositor.
+exec 9>"$launcher_lock"
+if ! /usr/bin/flock -n 9; then
+    exit 0
+fi
+
+install -d -m 0700 "$state_dir"
+if [[ -f $log ]] && (( $(stat -c %s "$log") > 1048576 )); then
+    mv -f -- "$log" "$log.previous"
+fi
+
+if ! command -v quickshell >/dev/null 2>&1; then
+    printf 'APX: Quickshell não está instalada; nenhuma shell será iniciada.\n' >>"$log"
+    exit 127
+fi
+
+if [[ ! -r $config ]]; then
+    printf 'APX: configuração Quickshell indisponível: %s\n' "$config" >>"$log"
+    exit 1
+fi
+
+if [[ ! -e $login_marker ]]; then
+    if [[ -r $handoff_proof ]]; then
+        printf '\n=== APX authenticated handoff %(%Y-%m-%dT%H:%M:%S%z)T ===\n' -1 >>"$log"
+        /usr/bin/install -m 0600 /dev/null "$login_marker"
+    elif [[ ! -x /usr/bin/hyprlock || ! -r $lock_config ]]; then
+        printf 'APX: login inicial indisponível; a sessão gráfica será encerrada.\n' >>"$log"
+        /usr/bin/hyprctl dispatch exit >/dev/null 2>&1 || true
+        exit 1
+    else
+        printf '\n=== APX initial login %(%Y-%m-%dT%H:%M:%S%z)T ===\n' -1 >>"$log"
+        if ! /usr/bin/hyprlock --immediate-render --no-fade-in --config "$lock_config" >>"$log" 2>&1; then
+            printf 'APX: hyprlock terminou sem autenticação; a sessão gráfica será encerrada.\n' >>"$log"
+            /usr/bin/hyprctl dispatch exit >/dev/null 2>&1 || true
+            exit 1
+        fi
+        /usr/bin/install -m 0600 /dev/null "$login_marker"
+    fi
+fi
+
+# Do not impose a fixed four-second delay.  Start as soon as Hyprland IPC has
+# reported a real enabled monitor twice in succession; the second observation
+# preserves the settling protection needed by portal and layer-shell clients.
+ready_observations=0
+for _ in {1..40}; do
+    if /usr/bin/hyprctl -j monitors 2>/dev/null | /usr/bin/grep -Fq '"disabled": false'; then
+        ((ready_observations += 1))
+        ((ready_observations >= 2)) && break
+    else
+        ready_observations=0
+    fi
+    /usr/bin/sleep 0.05
+done
+
+if [[ -x /usr/bin/hypridle && -r $idle_config ]] && ! /usr/bin/pidof hypridle >/dev/null 2>&1; then
+    /usr/bin/hypridle --quiet --config "$idle_config" >>"$log" 2>&1 &
+fi
+
+start_desktop_service() {
+    local pattern=$1
+    shift
+    if [[ -x $1 ]] && ! /usr/bin/pgrep -u "$(id -u)" -f "$pattern" >/dev/null 2>&1; then
+        "$@" >>"$log" 2>&1 &
+    fi
+}
+
+# These are ordinary desktop facilities, not APX privileges. Keeping them in
+# the Environment makes notifications, password storage, file pickers and
+# removable-media prompts behave like a normal Linux desktop.
+start_desktop_service '^/usr/bin/gnome-keyring-daemon' \
+    /usr/bin/gnome-keyring-daemon --start --components=secrets
+start_desktop_service '^/usr/lib/xdg-desktop-portal-hyprland' \
+    /usr/lib/xdg-desktop-portal-hyprland
+start_desktop_service '^/usr/lib/xdg-desktop-portal-gtk' \
+    /usr/lib/xdg-desktop-portal-gtk
+start_desktop_service '^/usr/bin/mako([[:space:]]|$)' /usr/bin/mako
+start_desktop_service '[/]apx-notification-focus-v1([[:space:]]|$)' \
+    /home/apx/.local/bin/apx-notification-focus-v1
+start_desktop_service '^/usr/lib/hyprpolkitagent/hyprpolkitagent' \
+    /usr/lib/hyprpolkitagent/hyprpolkitagent
+start_desktop_service '^/usr/bin/udiskie([[:space:]]|$)' /usr/bin/udiskie --automount --no-tray
+
+while true; do
+    printf '\n=== APX shell start %(%Y-%m-%dT%H:%M:%S%z)T ===\n' -1 >>"$log"
+    quickshell --no-duplicate --path "$config" --no-color --log-times -v >>"$log" 2>&1
+    status=$?
+    printf 'APX: Quickshell terminou com estado %s; nova tentativa dentro de 2 segundos.\n' "$status" >>"$log"
+    /usr/bin/sleep 2
+done

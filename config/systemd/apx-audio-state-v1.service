@@ -1,0 +1,23 @@
+[Unit]
+Description=APX active-Environment audio state handoff v1
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-audio-state-v1.py --serve
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+ReadWritePaths=/run/apx /var/lib/apx/audio-state-v1
+
+[Install]
+WantedBy=multi-user.target

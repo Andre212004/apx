@@ -101,21 +101,9 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(result.state, "freeing-space")
         self.assertIn("qgroup-home", result.pending)
 
-    def test_environment_only_preserves_snapshots_and_archives(self):
-        plan = self.plan("environment-only")
-        observations = tuple(
-            cleanup.ResourceObservation(
-                item.resource_id,
-                item.identity_digest if item.disposition == "preserve" else None,
-                "present" if item.disposition == "preserve" else "absent",
-            )
-            for item in plan.resources
-        )
-        result = cleanup.assess_cleanup(
-            plan, self.evidence(plan, observations=observations), approved=True
-        )
-        self.assertEqual(result.state, "complete")
-        self.assertEqual(set(result.preserved), {"archive-1", "snapshot-1"})
+    def test_environment_only_scope_is_not_available(self):
+        with self.assertRaisesRegex(cleanup.CleanupError, "unsupported cleanup scope"):
+            self.plan("environment-only")
 
     def test_complete_purge_cannot_mark_a_listed_copy_for_preservation(self):
         resources = list(self.resources())

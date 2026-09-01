@@ -1,0 +1,57 @@
+pkgname=howdy-apx
+pkgver=3.0.0beta.r592.d3ab993
+pkgrel=3
+pkgdesc="Pinned native-PAM Howdy build for APX face authentication"
+arch=('x86_64')
+url='https://github.com/boltgolt/howdy'
+license=('MIT')
+depends=('libinih' 'libevdev' 'pam' 'python' 'python-dlib' 'python-opencv')
+makedepends=('git' 'meson' 'ninja' 'cmake')
+provides=('howdy')
+conflicts=('howdy' 'howdy-git')
+backup=('etc/howdy/config.ini')
+source=(
+  'howdy::git+https://github.com/boltgolt/howdy.git#commit=d3ab99382f88f043d15f15c1450ab69433892a1c'
+  'apx-camera-frame-state.patch'
+  'https://github.com/davisking/dlib-models/raw/master/dlib_face_recognition_resnet_model_v1.dat.bz2'
+  'https://github.com/davisking/dlib-models/raw/master/mmod_human_face_detector.dat.bz2'
+  'https://github.com/davisking/dlib-models/raw/master/shape_predictor_5_face_landmarks.dat.bz2'
+)
+sha256sums=(
+  'SKIP'
+  '5f917210cad45f903f58fb5e8496bcff35ea86a3aa84ecc61cffcd5dd82b4e3f'
+  'abb1f61041e434465855ce81c2bd546e830d28bcbed8d27ffbe5bb408b11553a'
+  'db9e9e40f092c118d5eb3e643935b216838170793559515541c56a2b50d9fc84'
+  '6e787bbebf5c9efdb793f6cd1f023230c4413306605f24f299f12869f95aa472'
+)
+
+prepare() {
+  patch -d howdy -Np1 -i "$srcdir/apx-camera-frame-state.patch"
+}
+
+build() {
+  arch-meson howdy build \
+    -Dwith_polkit=false \
+    -Dinstall_pam_config=false \
+    -Dinstall_in_site_packages=false \
+    -Dpam_dir=/usr/lib/security \
+    -Dconfig_dir=/etc/howdy \
+    -Ddlib_data_dir=/usr/share/dlib-data \
+    -Duser_models_dir=/etc/howdy/models \
+    -Dpython_path=/usr/bin/python
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  # Keep the backed-up configuration path in every package revision so pacman
+  # preserves the APX camera policy instead of treating it as a removed file.
+  install -Dm644 howdy/howdy/src/config.ini "$pkgdir/etc/howdy/config.ini"
+  install -Dm644 "$srcdir/dlib_face_recognition_resnet_model_v1.dat" \
+    "$pkgdir/usr/share/dlib-data/dlib_face_recognition_resnet_model_v1.dat"
+  install -Dm644 "$srcdir/mmod_human_face_detector.dat" \
+    "$pkgdir/usr/share/dlib-data/mmod_human_face_detector.dat"
+  install -Dm644 "$srcdir/shape_predictor_5_face_landmarks.dat" \
+    "$pkgdir/usr/share/dlib-data/shape_predictor_5_face_landmarks.dat"
+  install -Dm644 howdy/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

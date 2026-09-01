@@ -1,0 +1,31 @@
+[Unit]
+Description=APX bounded Environment switch service v1
+After=apx-executor-v1.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/apx/apx-environment-switch-v1.py --serve
+Restart=on-failure
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+ReadWritePaths=/run/apx
+ReadWritePaths=/var/lib/apx/environments/hub/home/.apx-host-bridge
+SystemCallFilter=@system-service @io-event @process
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

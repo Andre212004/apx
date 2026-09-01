@@ -1,0 +1,1 @@
+rd.luks.name=3ad5fc06-c4eb-4bb2-936b-f75eff3bc1c4=cryptroot root=/dev/mapper/cryptroot rootflags=subvol=@ rw rd.plymouth=0 plymouth.enable=0 rd.systemd.show_status=1 systemd.show_status=1 systemd.journald.forward_to_console=1 apx.native_windows_reserve=1

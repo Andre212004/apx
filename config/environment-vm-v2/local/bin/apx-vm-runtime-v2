@@ -1,0 +1,472 @@
+#!/usr/bin/python3
+"""Single-process owner for an APX KVM/VFIO system Environment.
+
+This runtime deliberately has no Host readiness protocol.  The APX graphical
+session owns this process, this process owns QEMU and the optional Looking
+Glass client, and systemd owns the whole cgroup.  If any owner exits, its
+children are stopped and the existing APX handoff restores the Hub.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+import time
+from typing import NoReturn
+
+
+GIB = 1024 ** 3
+CONFIG = Path.home() / ".config/apx/system-vm-v2.json"
+STATE_DIR = Path.home() / ".local/state/apx-system-vm-v2"
+PRESENTATION = STATE_DIR / "presentation"
+STATE = STATE_DIR / "state.json"
+LOG = STATE_DIR / "launcher.log"
+IDENTITY_CLIENT = Path("/run/apx/environment-switch-client-v1.py")
+QEMU = Path("/usr/bin/qemu-system-x86_64")
+QEMU_IMG = Path("/usr/bin/qemu-img")
+SWTPM = Path("/usr/bin/swtpm")
+LOOKING_GLASS = Path.home() / ".local/bin/looking-glass-client"
+KVMFR = Path("/dev/kvmfr0")
+OVMF_CODE = Path("/usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd")
+OVMF_VARS = Path("/usr/share/edk2/x64/OVMF_VARS.4m.fd")
+DIRECT = "direct"
+NATIVE = "native"
+
+
+class VmError(RuntimeError):
+    pass
+
+
+def atomic_write(path: Path, value: str, mode: int = 0o600) -> None:
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    try:
+        os.write(descriptor, value.encode())
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    os.replace(temporary, path)
+
+
+def load_config() -> dict[str, object]:
+    try:
+        value = json.loads(CONFIG.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise VmError("a configuração local da VM v2 não está disponível") from error
+    required = {
+        "schema", "kind", "label", "directory", "disk", "legacy_disk",
+        "installer", "disk_gib", "network", "secure_boot", "tpm",
+        "rtc", "native_capable", "tools_drive",
+    }
+    if type(value) is not dict or set(value) != required or value.get("schema") != 2:
+        raise VmError("a configuração local da VM v2 é inválida")
+    if value.get("kind") not in {"windows11", "ubuntu"}:
+        raise VmError("o sistema convidado não é suportado")
+    for field in ("label", "directory", "disk", "legacy_disk", "installer", "network", "rtc"):
+        if type(value.get(field)) is not str or not value[field] or "/" in value[field]:
+            raise VmError(f"o campo {field} da VM é inválido")
+    if type(value.get("disk_gib")) is not int or not 32 <= value["disk_gib"] <= 512:
+        raise VmError("o tamanho do disco da VM é inválido")
+    for field in ("secure_boot", "tpm", "native_capable", "tools_drive"):
+        if type(value.get(field)) is not bool:
+            raise VmError(f"o campo {field} da VM é inválido")
+    if value["secure_boot"] is not True:
+        raise VmError("o perfil v2 requer firmware Secure Boot")
+    if value["network"] not in {"e1000e", "virtio-net-pci"}:
+        raise VmError("o modelo de rede da VM é inválido")
+    if value["rtc"] not in {"localtime", "utc"}:
+        raise VmError("o relógio da VM é inválido")
+    return value
+
+
+def cpu_groups(available: set[int]) -> list[list[int]]:
+    topology: dict[tuple[str, str], list[int]] = {}
+    for cpu in sorted(available):
+        base = Path(f"/sys/devices/system/cpu/cpu{cpu}/topology")
+        try:
+            key = (base.joinpath("physical_package_id").read_text().strip(),
+                   base.joinpath("core_id").read_text().strip())
+        except OSError:
+            key = ("0", str(cpu))
+        topology.setdefault(key, []).append(cpu)
+    return sorted((sorted(group) for group in topology.values()), key=lambda group: group[0])
+
+
+def cpu_list(cpus: list[int]) -> str:
+    ranges: list[str] = []
+    start = previous = cpus[0]
+    for cpu in cpus[1:]:
+        if cpu == previous + 1:
+            previous = cpu
+            continue
+        ranges.append(str(start) if start == previous else f"{start}-{previous}")
+        start = previous = cpu
+    ranges.append(str(start) if start == previous else f"{start}-{previous}")
+    return ",".join(ranges)
+
+
+def memory_limit_bytes() -> int:
+    try:
+        total = int(next(line.split()[1] for line in Path("/proc/meminfo").read_text().splitlines()
+                         if line.startswith("MemTotal:"))) * 1024
+    except (OSError, StopIteration, ValueError) as error:
+        raise VmError("não foi possível medir a memória disponível") from error
+    try:
+        cgroup = Path("/sys/fs/cgroup/memory.max").read_text().strip()
+        if cgroup != "max":
+            total = min(total, int(cgroup))
+    except (OSError, ValueError):
+        pass
+    return total
+
+
+def resource_plan() -> dict[str, object]:
+    available = set(os.sched_getaffinity(0))
+    groups = cpu_groups(available)
+    if len(groups) < 2 or len(available) < 4:
+        raise VmError("a VM precisa de pelo menos dois cores físicos e quatro CPUs lógicos")
+    # One complete physical core remains outside QEMU for the AMD compositor,
+    # audio and APX recovery.  Every other CPU allowed by the outer cgroup goes
+    # to the guest; there is no CPU quota below the Host's actual capacity.
+    reserved = groups[-1]
+    guest_cpus = sorted(cpu for group in groups[:-1] for cpu in group)
+    group_sizes = {len(group) for group in groups[:-1]}
+    threads = group_sizes.pop() if len(group_sizes) == 1 else 1
+    cores = len(guest_cpus) // threads
+    if cores * threads != len(guest_cpus):
+        threads = 1
+        cores = len(guest_cpus)
+
+    total = memory_limit_bytes()
+    if total < 8 * GIB:
+        raise VmError("a VM precisa de pelo menos 8 GiB de memória no cgroup")
+    # Use roughly three quarters of the admitted memory, always leaving at
+    # least 5 GiB for QEMU overhead and the live Host presentation path.
+    guest_gib = int(min(total * 0.75, total - 5 * GIB) // GIB)
+    guest_gib = max(4, min(22, guest_gib))
+    return {
+        "cpus": guest_cpus,
+        "cpu_list": cpu_list(guest_cpus),
+        "reserved_cpus": reserved,
+        "vcpus": len(guest_cpus),
+        "cores": cores,
+        "threads": threads,
+        "memory_gib": guest_gib,
+        "admitted_memory_gib": round(total / GIB, 2),
+    }
+
+
+def presentation_mode(config: dict[str, object]) -> str:
+    try:
+        mode = PRESENTATION.read_text().strip()
+    except FileNotFoundError:
+        mode = DIRECT
+    if mode not in {DIRECT, NATIVE}:
+        raise VmError("o modo de apresentação guardado é inválido")
+    if mode == NATIVE and not config["native_capable"]:
+        raise VmError("este convidado não admite apresentação nativa")
+    return mode
+
+
+def set_presentation(config: dict[str, object], mode: str, exit_session: bool) -> int:
+    if mode == NATIVE and not config["native_capable"]:
+        raise VmError("este convidado não admite apresentação nativa")
+    atomic_write(PRESENTATION, mode + "\n")
+    if exit_session:
+        subprocess.run(("/usr/bin/hyprctl", "dispatch", "exit"), check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+def environment_label(default: str) -> str:
+    try:
+        result = subprocess.run((str(IDENTITY_CLIENT), "identity"), text=True,
+                                capture_output=True, timeout=2, check=False)
+        value = json.loads(result.stdout)
+        candidate = value.get("display_name") or value.get("name")
+        if result.returncode == 0 and type(candidate) is str and candidate.strip():
+            return candidate.strip()[:80]
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        pass
+    return default
+
+
+def existing_disk(vm_dir: Path, config: dict[str, object]) -> tuple[Path, str, list[str]]:
+    disk = vm_dir / str(config["disk"])
+    legacy = vm_dir / str(config["legacy_disk"])
+    if disk.exists() and legacy.exists():
+        raise VmError("existem simultaneamente discos raw e qcow2; o arranque foi recusado")
+    if legacy.exists():
+        return legacy, "qcow2", ["cache=writeback", "aio=threads"]
+    if not disk.exists():
+        subprocess.run((str(QEMU_IMG), "create", "-f", "raw", str(disk),
+                        f"{config['disk_gib']}G"), check=True)
+        os.chmod(disk, 0o600)
+    return disk, "raw", ["cache=none", "aio=native"]
+
+
+def qemu_command(config: dict[str, object], plan: dict[str, object], mode: str,
+                 vm_dir: Path, disk: Path, disk_format: str,
+                 cache_options: list[str], sockets: dict[str, Path]) -> list[str]:
+    nvram = vm_dir / "OVMF_VARS.4m.fd"
+    if not nvram.exists():
+        subprocess.run(("/usr/bin/cp", "--reflink=auto", str(OVMF_VARS), str(nvram)), check=True)
+        os.chmod(nvram, 0o600)
+    disk_options = ",".join(("if=none", "id=system", f"format={disk_format}",
+                             *cache_options, "discard=unmap", "detect-zeroes=unmap",
+                             f"file={disk}"))
+    command = [
+        "/usr/bin/taskset", "--cpu-list", str(plan["cpu_list"]), str(QEMU),
+        "-name", f"{config['label']} · {environment_label('APX')}",
+        "-machine", "q35,accel=kvm,smm=on",
+        "-cpu", "host,topoext=on,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time",
+        "-smp", (f"{plan['vcpus']},sockets=1,cores={plan['cores']},"
+                 f"threads={plan['threads']},maxcpus={plan['vcpus']}"),
+        "-m", f"{plan['memory_gib']}G",
+        "-drive", f"if=pflash,format=raw,readonly=on,file={OVMF_CODE}",
+        "-drive", f"if=pflash,format=raw,file={nvram}",
+        "-global", "driver=cfi.pflash01,property=secure,value=on",
+        "-drive", disk_options,
+        "-device", "nvme,drive=system,serial=APX-SYSTEM-V2",
+        "-device", "vfio-pci,host=01:00.0,multifunction=on,x-vga=on",
+        "-device", "vfio-pci,host=01:00.1",
+        "-device", "qemu-xhci",
+        "-device", "usb-kbd",
+        "-device", "usb-mouse",
+        "-nic", f"user,model={config['network']}",
+        "-audiodev", "pipewire,id=audio0",
+        "-device", "ich9-intel-hda",
+        "-device", "hda-duplex,audiodev=audio0",
+        "-rtc", f"base={config['rtc']},clock=host,driftfix=slew",
+        "-vga", "none",
+    ]
+    if config["tpm"]:
+        command.extend((
+            "-chardev", f"socket,id=chrtpm,path={sockets['tpm']}",
+            "-tpmdev", "emulator,id=tpm0,chardev=chrtpm",
+            "-device", "tpm-tis,tpmdev=tpm0",
+        ))
+
+    installer = vm_dir / str(config["installer"])
+    allocated = disk.stat().st_blocks * 512
+    empty = allocated < 512 * 1024 * 1024
+    if installer.is_file():
+        command.extend((
+            "-drive", f"if=none,id=installer,format=raw,readonly=on,file={installer}",
+            "-device", "ide-cd,drive=installer,bus=ide.0",
+        ))
+    command.extend(("-boot", "once=d,menu=on" if installer.is_file() and empty else "menu=on"))
+
+    tools = Path.home() / "APXTools"
+    if config["tools_drive"] and tools.is_dir():
+        command.extend((
+            "-drive", f"if=none,id=apxtools,format=raw,readonly=on,file=fat:ro:{tools}",
+            "-device", "usb-storage,drive=apxtools",
+        ))
+
+    if mode == DIRECT:
+        command.extend((
+            "-device", "VGA,xres=1920,yres=1080,refresh_rate=120,vgamem_mb=64",
+            "-display", "gtk,zoom-to-fit=on,grab-on-hover=on,show-tabs=off",
+            "-full-screen",
+        ))
+    else:
+        command.extend((
+            "-spice", f"unix=on,addr={sockets['spice']},disable-ticketing=on",
+            "-object", f"memory-backend-file,id=looking-glass,mem-path={KVMFR},size=128M,share=on",
+            "-device", "ivshmem-plain,id=shmem0,memdev=looking-glass",
+            "-display", "none",
+        ))
+    return command
+
+
+def wait_for_socket(path: Path, process: subprocess.Popen[bytes], seconds: float = 15) -> None:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.is_socket():
+            return
+        if process.poll() is not None:
+            raise qemu_failure(int(process.returncode))
+        time.sleep(0.05)
+    raise VmError("QEMU não publicou o transporte local de input")
+
+
+def qemu_failure(status: int) -> VmError:
+    detail = ""
+    try:
+        current_attempt = LOG.read_text(errors="replace").rsplit("=== APX VM v2", 1)[-1]
+        qemu_lines = [
+            line.strip() for line in current_attempt.splitlines()
+            if line.strip().startswith("qemu-system-")
+        ]
+        if qemu_lines:
+            detail = qemu_lines[-1].split(":", 1)[-1].strip()[:300]
+    except OSError:
+        pass
+    suffix = f": {detail}" if detail else ""
+    return VmError(f"QEMU terminou com estado {status}{suffix}")
+
+
+def stop(process: subprocess.Popen[bytes] | None) -> None:
+    if process is None or process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=4)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
+def visible_failure(message: str) -> None:
+    atomic_write(STATE, json.dumps({"schema": 2, "status": "error", "message": message,
+                                    "log": str(LOG)}, sort_keys=True) + "\n")
+    subprocess.run(("/usr/bin/rofi", "-e",
+                    f"APX · VM\n\n{message}\n\nSUPER+E regressa ao HUB.\nDiagnóstico: {LOG}"),
+                   check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def native_client(spice: Path, label: str) -> list[str]:
+    return [
+        str(LOOKING_GLASS), "-f", str(KVMFR), "-F", "-c", str(spice), "-p", "0",
+        "app:allowDMA=yes", "app:framePollInterval=1000", "app:cursorPollInterval=1000",
+        "spice:enable=yes", "win:setGuestRes=no", "win:jitRender=yes",
+        f"win:title=APX Native · {label}", "win:appId=apx-system-vm",
+        "win:ignoreQuit=yes", "win:quickSplash=yes", "win:disableWaitingMessage=no",
+        "input:captureOnFocus=yes", "input:autoCapture=yes", "input:rawMouse=yes",
+        "input:grabKeyboard=yes", "spice:audio=no", "spice:usbAudio=no",
+        "spice:clipboard=no", "clipboard:toVM=no", "clipboard:toLocal=no",
+    ]
+
+
+def run_vm(config: dict[str, object]) -> int:
+    for path in (QEMU, QEMU_IMG, SWTPM, OVMF_CODE, OVMF_VARS):
+        if not path.exists():
+            raise VmError(f"dependência da VM em falta: {path}")
+    if not os.access("/dev/kvm", os.R_OK | os.W_OK):
+        raise VmError("a capacidade KVM não foi entregue ao Environment")
+    for path in (Path("/dev/vfio/vfio"), Path("/dev/vfio/11")):
+        if not path.exists():
+            raise VmError(f"a capacidade VFIO não foi entregue: {path}")
+
+    mode = presentation_mode(config)
+    if mode == NATIVE:
+        if not LOOKING_GLASS.is_file() or not os.access(LOOKING_GLASS, os.X_OK):
+            raise VmError("o cliente Looking Glass certificado não está instalado")
+        if not KVMFR.exists():
+            raise VmError("o framebuffer KVMFR não foi entregue ao Environment")
+
+    plan = resource_plan()
+    STATE_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if LOG.exists() and LOG.stat().st_size > 2 * 1024 * 1024:
+        LOG.replace(LOG.with_name("launcher.previous.log"))
+    log_stream = LOG.open("ab", buffering=0)
+    header = f"\n=== APX VM v2 {time.strftime('%Y-%m-%dT%H:%M:%S%z')} ===\n".encode()
+    log_stream.write(header)
+
+    vm_dir = Path.home() / "VMs" / str(config["directory"])
+    vm_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    lock_stream = (vm_dir / "run.lock").open("w")
+    try:
+        fcntl.flock(lock_stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return 0
+
+    disk, disk_format, cache_options = existing_disk(vm_dir, config)
+    sockets = {"tpm": vm_dir / "swtpm.sock", "spice": vm_dir / "spice.sock"}
+    for endpoint in sockets.values():
+        endpoint.unlink(missing_ok=True)
+    tpm_dir = vm_dir / "tpm2"
+    tpm_dir.mkdir(mode=0o700, exist_ok=True)
+    swtpm: subprocess.Popen[bytes] | None = None
+    qemu: subprocess.Popen[bytes] | None = None
+    client: subprocess.Popen[bytes] | None = None
+
+    def terminate(_signum: int, _frame: object) -> NoReturn:
+        stop(client); stop(qemu); stop(swtpm)
+        raise SystemExit(0)
+
+    previous_term = signal.signal(signal.SIGTERM, terminate)
+    previous_int = signal.signal(signal.SIGINT, terminate)
+    try:
+        if config["tpm"]:
+            swtpm = subprocess.Popen((
+                str(SWTPM), "socket", "--tpm2", "--tpmstate", f"dir={tpm_dir}",
+                "--ctrl", f"type=unixio,path={sockets['tpm']}", "--terminate",
+            ), stdout=log_stream, stderr=subprocess.STDOUT)
+            wait_for_socket(sockets["tpm"], swtpm, 5)
+
+        command = qemu_command(config, plan, mode, vm_dir, disk, disk_format,
+                               cache_options, sockets)
+        state = {"schema": 2, "status": "running", "mode": mode,
+                 "kind": config["kind"], "disk_format": disk_format, "resources": plan}
+        atomic_write(STATE, json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n")
+        log_stream.write(("resource-plan=" + json.dumps(plan, sort_keys=True) + "\n").encode())
+        qemu = subprocess.Popen(command, stdout=log_stream, stderr=subprocess.STDOUT)
+
+        if mode == DIRECT:
+            status = qemu.wait()
+            if status:
+                raise qemu_failure(status)
+            return 0
+
+        wait_for_socket(sockets["spice"], qemu)
+        client = subprocess.Popen(native_client(sockets["spice"], str(config["label"])),
+                                  stdout=log_stream, stderr=subprocess.STDOUT)
+        while True:
+            qemu_status = qemu.poll()
+            client_status = client.poll()
+            if qemu_status is not None:
+                stop(client)
+                if qemu_status:
+                    raise qemu_failure(qemu_status)
+                return 0
+            if client_status is not None:
+                stop(qemu)
+                if client_status:
+                    raise VmError(f"Looking Glass terminou com estado {client_status}")
+                return 0
+            time.sleep(0.1)
+    finally:
+        signal.signal(signal.SIGTERM, previous_term)
+        signal.signal(signal.SIGINT, previous_int)
+        stop(client); stop(qemu); stop(swtpm)
+        for endpoint in sockets.values():
+            endpoint.unlink(missing_ok=True)
+        log_stream.close()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--set-presentation", choices=(DIRECT, NATIVE))
+    parser.add_argument("--set-presentation-and-exit", choices=(DIRECT, NATIVE))
+    arguments = parser.parse_args()
+    config = load_config()
+    if arguments.set_presentation:
+        return set_presentation(config, arguments.set_presentation, False)
+    if arguments.set_presentation_and_exit:
+        return set_presentation(config, arguments.set_presentation_and_exit, True)
+    result = run_vm(config)
+    # Guest shutdown is the end of this dedicated Environment session. There
+    # is no empty Linux desktop behind it; let the existing APX supervisor
+    # restore the Hub through the same compositor-owned path as SUPER+E.
+    subprocess.run(("/usr/bin/hyprctl", "dispatch", "exit"), check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return result
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (VmError, OSError, subprocess.SubprocessError) as error:
+        visible_failure(str(error))
+        subprocess.run(("/usr/bin/hyprctl", "dispatch", "exit"), check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        raise SystemExit(2)

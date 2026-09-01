@@ -1,0 +1,108 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+readonly vm_dir="$HOME/VMs/Ubuntu"
+readonly disk="$vm_dir/Ubuntu.qcow2"
+readonly installer="$vm_dir/Ubuntu.iso"
+readonly nvram="$vm_dir/OVMF_VARS.4m.fd"
+readonly state_dir="$HOME/.local/state/apx-ubuntu-vm"
+readonly log="$state_dir/launcher.log"
+readonly owner_state_dir="$HOME/.local/state/apx-system-vm"
+readonly ready_marker="$owner_state_dir/ready-v1"
+readonly presentation_marker="$owner_state_dir/presentation-ready-v1"
+readonly qmp_socket="$vm_dir/qmp.sock"
+readonly ovmf_code=/usr/share/edk2/x64/OVMF_CODE.4m.fd
+readonly ovmf_vars=/usr/share/edk2/x64/OVMF_VARS.4m.fd
+
+mkdir -p "$vm_dir" "$state_dir" "$owner_state_dir"
+/usr/bin/rm -f -- "$ready_marker" "$ready_marker.tmp" \
+    "$presentation_marker" "$presentation_marker.tmp" "$qmp_socket"
+cleanup() { /usr/bin/rm -f -- "$ready_marker" "$ready_marker.tmp" \
+    "$presentation_marker" "$presentation_marker.tmp" "$qmp_socket"; }
+trap cleanup EXIT INT TERM
+exec 9>"$vm_dir/run.lock"
+/usr/bin/flock -n 9 || exit 0
+[[ -r /dev/kvm && -w /dev/kvm ]] || { printf 'APX: capacidade KVM indisponível.\n' >&2; exit 3; }
+[[ -f $disk ]] || /usr/bin/qemu-img create -f qcow2 "$disk" 120G
+if [[ ! -f $nvram ]]; then
+    /usr/bin/cp --reflink=auto "$ovmf_vars" "$nvram"
+    /usr/bin/chmod 0600 "$nvram"
+fi
+
+allocated_bytes=$(( $(/usr/bin/stat -c %b "$disk") * 512 ))
+boot_policy=menu=on
+[[ -f $installer && $allocated_bytes -lt 536870912 ]] && boot_policy=once=d,menu=on
+
+qemu=(
+    /usr/bin/taskset --cpu-list 0-3,6-9 /usr/bin/qemu-system-x86_64
+    -name "Ubuntu · APX"
+    -machine q35,accel=kvm
+    -cpu host,topoext=on
+    -smp 8,sockets=1,cores=4,threads=2
+    -m 12G
+    -drive "if=pflash,format=raw,readonly=on,file=$ovmf_code"
+    -drive "if=pflash,format=raw,file=$nvram"
+    -drive "if=none,id=system,format=qcow2,cache=writeback,aio=threads,discard=unmap,detect-zeroes=unmap,file=$disk"
+    -device nvme,drive=system,serial=APX-UBUNTU
+    -device vfio-pci,host=01:00.0,multifunction=on,x-vga=on
+    -device vfio-pci,host=01:00.1
+    -device qemu-xhci
+    -device usb-kbd
+    -device usb-mouse
+    -nic user,model=virtio-net-pci
+    -audiodev pipewire,id=audio0
+    -device ich9-intel-hda
+    -device hda-duplex,audiodev=audio0
+    -vga none
+    -device VGA,xres=1920,yres=1080,refresh_rate=120,vgamem_mb=64
+    -display gtk,zoom-to-fit=on,grab-on-hover=off,show-tabs=off
+    -full-screen
+    -qmp "unix:$qmp_socket,server=on,wait=off"
+    -rtc base=utc,clock=host,driftfix=slew
+    -boot "$boot_policy"
+)
+if [[ -f $installer ]]; then
+    qemu+=( -drive "if=none,id=installer,format=raw,readonly=on,file=$installer"
+            -device ide-cd,drive=installer,bus=ide.0 )
+fi
+printf '\n=== APX Ubuntu VM start %(%Y-%m-%dT%H:%M:%S%z)T ===\n' -1 >>"$log"
+"${qemu[@]}" >>"$log" 2>&1 &
+qemu_pid=$!
+trap 'kill "$qemu_pid" 2>/dev/null || true; cleanup' EXIT INT TERM
+/usr/bin/python3 - "$qmp_socket" >>"$log" 2>&1 <<'PY'
+import json, socket, sys, time
+path = sys.argv[1]; deadline = time.monotonic() + 30; connection = socket.socket(socket.AF_UNIX)
+while True:
+    try: connection.connect(path); break
+    except (FileNotFoundError, ConnectionRefusedError):
+        if time.monotonic() >= deadline: raise SystemExit("APX: QMP não ficou disponível")
+        time.sleep(0.05)
+connection.settimeout(0.5); buffer = b""
+def message():
+    global buffer
+    while time.monotonic() < deadline:
+        if b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line: return json.loads(line)
+        try: chunk = connection.recv(4096)
+        except TimeoutError: continue
+        if not chunk: raise SystemExit("APX: QMP terminou durante a inicialização")
+        buffer += chunk
+    raise SystemExit("APX: QMP não respondeu dentro do prazo")
+if "QMP" not in message(): raise SystemExit("APX: saudação QMP inválida")
+def reply():
+    while True:
+        value = message()
+        if "return" in value or "error" in value: return value
+connection.sendall(b'{"execute":"qmp_capabilities"}\n'); reply()
+connection.sendall(b'{"execute":"query-status"}\n'); value = reply(); connection.close()
+if value.get("return", {}).get("status") != "running":
+    raise SystemExit("APX: a VM não ficou em execução")
+PY
+/usr/bin/printf 'apx-system-vm-ready-v1\n' >"$ready_marker.tmp"
+/usr/bin/chmod 0600 "$ready_marker.tmp"
+/usr/bin/mv -f -- "$ready_marker.tmp" "$ready_marker"
+/usr/bin/printf 'apx-system-vm-presentation-ready-v1\n' >"$presentation_marker.tmp"
+/usr/bin/chmod 0600 "$presentation_marker.tmp"
+/usr/bin/mv -f -- "$presentation_marker.tmp" "$presentation_marker"
+wait "$qemu_pid"
