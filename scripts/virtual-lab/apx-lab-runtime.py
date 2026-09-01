@@ -79,7 +79,7 @@ ENVIRONMENT_SHELL_ASSETS = {
     "local/bin/apx-notification-focus-v1": "835cc0302f10f01c2417077884fca7f9b9a6b95b2328ac8d32dccc4e93ca7cc0",
     "local/bin/apx-shell-v1": "19a04a0700f8f9ed512f5b6433a4ea9c0b114222810894095654b36bfc55423e",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f",
+    "quickshell/apx/shell.qml": "2c6b39f50f2228d88320759ee770203c7913549fe32ec35f65616767b79b7f20",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 MAX_WALLPAPER_BYTES = 4 * 1024 * 1024

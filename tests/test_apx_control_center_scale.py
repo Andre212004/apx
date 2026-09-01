@@ -33,13 +33,13 @@ class ControlCenterScaleTests(unittest.TestCase):
         toggle = source.split("function togglePopup", 1)[1].split("function focusEnvironmentMenuAfterOpen", 1)[0]
 
         self.assertIn("popupReveal = 0", show)
-        self.assertIn("popup.visible = true", show)
+        self.assertIn("popup.open = true", show)
         self.assertIn("popupOpenAnimation.restart()", show)
 
         # Switching from one APX menu to another must not destroy/hide the
         # layer surface for a frame before revealing the next menu.
-        switch_path = toggle.split('if (popupKind === kind && popup.visible)', 1)[1]
-        self.assertEqual(switch_path.count("popup.visible = false"), 1)
+        switch_path = toggle.split('if (popupKind === kind && popup.open)', 1)[1]
+        self.assertEqual(switch_path.count("popup.open = false"), 1)
 
     def test_every_keyboard_popup_animates_its_bar_button(self) -> None:
         source = SHELL.read_text()
@@ -63,8 +63,9 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn("acceptedButtons: Qt.LeftButton", bar_button)
         self.assertIn("hoverEnabled: true", bar_button)
         self.assertIn("cursorShape: Qt.PointingHandCursor", bar_button)
-        self.assertIn("onPressed: button.activated()", bar_button)
+        self.assertIn("onClicked: button.activated()", bar_button)
         self.assertNotIn("onTapped: button.activated()", bar_button)
+        self.assertNotIn("onPressed: button.activated()", bar_button)
         self.assertNotIn("HoverHandler {", bar_button)
         self.assertNotIn("TapHandler {", bar_button)
         self.assertIn("scale: pointer.pressed ? 0.96 : 1", bar_button)
@@ -86,7 +87,7 @@ class ControlCenterScaleTests(unittest.TestCase):
             block = source.split(f"id: {button_id}", 1)[1].split("onActivated:", 1)[0]
             self.assertIn(f"alternateLabel: {button_id}.label", block)
             self.assertIn(
-                f'alternateActive: popup.visible && root.popupKind === "{kind}"',
+                f'alternateActive: popup.open && root.popupKind === "{kind}"',
                 block,
             )
             self.assertIn(
@@ -103,7 +104,7 @@ class ControlCenterScaleTests(unittest.TestCase):
         self.assertIn('label: "[|]"', controls)
         self.assertIn('alternateLabel: "[A]"', controls)
         self.assertIn(
-            'alternateActive: popup.visible && root.popupKind === "controls"',
+            'alternateActive: popup.open && root.popupKind === "controls"',
             controls,
         )
         self.assertIn(
@@ -137,11 +138,18 @@ class ControlCenterScaleTests(unittest.TestCase):
 
         popup = source.split("id: popup\n", 1)[1]
         self.assertIn("id: popupHover", popup)
-        self.assertIn("focusable: visible", popup)
+        self.assertIn("property bool open: false", popup)
+        self.assertIn("visible: true", popup)
+        self.assertIn("focusable: open", popup)
+        self.assertIn("mask: Region { item: popupInputRegion }", popup)
+        self.assertIn("id: popupInputRegion", popup)
+        self.assertIn("width: popup.open ? parent.width : 0", popup)
+        self.assertIn("height: popup.open ? parent.height : 0", popup)
+        self.assertIn("visible: popup.open", popup)
         self.assertIn("WlrLayershell.layer: WlrLayer.Overlay", popup)
         self.assertNotIn("popupKeyboardClaiming", source)
         self.assertNotIn("popupKeyboardClaimTimer", source)
-        self.assertIn("visible && root.popupKeyboardRequested", popup)
+        self.assertIn("open && root.popupKeyboardRequested", popup)
         self.assertIn("? WlrKeyboardFocus.Exclusive", popup)
         self.assertNotIn("WlrKeyboardFocus.OnDemand", popup)
         self.assertNotIn("HyprlandFocusGrab", source)
@@ -150,7 +158,11 @@ class ControlCenterScaleTests(unittest.TestCase):
         dismiss = source.split("id: popupDismissLayer", 1)[1].split(
             "id: popup\n", 1
         )[0]
-        self.assertIn("visible: popup.visible", dismiss)
+        self.assertIn("visible: true", dismiss)
+        self.assertIn("mask: Region { item: dismissInputRegion }", dismiss)
+        self.assertIn("id: dismissInputRegion", dismiss)
+        self.assertIn("width: popup.open ? parent.width : 0", dismiss)
+        self.assertIn("height: popup.open ? parent.height : 0", dismiss)
         self.assertIn("WlrLayershell.layer: WlrLayer.Top", dismiss)
         self.assertIn("WlrLayershell.keyboardFocus: WlrKeyboardFocus.None", dismiss)
         self.assertIn("onClicked: root.closePopup()", dismiss)

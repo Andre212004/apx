@@ -11,7 +11,7 @@ active safety blocks, and immediate repository milestone. `AGENTS.md` requires
 future sessions to read both files. The handoff never overrides this canonical
 state; disagreement must be resolved explicitly.
 
-## QuickShell popup interaction candidate — 2026-09-01
+## QuickShell popup interaction physically accepted — 2026-09-01
 
 The owner reported three coupled regressions in the shared QuickShell menus:
 the menu surface appeared too transparent, clicking a bar button did not move
@@ -32,19 +32,24 @@ week. A fresh opening resets the month view and focuses today's exact date.
 The Environments focus list now begins with index `-1`, the active HUB card;
 Down continues into the Environment catalogue and action row.
 
-Bar buttons invoke their toggle on pointer press, before a popup focus change
-can cancel a release-time tap; the TapHandler itself also keeps the pointing
-hand cursor. The display-brightness card no longer carries a one-off blue-grey
-surface and instead uses the shared neutral Control Centre palette.
+The first physical follow-up rejected the press-time `MouseArea` correction.
+After opening a menu, the stationary pointer still changed from a hand to an
+arrow; the next click restored pointer recognition but did not activate the
+button, and only a third click closed the menu. This matches the compositor
+failure mode in which mapping a second layer-shell surface drops pointer focus
+until movement or a consumed click. The stable bar address and a single QML
+pointer handler were therefore insufficient evidence of stable pointer
+ownership.
 
-The remaining same-button second-click failure is addressed at the
-layer-shell boundary without an input shield. The original 46-pixel bar itself
-now uses the Overlay layer alongside the popup. Its real buttons remain directly
-clickable, and the compositor reports the same bar-surface address before and
-after a popup opens, so pointer ownership no longer transfers away from them.
-Within each button, one `MouseArea` now owns hover, cursor and press for the
-whole interaction. This removes the former HoverHandler/TapHandler release
-race which restored the arrow under a stationary pointer.
+The superseding repository candidate keeps the popup and outside-dismissal
+layer surfaces mapped for the complete QuickShell lifetime. While closed,
+explicit zero-sized QuickShell input masks make both surfaces click-through
+and the popup content remains hidden; opening changes only their visual/input
+regions and keyboard interactivity, rather than creating another compositor
+surface under a live pointer gesture. Bar buttons still have one `MouseArea`,
+but activation now occurs on the completed click rather than on press, so no
+focus or input-region transition occurs between the press and release. The
+display-brightness card remains on the shared neutral Control Centre palette.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -56,18 +61,35 @@ toggle behavior. The redundant `HyprlandFocusGrab` is removed because its
 state transition reset the cursor to an arrow; dismissal is owned entirely by
 the explicit surface, bar background, Escape handling and same-button toggle.
 
-The owner explicitly authorized a shell-only physical exception from the
-dirty-checkout refusal. The current Hub file and source match SHA-256
+The owner explicitly authorized the preceding shell-only physical exception
+from the dirty-checkout refusal. That rejected Hub version matched SHA-256
 `e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f`;
 rollback is `/var/lib/apx/backups/20260901T010958Z-quickshell-popup-interaction-v1/`.
-The targeted 44-test group, exact live topology including the stable 1270×46
-Overlay bar, one-process QuickShell restart and Host health checks
-passed; the complete repository suite passes
-1126 tests with 11 expected skips. No registered Development Environment
-exists, and the seed, installed runtime, stopped Environments and every other
-dirty-checkout change were intentionally not installed. A physical owner
-click/keyboard check remains acceptance evidence rather than an automated
-claim.
+Its targeted 44-test group, topology and Host health checks passed, but the
+owner's stationary-pointer test rejected it. The superseding repository
+source is SHA-256
+`2c6b39f50f2228d88320759ee770203c7913549fe32ec35f65616767b79b7f20`;
+it is now installed only in the active Hub under the owner's fresh explicit
+approval. The first two adapter attempts observed the terminating old
+QuickShell process before the replacement had published layers; their topology
+gate failed and both restored the prior source automatically. The corrected
+adapter requires a different single PID plus a live QuickShell layer before
+continuing. Its successful rollback point is
+`/var/lib/apx/backups/20260901T012510Z-quickshell-popup-interaction-v1/`.
+
+Source and live Hub hashes match. All four QuickShell layer addresses remain
+identical while Environments changes from closed 300×330 to open 430×546; the
+1270×46 bar and 1280×674 dismissal surface also remain the same compositor
+objects. IPC open/close, the final closed state, one QuickShell process, zero
+failed Host units and healthy APX status passed. The complete repository suite
+passes 1126 tests with 11 expected skips; deployment-shell syntax, Python
+compilation and diff whitespace validation also pass. The seed, installed
+runtime and stopped Environments remain untouched. Physical stationary-pointer
+second-click acceptance then passed: without moving the pointer after opening
+a menu, the second click on the same bar button closed it normally and the hand
+cursor remained usable. This owner observation accepts the new pointer path.
+The prior automated keyboard-focus, outside-dismissal and IPC checks remain
+valid; no automated claim replaces the physical click evidence.
 
 The compositor fallback behind QuickShell is deliberately plain black. The
 active Lua and legacy Hyprland configurations set the default wallpaper to

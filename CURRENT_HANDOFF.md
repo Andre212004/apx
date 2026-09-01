@@ -1,6 +1,6 @@
 # APX Current Handoff
 
-QuickShell popup interaction correction — 2026-09-01: the owner reported that
+QuickShell popup interaction accepted — 2026-09-01: the owner reported that
 menus remained visually transparent, mouse-opened Calendar/Environments left
 keyboard input in the terminal, and an outside click did not dismiss the menu.
 The shared shell now uses consistent `#d90a1014` surfaces (85% alpha), neutral
@@ -12,20 +12,23 @@ grid has a separate matte `root.card` surface so weekday labels and dates remain
 legible over the translucent menu. Calendar opens on today's date. Left/right
 stay within the current control row; up/down change rows and move by seven days
 inside the month grid. Environments opens with the active HUB card focused.
-The original bar itself now lives permanently on the Overlay layer alongside
-the popup. No auxiliary surface covers its buttons, and its compositor address
-remains identical before and after a popup opens; pointer ownership therefore
-stays with the real button through the second click. Each button now uses one
-`MouseArea` for hover, hand cursor, press animation and activation; the former
-competing Hover/Tap handlers can no longer reset the cursor to an arrow on
-release. The redundant `HyprlandFocusGrab`, which still reset the compositor
-cursor when the popup changed state, is removed; the dedicated outside-click
-surface remains the dismissal authority. The
-display-brightness card uses the same neutral button surface and outline as the
-other controls.
+The owner's physical follow-up rejected the prior pointer claim: after the
+first click opened a menu, the stationary cursor still became an arrow, the
+second click only restored recognition, and the third click closed the menu.
+This is the known layer-shell pattern where mapping another surface drops the
+compositor's pointer target until movement or a consumed click. A stable bar
+address and one `MouseArea` did not prevent that compositor transition.
 
-At the owner's explicit exception to the dirty-checkout rule, the current
-`shell.qml` was installed in the active Hub. Source and live Hub both match
+The superseding repository candidate therefore keeps both the popup and the
+outside-dismissal surfaces permanently mapped. Explicit zero-sized input masks
+make them click-through while closed, and the popup visual stays hidden;
+opening changes masks/content instead of creating a new surface. The bar's one
+`MouseArea` now activates only after release, so the complete click finishes
+before menu focus and input regions change. `HyprlandFocusGrab` remains absent,
+and the display-brightness card retains the neutral style.
+
+At the owner's explicit exception to the dirty-checkout rule, the preceding
+`shell.qml` was installed in the active Hub. That rejected version matched
 SHA-256 `e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f`;
 the immediate predecessor is recoverable from
 `/var/lib/apx/backups/20260901T010958Z-quickshell-popup-interaction-v1/`.
@@ -34,10 +37,29 @@ The targeted 44-test group passed, the live compositor exposed the expected
 application-area Top dismissal surface, exactly one QuickShell returned, Hub
 remains the only running Environment and no unit is failed. The complete
 repository suite passes 1126 tests with 11
-expected skips. No registered Development Environment exists. Per the
-owner's boundary, no other dirty-checkout change was installed and the active
-seed/runtime remained untouched. The remaining physical acceptance is one
-owner click/keyboard check; repository-wide publication is the next milestone.
+expected skips, but the physical stationary-pointer acceptance failed. The
+new repository candidate is SHA-256
+`2c6b39f50f2228d88320759ee770203c7913549fe32ec35f65616767b79b7f20`
+and is installed only in the active Hub under fresh owner approval. Two initial
+adapter runs saw the terminating prior QuickShell PID before the replacement
+had published a layer; both failed their topology gate and automatically
+restored the preceding source. The corrected readiness gate requires a new
+single PID and a live layer. The successful rollback point is
+`/var/lib/apx/backups/20260901T012510Z-quickshell-popup-interaction-v1/`.
+
+Source and live hashes match. The same four compositor layer addresses exist
+before and after the Environments popup changes from closed 300×330 to open
+430×546; the 1270×46 bar and full 1280×674 dismissal surface are also stable.
+IPC opening/closing left the popup closed, exactly one QuickShell runs, Host
+has zero failed units and APX is healthy. The complete repository suite passes
+1126 tests with 11 expected skips; deployment-shell syntax, Python compilation
+and diff whitespace validation also pass. The seed/runtime and stopped
+Environments remain untouched. The next evidence was the owner's stationary
+same-button second-click and keyboard check. The owner then confirmed the exact
+stationary-pointer path works: the menu opens on the first click and closes on
+the second click without moving the mouse. The new pointer interaction is
+therefore physically accepted; the earlier automated keyboard-focus and
+outside-dismissal checks remain valid.
 
 Hyprland's native background is now a plain-black safety layer behind
 QuickShell. Both active Lua and legacy fallback disable the default wallpaper,

@@ -935,7 +935,7 @@ ShellRoot {
 
     function focusCalendarMenuAfterOpen(selectToday) {
         Qt.callLater(function() {
-            if (root.popupKind !== "calendar" || !popup.visible || root.calendarEditor) return
+            if (root.popupKind !== "calendar" || !popup.open || root.calendarEditor) return
             if (selectToday === true) {
                 root.calendarDate = new Date(root.currentDate.getFullYear(),
                                              root.currentDate.getMonth(),
@@ -958,7 +958,7 @@ ShellRoot {
         animatedBarOpenKind = ""
         animatedBarCloseKind = ""
         popupOpenAnimation.stop()
-        popup.visible = false
+        popup.open = false
         popupReveal = 1
         popupKind = ""
         controlsWifiOpen = false
@@ -976,17 +976,17 @@ ShellRoot {
     function showPopup() {
         popupOpenAnimation.stop()
         popupReveal = 0
-        popup.visible = true
+        popup.open = true
         popupOpenAnimation.restart()
     }
 
     function togglePopup(kind, target, keyboardRequested) {
-        if (popupKind === kind && popup.visible) {
+        if (popupKind === kind && popup.open) {
             popupKeyboardRequested = false
             animatedBarOpenKind = ""
             animatedBarCloseKind = kind
             barAnimationReset.restart()
-            popup.visible = false
+            popup.open = false
             popupKind = ""
             if (kind === "environments") environmentKeyboardFocus = false
             if (kind === "calendar") calendarFocusAction = ({ kind: "", key: "" })
@@ -1029,7 +1029,7 @@ ShellRoot {
 
     function focusEnvironmentMenuAfterOpen() {
         Qt.callLater(function() {
-            if (root.popupKind !== "environments" || !popup.visible) return
+            if (root.popupKind !== "environments" || !popup.open) return
             root.environmentKeyboardFocus = true
             root.environmentFocusIndex = -1
             environmentMenu.forceActiveFocus()
@@ -2522,7 +2522,7 @@ ShellRoot {
         }
 
         function popupStatus(): string {
-            return JSON.stringify({ kind: root.popupKind, visible: popup.visible,
+            return JSON.stringify({ kind: root.popupKind, visible: popup.open,
                                     width: popup.implicitWidth, height: popup.implicitHeight,
                                     calendar_focus_kind: root.calendarFocusAction.kind,
                                     calendar_focus_key: root.calendarFocusAction.key,
@@ -2857,9 +2857,9 @@ ShellRoot {
             acceptedButtons: Qt.LeftButton
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            // One pointer owner keeps the hand cursor after release. Acting on
-            // press also avoids a popup transition canceling a completed click.
-            onPressed: button.activated()
+            // Complete the click on the permanently mapped bar surface before
+            // changing menu focus or input regions.
+            onClicked: button.activated()
         }
     }
 
@@ -3120,7 +3120,7 @@ ShellRoot {
 
             MouseArea {
                 anchors.fill: parent
-                enabled: popup.visible
+                enabled: popup.open
                 onClicked: root.closePopup()
             }
 
@@ -3133,7 +3133,7 @@ ShellRoot {
                     id: calendarButton
                     label: "[ " + root.clockText + " ]"
                     alternateLabel: calendarButton.label
-                    alternateActive: popup.visible && root.popupKind === "calendar"
+                    alternateActive: popup.open && root.popupKind === "calendar"
                     animateActivation: root.animatedBarOpenKind === "calendar"
                     animateDeactivation: root.animatedBarCloseKind === "calendar"
                     onActivated: root.togglePopup("calendar", this, true)
@@ -3145,7 +3145,7 @@ ShellRoot {
                 anchors.centerIn: parent
                 label: root.isHub ? "[ HUB · ENVIRONMENTS ]" : "[ " + root.environmentLabel + " · VOLTAR AO HUB ]"
                 alternateLabel: environmentButton.label
-                alternateActive: popup.visible && root.popupKind === "environments"
+                alternateActive: popup.open && root.popupKind === "environments"
                 animateActivation: root.animatedBarOpenKind === "environments"
                 animateDeactivation: root.animatedBarCloseKind === "environments"
                 onActivated: {
@@ -3164,7 +3164,7 @@ ShellRoot {
                     visible: root.isHub
                     label: root.modelStoreState.state === "active" ? "[ IA ON ]" : (root.modelStoreState.state === "safe-to-remove" ? "[ SSD OK ]" : "[ IA OFF ]")
                     alternateLabel: modelStoreButton.label
-                    alternateActive: popup.visible && root.popupKind === "model"
+                    alternateActive: popup.open && root.popupKind === "model"
                     animateActivation: root.animatedBarOpenKind === "model"
                     animateDeactivation: root.animatedBarCloseKind === "model"
                     onActivated: root.togglePopup("model", this, true)
@@ -3177,7 +3177,7 @@ ShellRoot {
                     id: batteryButton
                     label: "[ BAT " + root.batteryText + " ]"
                     alternateLabel: batteryButton.label
-                    alternateActive: popup.visible && root.popupKind === "battery"
+                    alternateActive: popup.open && root.popupKind === "battery"
                     animateActivation: root.animatedBarOpenKind === "battery"
                     animateDeactivation: root.animatedBarCloseKind === "battery"
                     onActivated: root.togglePopup("battery", this, true)
@@ -3186,7 +3186,7 @@ ShellRoot {
                     id: controlCenterButton
                     label: "[|]"
                     alternateLabel: "[A]"
-                    alternateActive: popup.visible && root.popupKind === "controls"
+                    alternateActive: popup.open && root.popupKind === "controls"
                     animateActivation: root.animatedBarOpenKind === "controls"
                     animateDeactivation: root.animatedBarCloseKind === "controls"
                     onActivated: root.togglePopup("controls", this, true)
@@ -3303,20 +3303,28 @@ ShellRoot {
         easing.type: Easing.OutCubic
     }
 
-    // Keep application windows clickable only after the menu is dismissed.
-    // This input-only surface catches the first outside click while remaining
-    // below the Overlay popup and below the reserved bar area.
+    // Keep this layer mapped for the lifetime of QuickShell. Hyprland can drop
+    // pointer focus when a click maps a second layer surface, which consumes
+    // the next stationary click. The zero-sized mask makes the already-mapped
+    // layer input-transparent while the menu is closed.
     PanelWindow {
         id: popupDismissLayer
-        visible: popup.visible
+        visible: true
         anchors { left: true; right: true; bottom: true }
         implicitHeight: screen ? Math.max(0, screen.height - bar.implicitHeight) : 0
         exclusionMode: ExclusionMode.Ignore
         exclusiveZone: 0
         focusable: false
         color: "transparent"
+        mask: Region { item: dismissInputRegion }
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        Item {
+            id: dismissInputRegion
+            width: popup.open ? parent.width : 0
+            height: popup.open ? parent.height : 0
+        }
 
         MouseArea {
             anchors.fill: parent
@@ -3326,12 +3334,17 @@ ShellRoot {
 
     PanelWindow {
         id: popup
+        property bool open: false
         anchors { top: true; left: true }
         margins { top: 6; left: root.popupLeftMargin }
         exclusiveZone: 0
-        focusable: visible
+        // The window itself never unmaps. Only its visual and input mask open,
+        // so the bar keeps the compositor's pointer focus after activation.
+        visible: true
+        focusable: open
+        mask: Region { item: popupInputRegion }
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: visible && root.popupKeyboardRequested
+        WlrLayershell.keyboardFocus: open && root.popupKeyboardRequested
                                      ? WlrKeyboardFocus.Exclusive
                                      : WlrKeyboardFocus.None
         implicitWidth: root.popupKind === "calendar" ? 480
@@ -3347,7 +3360,6 @@ ShellRoot {
                                                              : ((root.controlsAudioOpen || root.controlsMicrophoneOpen) ? 232
                                                                 : (root.controlsBluetoothOpen ? 320 : 480)) * root.controlCenterScale)
                                                           : (root.popupKind === "model" ? 370 : (root.popupKind === "environments" ? root.environmentPopupHeight : 330)))
-        visible: false
         color: "transparent"
         // A layer-shell surface can accept both pointer and keyboard input
         // even when opened by an IPC shortcut, which avoids the xdg_popup
@@ -3355,7 +3367,7 @@ ShellRoot {
 
         Shortcut {
             sequence: "Escape"
-            enabled: popup.visible && !root.wifiPasswordVisible
+            enabled: popup.open && !root.wifiPasswordVisible
             onActivated: {
                 if (root.popupKind === "calendar" && root.calendarEditor)
                     root.cancelCalendarEditor()
@@ -3364,8 +3376,15 @@ ShellRoot {
             }
         }
 
+        Item {
+            id: popupInputRegion
+            width: popup.open ? parent.width : 0
+            height: popup.open ? parent.height : 0
+        }
+
         Rectangle {
             id: popupBackground
+            visible: popup.open
             anchors.left: parent.left
             anchors.top: parent.top
             width: root.popupKind === "controls" ? parent.width / root.controlCenterScale : parent.width
@@ -5049,10 +5068,10 @@ ShellRoot {
                             BounceMouseArea {
                                 id: terminalMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                popup.visible = false
-                                if (root.isHub) {
-                                    if (!hostConsoleProcess.running) hostConsoleProcess.running = true
-                                } else if (!environmentFilesProcess.running) environmentFilesProcess.running = true
+                                    popup.open = false
+                                    if (root.isHub) {
+                                        if (!hostConsoleProcess.running) hostConsoleProcess.running = true
+                                    } else if (!environmentFilesProcess.running) environmentFilesProcess.running = true
                                 }
                             }
                         }
@@ -5070,7 +5089,7 @@ ShellRoot {
                             Text { anchors.right: parent.right; anchors.rightMargin: 11; anchors.verticalCenter: parent.verticalCenter; text: "SUPER+M"; color: root.textDim; font.family: "Adwaita Mono"; font.pixelSize: root.menuMetaSize }
                             BounceMouseArea {
                                 id: environmentsControlMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { popup.visible = false; if (!hostExitProcess.running) hostExitProcess.running = true }
+                                onClicked: { popup.open = false; if (!hostExitProcess.running) hostExitProcess.running = true }
                             }
                         }
                     }
@@ -5097,7 +5116,7 @@ ShellRoot {
                             border.width: 1; border.color: root.controlButtonOutline
                             Text { anchors.centerIn: parent; text: "Bloquear"; color: root.textMain; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             BounceMouseArea { id: lockMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
-                                popup.visible = false
+                                popup.open = false
                                 if (!lockProcess.running) lockProcess.running = true
                             } }
                         }
@@ -5125,7 +5144,7 @@ ShellRoot {
                             border.width: 1; border.color: root.controlButtonOutline
                             Text { anchors.centerIn: parent; text: root.isHub ? "Update" : "Apps"; color: root.cyan; font.family: "Adwaita Mono"; font.pixelSize: root.menuBodySize; font.bold: true }
                             BounceMouseArea { id: updateMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: {
-                                popup.visible = false
+                                popup.open = false
                                 if (root.isHub) {
                                     if (!updateUiProcess.running) updateUiProcess.running = true
                                 } else if (!environmentAppsProcess.running) environmentAppsProcess.running = true

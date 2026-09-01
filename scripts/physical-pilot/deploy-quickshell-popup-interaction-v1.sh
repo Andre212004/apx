@@ -10,8 +10,8 @@ readonly repository=/root/apx-host-development-mode-v1/apx
 readonly source_ui=$repository/config/environment-shell-v1/quickshell/apx/shell.qml
 readonly hub_ui=/var/lib/apx/environments/hub/home/apx/.config/quickshell/apx/shell.qml
 readonly hub_registration=/var/lib/apx/environments/hub/registration.json
-readonly source_sha256=e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f
-readonly previous_sha256=159837574174b30349ab487c5519615f20d10997ad66941cfcadad627058f243
+readonly source_sha256=2c6b39f50f2228d88320759ee770203c7913549fe32ec35f65616767b79b7f20
+readonly previous_sha256=e2de7c4a6f46af0138dfa8d79b8652b69f79422d15073bad4760e56ac053965f
 readonly backup="/var/lib/apx/backups/$(date -u +%Y%m%dT%H%M%SZ)-quickshell-popup-interaction-v1"
 
 fail() { echo "APX QuickShell popup deployment refused: $*" >&2; exit 2; }
@@ -62,6 +62,11 @@ trap rollback ERR
 
 # Preserve the live file inode because the Hub home is already visible to the
 # running session. The supervised launcher recreates QuickShell afterward.
+previous_shell_pid=$(
+    /usr/bin/systemd-run -M apx-hub --uid=apx --pipe --wait --quiet \
+        /usr/bin/bash -lc 'pgrep -x quickshell | head -n1'
+)
+[[ $previous_shell_pid =~ ^[0-9]+$ ]] || fail 'active QuickShell PID is unavailable'
 /usr/bin/cp -- "$source_ui" "$hub_ui"
 /usr/bin/chown 1000:1000 "$hub_ui"
 /usr/bin/chmod 0600 "$hub_ui"
@@ -71,7 +76,19 @@ restart_shell
 ready=no
 for _ in {1..100}; do
     if /usr/bin/systemd-run -M apx-hub --uid=apx --pipe --wait --quiet \
-            /usr/bin/bash -lc 'test "$(pgrep -x quickshell | wc -l)" -eq 1' \
+            /usr/bin/bash -lc '
+                pid=$(pgrep -x quickshell)
+                test $(wc -w <<<"$pid") -eq 1 && test "$pid" != "$1" || exit 1
+                export XDG_RUNTIME_DIR=/run/apx/session-1000
+                for socket in "$XDG_RUNTIME_DIR"/hypr/*/.socket.sock; do
+                    test -S "$socket" || continue
+                    export HYPRLAND_INSTANCE_SIGNATURE=$(basename "$(dirname "$socket")")
+                    /usr/bin/hyprctl layers -j \
+                        | /usr/bin/grep -q quickshell \
+                        && exit 0
+                done
+                exit 1
+            ' bash "$previous_shell_pid" \
             >/dev/null 2>&1; then
         ready=yes
         break
@@ -79,11 +96,47 @@ for _ in {1..100}; do
     /usr/bin/sleep 0.1
 done
 if [[ $ready != yes ]]; then
-    echo 'APX QuickShell popup deployment failed: exactly one supervised QuickShell did not return' >&2
+    echo 'APX QuickShell popup deployment failed: a new supervised process with a live layer did not return' >&2
     false
 fi
 
 /usr/bin/cmp -- "$source_ui" "$hub_ui"
+
+closed_layers=$(
+    /usr/bin/systemd-run -M apx-hub --uid=apx --pipe --wait --quiet \
+        /usr/bin/bash -lc '
+            export XDG_RUNTIME_DIR=/run/apx/session-1000
+            for socket in "$XDG_RUNTIME_DIR"/hypr/*/.socket.sock; do
+                test -S "$socket" || continue
+                export HYPRLAND_INSTANCE_SIGNATURE=$(basename "$(dirname "$socket")")
+                exec /usr/bin/hyprctl layers -j
+            done
+            exit 1
+        '
+)
+/usr/bin/python3 -c '
+import json, sys
+value = json.load(sys.stdin)
+print(json.dumps([
+    {"level": level, "address": layer.get("address"), "x": layer.get("x"),
+     "y": layer.get("y"), "w": layer.get("w"), "h": layer.get("h")}
+    for monitor in value.values()
+    for level, entries in monitor.get("levels", {}).items()
+    for layer in entries if layer.get("namespace") == "quickshell"
+], sort_keys=True))
+assert any(layer.get("namespace") == "quickshell" and layer.get("w") == 300
+           and layer.get("h") == 330
+           for monitor in value.values()
+           for layer in monitor.get("levels", {}).get("3", []))
+assert any(layer.get("namespace") == "quickshell"
+           and layer.get("w", 0) > 1000 and layer.get("h") == 46
+           for monitor in value.values()
+           for layer in monitor.get("levels", {}).get("3", []))
+assert any(layer.get("namespace") == "quickshell"
+           and layer.get("w", 0) > 1000 and layer.get("h", 0) > 500
+           for monitor in value.values()
+           for layer in monitor.get("levels", {}).get("2", []))
+' <<<"$closed_layers"
 
 popup_status=$(
     /usr/bin/systemd-run -M apx-hub --uid=apx --pipe --wait --quiet \
@@ -127,9 +180,9 @@ assert any(layer.get("namespace") == "quickshell"
            for layer in monitor.get("levels", {}).get("2", []))
 ' <<<"$layers"
 
-# The transparent Top-layer input surface is physically below the Overlay menu
-# and covers the application area. The targeted tests prove its MouseArea calls
-# closePopup; toggle the same button here to prove the live close path as well.
+# The popup and transparent Top-layer input surface existed before the menu
+# opened. Their closed masks are empty; opening only activates their input
+# regions. Toggle the same button here to prove the live close path as well.
 dismiss_status=$(
     /usr/bin/systemd-run -M apx-hub --uid=apx --pipe --wait --quiet \
         /usr/bin/bash -lc '
