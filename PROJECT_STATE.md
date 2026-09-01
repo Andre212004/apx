@@ -38,11 +38,10 @@ hand cursor. The display-brightness card no longer carries a one-off blue-grey
 surface and instead uses the shared neutral Control Centre palette.
 
 The remaining same-button second-click failure is addressed at the
-layer-shell boundary. While a popup is visible, a transparent Overlay surface
-covers the 46-pixel bar and contains input targets mapped exactly to Calendar,
-Environments, Model, Battery and Control Centre. Those targets retain the hand
-cursor for press and release, then close the active menu or switch to another;
-the focus grab explicitly includes both auxiliary input surfaces.
+layer-shell boundary without an input shield. The original 46-pixel bar itself
+now uses the Overlay layer alongside the popup. Its real buttons remain directly
+clickable, and the compositor reports the same bar-surface address before and
+after a popup opens, so pointer ownership no longer transfers away from them.
 
 Every mouse or IPC bar opening now requests exclusive layer-shell keyboard
 focus for the menu lifetime. Outside-click dismissal no longer depends on an
@@ -55,16 +54,24 @@ boundary.
 
 The owner explicitly authorized a shell-only physical exception from the
 dirty-checkout refusal. The current Hub file and source match SHA-256
-`416b672081ef52eb2ed05bd4c9c8156c6a2d29c40c9a9eeda5699a54b02f6ab6`;
-rollback is `/var/lib/apx/backups/20260901T004828Z-quickshell-popup-interaction-v1/`.
-The targeted 42-test group, exact live topology including the 1270×46 Overlay
-bar-input surface, one-process QuickShell restart and Host health checks
+`a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d`;
+rollback is `/var/lib/apx/backups/20260901T010236Z-quickshell-popup-interaction-v1/`.
+The targeted 43-test group, exact live topology including the stable 1270×46
+Overlay bar, one-process QuickShell restart and Host health checks
 passed; the complete repository suite passes
-1124 tests with 11 expected skips. No registered Development Environment
+1125 tests with 11 expected skips. No registered Development Environment
 exists, and the seed, installed runtime, stopped Environments and every other
 dirty-checkout change were intentionally not installed. A physical owner
 click/keyboard check remains acceptance evidence rather than an automated
 claim.
+
+Mako no longer retains terminal notifications indefinitely. A user-owned
+watcher consumes Hyprland `activewindow` events and dismisses only notifications
+whose application is `kitty` or `Alacritty` when that terminal is visited. A
+matching Mako criterion enforces an 8-second fallback for notifications emitted
+while the terminal is already focused. The live focus and timeout paths passed;
+rollback is
+`/var/lib/apx/backups/20260901T005931Z-terminal-notification-policy-v1/`.
 
 ## System VM v2 repository candidate — 2026-08-24
 

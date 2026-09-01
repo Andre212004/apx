@@ -83,13 +83,17 @@ cursor is declared on both hover and press handlers. The display-brightness
 card now uses the shared neutral Control Centre surface and outline rather than
 its former separate blue-grey colour.
 
-Because opening an Overlay popup can transfer pointer ownership away from the
-Top-layer bar, a transparent 46-pixel Overlay input surface remains over the
-bar for the popup lifetime. Its five zones are mapped directly from the real
-popup buttons, keep the pointing-hand cursor for the full press/release cycle,
-and close or switch the popup only after the click completes. The live
-compositor exposes this surface as `1270×46`, above the original bar and
-separate from both the menu and outside-click dismissal surface.
+Because opening an Overlay popup transferred pointer ownership away from the
+Top-layer bar, the original 46-pixel bar now lives on the Overlay layer too.
+There is no input shield over it: its real buttons remain directly clickable
+and the live compositor keeps the same `1270×46` surface address before and
+after opening a menu. The popup and outside-click dismissal surface remain
+separate.
+
+Terminal notifications are bounded as well. A local Hyprland focus watcher
+dismisses only `kitty` and `Alacritty` notifications when their terminal gains
+focus, and matching Mako criteria enforce an 8-second fallback when a
+notification arrives while that terminal is already active.
 
 Application windows use the same one-pixel opaque `#26343a` border as the
 QuickShell bar. Active and inactive windows deliberately share that neutral
@@ -119,7 +123,7 @@ popup/button active-state mappings. They also cover opaque menu colour,
 exclusive keyboard focus, the outside-click dismissal layer and the stable
 Overlay bar-button targets. Physical owner
 acceptance remains the final check for each key chord and pointer interaction.
-The complete repository suite passes 1124 tests with 11 expected skips. The
+The complete repository suite passes 1125 tests with 11 expected skips. The
 visual wallpaper layer was captured in the active Hub; an earlier final menu
 capture was interrupted by the normal protected session lock and no
 authentication bypass was attempted.

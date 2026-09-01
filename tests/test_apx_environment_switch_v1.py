@@ -522,7 +522,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn('menuContent.implicitHeight > popupBackground.height - 20', source)
         self.assertIn('WlrLayershell.keyboardFocus:', source)
         self.assertIn('HyprlandFocusGrab {', source)
-        self.assertIn('windows: [bar, popup, popupBarInputLayer, popupDismissLayer]', source)
+        self.assertIn('windows: [bar, popup, popupDismissLayer]', source)
         self.assertIn('id: popupDismissLayer', source)
         self.assertIn('WlrLayershell.layer: WlrLayer.Top', source)
         self.assertIn('onClicked: root.closePopup()', source)
@@ -671,7 +671,7 @@ class EnvironmentSwitchV1Tests(unittest.TestCase):
         self.assertIn('enabled: root.sessionKindReady && !root.environmentSwitchPending', source)
         self.assertIn('import Quickshell.Hyprland', source)
         self.assertIn('HyprlandFocusGrab {', source)
-        self.assertIn('windows: [bar, popup, popupBarInputLayer, popupDismissLayer]', source)
+        self.assertIn('windows: [bar, popup, popupDismissLayer]', source)
         self.assertIn('id: popupDismissLayer', source)
         self.assertIn('columns: 2', source)
 

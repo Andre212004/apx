@@ -12,28 +12,37 @@ grid has a separate matte `root.card` surface so weekday labels and dates remain
 legible over the translucent menu. Calendar opens on today's date. Left/right
 stay within the current control row; up/down change rows and move by seven days
 inside the month grid. Environments opens with the active HUB card focused.
-Bar buttons open on pointer press. While a popup is visible, a dedicated
-transparent Overlay input surface mirrors the five popup-button rectangles
-above the bar, keeps the pointing-hand cursor through the complete second
-click, and closes or switches the menu on release. This avoids losing the
-second click when pointer ownership moves between layer-shell surfaces. The
+The original bar itself now lives permanently on the Overlay layer alongside
+the popup. No auxiliary surface covers its buttons, and its compositor address
+remains identical before and after a popup opens; pointer ownership therefore
+stays with the real button through the second click. The
 display-brightness card uses the same neutral button surface and outline as the
 other controls.
 
 At the owner's explicit exception to the dirty-checkout rule, only the current
 `shell.qml` was installed in the active Hub. Source and live Hub both match
-SHA-256 `416b672081ef52eb2ed05bd4c9c8156c6a2d29c40c9a9eeda5699a54b02f6ab6`;
+SHA-256 `a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d`;
 the immediate predecessor is recoverable from
-`/var/lib/apx/backups/20260901T004828Z-quickshell-popup-interaction-v1/`.
+`/var/lib/apx/backups/20260901T010236Z-quickshell-popup-interaction-v1/`.
 The targeted 42-test group passed, the live compositor exposed the expected
-430-pixel Overlay menu, the 1270×46 Overlay bar-input surface and the full
+430-pixel Overlay menu, the stable 1270×46 Overlay bar and the full
 application-area Top dismissal surface, exactly one QuickShell returned, Hub
 remains the only running Environment and no unit is failed. The complete
-repository suite passes 1124 tests with 11
+repository suite passes 1125 tests with 11
 expected skips. No registered Development Environment exists. Per the
 owner's boundary, no other dirty-checkout change was installed and the active
 seed/runtime remained untouched. The remaining physical acceptance is one
 owner click/keyboard check; repository-wide publication is the next milestone.
+
+Terminal notification cleanup — 2026-09-01: Mako's default zero timeout left
+old Codex approval notifications permanently visible under `app_name: kitty`
+(the current terminal replacing Alacritty). The Environment shell now starts a
+non-privileged Hyprland event watcher which dismisses only `kitty`/`Alacritty`
+notifications when that terminal gains focus. Matching notifications also
+override application-supplied infinite timeouts with an 8-second fallback.
+The active Hub has the Mako config, watcher and launcher line only; focus
+dismissal and the already-focused timeout both passed. Live backup is
+`/var/lib/apx/backups/20260901T005931Z-terminal-notification-policy-v1/`.
 
 System VM v2 physical reset — 2026-08-24: the owner rejected the
 accumulated VM opening path and requested a simple, near-native rebuild. The

@@ -88,6 +88,8 @@ start_desktop_service '^/usr/lib/xdg-desktop-portal-hyprland' \
 start_desktop_service '^/usr/lib/xdg-desktop-portal-gtk' \
     /usr/lib/xdg-desktop-portal-gtk
 start_desktop_service '^/usr/bin/mako([[:space:]]|$)' /usr/bin/mako
+start_desktop_service '[/]apx-notification-focus-v1([[:space:]]|$)' \
+    /home/apx/.local/bin/apx-notification-focus-v1
 start_desktop_service '^/usr/lib/hyprpolkitagent/hyprpolkitagent' \
     /usr/lib/hyprpolkitagent/hyprpolkitagent
 start_desktop_service '^/usr/bin/udiskie([[:space:]]|$)' /usr/bin/udiskie --automount --no-tray

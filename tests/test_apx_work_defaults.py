@@ -57,6 +57,20 @@ class WorkDefaultsTests(unittest.TestCase):
         self.assertIn("apx-shell-launcher-v1.lock", source)
         self.assertIn("/usr/bin/flock -n 9", source)
 
+    def test_terminal_notifications_expire_and_clear_when_refocused(self) -> None:
+        launcher = (SHELL / "local/bin/apx-shell-v1").read_text()
+        watcher = (SHELL / "local/bin/apx-notification-focus-v1").read_text()
+        mako = (SHELL / "mako/config").read_text()
+
+        self.assertIn("/home/apx/.local/bin/apx-notification-focus-v1", launcher)
+        self.assertIn('TERMINAL_APPS = {"kitty", "alacritty"}', watcher)
+        self.assertIn('line.startswith("activewindow>>")', watcher)
+        self.assertIn('[MAKOCTL, "dismiss", "-n", str(notification_id), "--no-history"]', watcher)
+        for app_name in ("kitty", "Alacritty", "alacritty"):
+            self.assertIn(f"[app-name={app_name}]", mako)
+        self.assertEqual(mako.count("default-timeout=8000"), 3)
+        self.assertEqual(mako.count("ignore-timeout=1"), 3)
+
     def test_wallpapers_rotate_on_a_noninteractive_background_layer(self) -> None:
         source = (SHELL / "quickshell/apx/shell.qml").read_text()
         for wallpaper in ("atlantic-coast.png", "alpine-lake.png", "rainforest-stream.png"):

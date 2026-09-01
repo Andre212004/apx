@@ -69,15 +69,17 @@ ENVIRONMENT_SHELL_ASSETS = {
     "hypr/hyprlock.conf": "5dfd13d9c23c602a24dfc69c416550425069cf47876cb5ccc4555a29681dc9a0",
     "hypr/hyprland.lua": "5990556173a4958a6e2d7a8d3a321ea92442174098c21ee0076678c0ae29a5ca",
     "hyprland/hyprland.conf": "7c571ef6e748635d65545f68c01a7253d94db21c355bdaeca8e9284a509877ae",
+    "mako/config": "53cda37280ea02455e62879186619aae296b08e8f10bd8cc1c09fd25239cf122",
     "local/bin/apx-detached-launch": "40970a9ed235a6799913211dc135c66222ee55e15d5d38e5cfe5d2feafd785ef",
     "local/bin/apx-face-auth-state-v1": "82eec2b7ca859006b14d9118bb5e1aa12d1a0d5f480cf1a3f9aeb27543b3b642",
     "local/bin/apx-host-console-open": "ed33a55eb6ac1eb1682989efd41ad26c2b12549f0dcfd056252a4f239d94b229",
     "local/bin/apx-host-console-terminal": "187025f24fda099acc85a7b82b0e0cacfd979f86feca77219911e661e7ec963e",
     "local/bin/apx-laptop-action-v1": "0edd10c264318719007c59831c097ec9c8e3fa8b3068fb7494f06523e617c7f7",
     "local/bin/apx-shortcuts-v1": "c94ec111c09c46cfd58e4c74b400d224e736e593754c8e1b9896eca9ea288995",
-    "local/bin/apx-shell-v1": "f5f8e6aeb729ea92c1561c6fe90c00e4692d17272e469f06ed7f7fbbccf5aca4",
+    "local/bin/apx-notification-focus-v1": "835cc0302f10f01c2417077884fca7f9b9a6b95b2328ac8d32dccc4e93ca7cc0",
+    "local/bin/apx-shell-v1": "19a04a0700f8f9ed512f5b6433a4ea9c0b114222810894095654b36bfc55423e",
     "quickshell/apx/calendar_store.py": "e23e6d4121f8b96647e2c0d8a8d1263e4d51f8f6d60dabebc9d3a6fce5379136",
-    "quickshell/apx/shell.qml": "416b672081ef52eb2ed05bd4c9c8156c6a2d29c40c9a9eeda5699a54b02f6ab6",
+    "quickshell/apx/shell.qml": "a4e7a9cdb5f17f8eec0c23616892837104f2d5774196912606edfdb7fe43a00d",
 }
 MAX_GRAPHICAL_CONFIG_BYTES = 1024 * 1024
 MAX_WALLPAPER_BYTES = 4 * 1024 * 1024
